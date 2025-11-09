@@ -34,6 +34,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.passwordHash) {
+      console.error('User found but passwordHash is missing:', { userId: user.id, email: user.email });
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!password) {
+      console.error('Password is missing in request');
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
