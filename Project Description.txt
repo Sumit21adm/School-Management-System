@@ -1,0 +1,658 @@
+0) Vision & Constraints
+
+A multi‑tenant, end‑to‑end School Management System (SMS) for K‑12 & colleges, delivered as SaaS or on‑prem. Clean, minimal UI, modular features, extensive customization (workflows, forms, fields, roles, themes), and API‑first design. Must scale from a single school to multi‑campus groups with thousands of concurrent users.
+
+Core Principles
+	•	API‑first: every feature available via versioned REST/GraphQL APIs.
+	•	Modular monolith to start, evolve to services when necessary (payments, notifications, reporting).
+	•	Tenant isolation by schema, strong RBAC/ABAC, audit logs, data residency.
+	•	UX: consistent, minimal, accessible (WCAG 2.1 AA), mobile‑friendly.
+	•	Observability & CI/CD baked in from day 1.
+
+⸻
+
+1) Tenancy & Deployment Modes
+
+Tenancy options
+	1.	Single‑tenant (on‑prem / VPC): separate DB + app stack.
+	2.	Multi‑tenant (SaaS): one cluster, Postgres with schema‑per‑tenant (good balance of isolation & ops) + a control plane DB for tenants, billing, plans, feature flags.
+
+Deployment
+	•	Containerized (Docker), orchestrated by Kubernetes. Helm charts per environment.
+	•	Env: dev → staging → prod. Blue/green deployments for web/API, rolling for workers.
+
+⸻
+
+2) Personas & Roles (RBAC/ABAC)
+	•	Super Admin (platform owner)
+	•	School Admin (per tenant)
+	•	Academic Head / Principal
+	•	Teacher / Staff (with departments)
+	•	Student
+	•	Guardian/Parent
+	•	Librarian / Accountant / HR / Transport / Hostel (specialized roles)
+
+Access Model
+	•	Base RBAC with permissions (CRUD by module).
+	•	Extend with ABAC (attributes: grade, section, campus, department, ownership) for row‑level scope.
+	•	Policies stored and managed via a policy engine (e.g., Casbin) + UI for admins.
+	•	Audit Trail on sensitive actions; immutable event store for key changes.
+
+⸻
+
+3) High‑Level Architecture
+
+Frontend
+	•	Next.js (React + TypeScript), App Router, Server Actions for internal admin tasks.
+	•	Component lib: Tailwind CSS + shadcn/ui, Headless UI, Lucide icons.
+	•	State: React Query (TanStack) for server cache, Zustand for local UI state.
+	•	i18n, RTL support, theming (CSS variables), dynamic form builder.
+
+Backend
+	•	NestJS (TypeScript) or Django (Python). (This plan assumes NestJS.)
+	•	PostgreSQL (primary), Redis (caching, sessions, queues), BullMQ for background jobs.
+	•	OpenAPI (REST) + optional GraphQL (Apollo) for complex client queries.
+	•	File storage: S3‑compatible (AWS S3, MinIO). CDN via CloudFront/Cloudflare.
+	•	Search: PostgreSQL full‑text initially; optional OpenSearch later.
+	•	Event bus (later at scale): NATS/Kafka for async domain events (attendance posted, invoice paid, exam published).
+
+Services/Modules (initially in a modular monolith)
+	•	Identity & Access
+	•	Core School (campus, class, section, subject, timetable)
+	•	People (students, guardians, staff)
+	•	Admissions & Front Office
+	•	HR & Leave
+	•	Academics (lesson plans, class routine, exam, online exam, grading, promotion)
+	•	Attendance (student/teacher)
+	•	Fees & Accounting (invoices, payments, ledgers)
+	•	Communications (email/SMS/push, announcements, events)
+	•	Library
+	•	Transport
+	•	Hostel
+	•	Inventory & Asset Management
+	•	CMS / Manage Frontend
+	•	Media Gallery
+	•	Complaints/Support Desk
+	•	Scholarships & Payroll
+	•	Reports/Analytics
+
+Security
+	•	OAuth2/OIDC, SSO (Google/Microsoft), optional SAML for enterprises.
+	•	2FA (TOTP/SMS/email), device/session management.
+	•	Rate limiting, IP allowlists (admin), secrets in vault (e.g., AWS Secrets Manager).
+	•	Encryption in transit (TLS) & at rest (KMS, S3 SSE). Field‑level encryption for PII.
+	•	Compliance: FERPA/GDPR‑like controls, India DPDP Act—purpose limitation, retention policies.
+
+Observability
+	•	Structured logs (JSON) → Loki/ELK.
+	•	Metrics → Prometheus + Grafana dashboards.
+	•	Tracing → OpenTelemetry + Tempo/Jaeger.
+
+⸻
+
+4) Data Model (Core Entities)
+
+Tenant Control Plane (global)
+	•	Tenant(id, name, plan, status, domain, created_at)
+	•	FeatureFlag(key, variant, tenant_id)
+	•	BillingAccount(tenant_id, provider, customer_id, plan, renewal)
+
+Per‑Tenant Schema (selected tables)
+	•	School(id, name, code, campuses[])
+	•	Campus(id, name, address)
+	•	AcademicYear(id, name, start, end, is_active)
+	•	Class(id, name, grade_level)
+	•	Section(id, class_id, name, capacity)
+	•	Subject(id, code, name, credit, class_id?)
+	•	User(id, email, phone, password_hash, status)
+	•	Role(id, name); UserRole(user_id, role_id)
+	•	Permission(id, key); RolePermission(role_id, permission_id)
+	•	Student(id, user_id, admission_no, dob, gender, photo, status)
+	•	Guardian(id, user_id, relation); StudentGuardian(student_id, guardian_id)
+	•	Staff(id, user_id, emp_code, join_date, dept, designation)
+	•	Timetable(id, section_id, day_of_week); TimetableSlot(id, timetable_id, period, subject_id, teacher_id, room)
+	•	Attendance(id, date, type{student|staff}, section_id, recorded_by)
+	•	AttendanceEntry(id, attendance_id, person_id, status{P,A,L}, note)
+	•	Exam(id, name, term, class_scope, publish_at)
+	•	ExamPaper(id, exam_id, subject_id, max_marks, weight)
+	•	Mark(id, exam_paper_id, student_id, marks, grade)
+	•	Promotion(id, from_class, to_class, batch_year)
+	•	FeeHead(id, name, description)
+	•	FeePlan(id, class_id, academic_year_id); FeePlanItem(id, plan_id, fee_head_id, amount, due_date)
+	•	Invoice(id, student_id, total, status, due_date)
+	•	InvoiceItem(id, invoice_id, fee_head_id, amount)
+	•	Payment(id, invoice_id, method, txn_ref, amount, status, posted_at)
+	•	LedgerAccount(id, name, code, type); JournalEntry(id, date, memo); JournalLine(entry_id, account_id, debit, credit)
+	•	LibraryBook(id, isbn, title, author, copies, shelf)
+	•	LibraryIssue(id, book_id, borrower{student|staff}_id, issued_on, due_on, returned_on, fines)
+	•	TransportRoute(id, name); Vehicle(id, number, capacity); Stop(id, route_id); StudentTransport(student_id, stop_id)
+	•	Hostel(id, name); Room(id, hostel_id, number, beds); Allocation(id, room_id, student_id, from, to)
+	•	InventoryItem(id, sku, name, qty, uom); StockTxn(id, item_id, type{in|out}, qty, ref)
+	•	Asset(id, tag, name, purchase_date, location, status)
+	•	Announcement(id, title, body, audience filter JSON, publish_at)
+	•	MessageLog(id, channel{email|sms|push}, to, template, status, response)
+	•	Complaint(id, created_by, target, category, priority, status, assignee)
+	•	Scholarship(id, name, criteria JSON); ScholarshipGrant(id, scholarship_id, student_id, amount)
+	•	PayrollEmployee(id=staff_id, ctc); PayrollRun(id, period, status); PayrollLine(run_id, staff_id, earnings JSON, deductions JSON, net)
+	•	Media(id, key, type, size, owner, visibility)
+	•	CustomField(id, entity, key, type, config JSON); CustomValue(entity_id, field_id, value)
+	•	AuditLog(id, actor, action, entity, entity_id, before JSON, after JSON, ts)
+
+⸻
+
+5) Feature Map (Aligned to your image)
+	1.	Dashboard: role‑based widgets (KPIs: attendance, fees due, exam timelines).
+	2.	Theme & Language: theme switcher, school branding, i18n (JSON catalogs), RTL.
+	3.	Administrator: general settings, academic year, campus, roles, permissions, email/SMS gateways, payment providers.
+	4.	Templates: certificate/ID card templates via drag‑drop designer; document merge with variables.
+	5.	Front Office: inquiries, visitor log, postal dispatch/receive.
+	6.	HR: staff lifecycle, departments, designations, documents, onboarding, offboarding.
+	7.	Manage Leave: leave types, policies, approvals, calendar sync.
+	8.	Lesson Plan: outcomes, resources, sequencing; attach media.
+	9.	Academic: classes, subjects, syllabus, curriculum mapping.
+	10.	Class Routine: timetable builder with conflict detection.
+	11.	Manage Student: admissions, bulk import, transfers, guardian links, IDs.
+	12.	Attendance: daily/period‑wise, device integrations (RFID/QR), CSV import.
+	13.	Generate Card: student ID, library card, admit card using designer.
+	14.	Online Exam: question bank, MCQ/subjective, proctoring (basic), randomization, time windows.
+	15.	Manage Exam: offline exam schedule, hall tickets, seat plan.
+	16.	Exam Mark: mark entry, moderation, grade scales, analytics.
+	17.	Promotion: rule‑based promotion to next class.
+	18.	Certificate: completion/bonafide/TC—issue & verify via QR.
+	19.	Inventory: suppliers, purchase, GRN, stock issue/return.
+	20.	Asset Management: asset register, depreciation, maintenance.
+	21.	Library: catalog, issue/return, fines, OPAC search.
+	22.	Transport: routes, stops, GPS ingest (later), allocations.
+	23.	Hostel: rooms, allocations, attendance.
+	24.	Message/Mail & SMS: templates, campaigns, transactional triggers.
+	25.	Complain: ticketing workflow, SLAs, notes, attachments.
+	26.	Announcement: notices, holidays, circulars, targeted audiences.
+	27.	Scholarship: eligibility rules, approvals.
+	28.	Event: calendar, registrations, reminders.
+	29.	Payroll: earnings/deductions, payslips, PF/ESI exports.
+	30.	Accounting: chart of accounts, double‑entry, receipts/payments, bank recon, fee integration.
+	31.	Report: standard + custom builder (SQL + safe views), export (CSV/PDF), schedules.
+	32.	Manage Frontend: simple CMS for school public site + admission form.
+	33.	Media Gallery: albums, permissions, watermarking.
+	34.	Miscellaneous: FAQ, help center, support.
+	35.	Subscription (SaaS): plans, usage metering, invoices (Stripe/Razorpay), dunning.
+	36.	Profile: user profile, password/2FA, devices.
+
+⸻
+
+6) API Design (Sketch)
+
+Auth
+	•	POST /auth/login → JWT access + refresh
+	•	POST /auth/refresh
+	•	POST /auth/impersonate (admin)
+
+Students
+	•	GET /students?class=10&section=A
+	•	POST /students (payload supports custom fields)
+	•	POST /students/:id/promote
+
+Fees
+	•	POST /fee-plans, /invoices, /payments
+	•	Webhooks: /webhooks/payments/razorpay | /stripe
+
+Comms
+	•	POST /messages/email|sms|push (template_key, variables)
+
+Standards
+	•	Pagination: cursor‑based.
+	•	Idempotency keys for POST.
+	•	Error shape with codes; Problem Details (RFC 9457).
+
+⸻
+
+7) Customization & Theming
+	•	Form Builder: admins can add custom fields to entities; UI renders dynamically.
+	•	Workflow Builder: approval steps (e.g., leave, admission, scholarship) via configurable states & transitions.
+	•	Template Designer: ID/certificates/admit cards (drag‑drop, variables, QR).
+	•	Permission Profiles: role presets per department.
+	•	Feature Flags: per‑tenant toggles; A/B for new modules.
+
+⸻
+
+8) UI/UX System (Minimal & Clean)
+	•	8‑pt spacing grid; airy whitespace; responsive breakpoints.
+	•	Type scale: 12/14/16/20/24/32. System font stack.
+	•	Neutral palette + one accent color per tenant; dark mode.
+	•	Navigation: left sidebar for modules, top bar for context (tenant, year, search, quick add).
+	•	Data tables: column density toggle, saved views, filters, CSV export, inline edit.
+	•	Empty states, skeleton loaders, optimistic UI where safe.
+	•	Accessibility: keyboard navigation, roles/ARIA, focus management, contrast.
+
+⸻
+
+9) Integrations
+	•	Email: AWS SES, SendGrid
+	•	SMS: Twilio, MSG91 (India)
+	•	Push: Firebase Cloud Messaging
+	•	Payments: Razorpay (IN), Stripe (global)
+	•	Docs: PDF generation (Puppeteer), QR codes
+	•	SSO: Google Workspace, Microsoft Entra ID
+	•	Hardware (later): RFID/QR attendance, GPS telematics ingestion
+
+⸻
+
+10) Security, Privacy, Compliance
+	•	DPO controls: data export, deletion, consent logs, purpose limitation tags.
+	•	Row‑level security by tenant_id & ABAC scopes.
+	•	Regular pen‑tests, SAST/DAST in CI. Dependencies monitored.
+	•	Backups: PITR (WAL archiving), daily snapshots, cross‑region.
+	•	DR: RTO ≤ 4h, RPO ≤ 15m (configurable by tier).
+
+⸻
+
+11) Testing Strategy
+	•	Unit: Jest (backend), Vitest/RTL (frontend).
+	•	Integration: Testcontainers (Postgres, Redis) in CI.
+	•	E2E: Playwright (multi‑role flows).
+	•	Contract: OpenAPI schema tests, Pact (if services split).
+	•	Load: k6/Gatling—target 95p latency < 300ms for core APIs.
+
+⸻
+
+12) Analytics & Reporting
+	•	Event capture (PostHog/Segment) for product analytics.
+	•	Built‑in report builder on safe SQL views; scheduled exports to S3 + email.
+	•	Real‑time dashboards (attendance, dues) via materialized views.
+
+⸻
+
+13) DevOps Pipeline
+	•	GitHub Actions: lint, test, build, containerize, scan, deploy.
+	•	Migrations via Prisma/TypeORM + schema registry.
+	•	Seed scripts per environment; fixture data for demos.
+	•	Feature environments (Preview URLs) per PR.
+
+⸻
+
+14) Phased Roadmap (MVP → V2)
+
+Phase 0 — Foundation (2–3 weeks)
+	•	Tenant control plane, auth, RBAC, audit, theming, i18n.
+	•	Core entities: academic year, class, section, subjects.
+	•	Users/people model with student/guardian/staff profiles.
+
+Phase 1 — MVP Vertical Slice (3–4 weeks)
+	•	Admissions (basic), student list, class/section assignments.
+	•	Attendance (daily), announcements, ID templates.
+	•	Fee plans, invoicing, online payment (Razorpay/Stripe), receipts.
+	•	Minimal dashboards & reports.
+
+Phase 2 — Academics & Exams (4–6 weeks)
+	•	Timetable builder, lesson plans.
+	•	Exam scheduling (offline), marks entry, grade scales, report cards.
+	•	Promotions & certificates with QR verify.
+
+Phase 3 — Communications & Library/Transport (3–5 weeks)
+	•	Email/SMS/push campaigns + transactional triggers.
+	•	Library module (catalog, issue/return, fines).
+	•	Transport (routes, stops, allocations). GPS ingest stub.
+
+Phase 4 — HR/Leave/Payroll & Inventory/Assets (5–7 weeks)
+	•	HR master data, leave policies & approvals, payroll runs.
+	•	Inventory, asset register, basic depreciation.
+
+Phase 5 — Online Exams & Portal (4–6 weeks)
+	•	Question bank, online exams (MCQ/subjective), grading workflows, anti‑cheat basics.
+	•	Parent/Student self‑service portal (payments, timetable, results, messages).
+
+Always‑On Tracks: security hardening, performance, accessibility, UX polish, analytics, docs.
+
+⸻
+
+15) Data Migration & Interop
+	•	CSV/XLSX importers for students, staff, subjects, fees; mapping UI.
+	•	Legacy SIS adapters (if provided) with staging tables.
+	•	Versioned export packages (JSON/CSV + media archives).
+
+⸻
+
+16) Pricing/Plans (SaaS Suggestion)
+	•	Starter: up to X students, core modules, community support.
+	•	Pro: advanced modules (library, transport, hostel), SSO, custom fields.
+	•	Enterprise: on‑prem, custom SLAs, data residency, integrations.
+
+⸻
+
+17) Definition of Done (per Feature)
+	•	API + UI + tests (≥80% critical paths), docs, accessibility check, i18n keys, analytics events, observability dashboards, rollback plan.
+
+⸻
+
+18) Next Steps (Actionable)
+	1.	Confirm tech stack (NestJS + Next.js + Postgres + Redis + S3).
+	2.	Create repos & CI templates; scaffold monorepo (Turborepo or Nx).
+	3.	Implement tenant control plane + auth + RBAC skeleton.
+	4.	Ship MVP vertical slice: Students → Attendance → Fees → Payments → Announcements.
+	5.	Draft minimal design system tokens & core components (Button, Input, Table, Dialog, Form, Empty State).
+
+This plan is intentionally concise yet complete enough to start building immediately and scale responsibly. We can turn each phase into a sprint backlog with user stories and acceptance criteria on request.
+
+⸻
+
+19) Shared‑Hosting Friendly Stack & Plan (LAMP)
+
+You asked for a stack that works on shared web hosting + phpMyAdmin/MySQL. Below is a pragmatic plan that keeps the same feature set while fitting common cPanel constraints.
+
+19.1 Recommended Stack
+	•	Language/Runtime: PHP 8.2+
+	•	Framework: Laravel 10 (mature, batteries‑included, great on shared hosts)
+	•	Frontend: Blade + Livewire (minimal JS) or Inertia + Vue (requires build step locally, upload compiled assets)
+	•	DB: MySQL 8 (MariaDB 10.6+ ok)
+	•	Cache/Queue: Database/file cache; database queue driver (since daemons often restricted)
+	•	Mail: SMTP (host’s mail, SES, SendGrid)
+	•	File Storage: Local (public) with optional S3 if available
+	•	PDF/Docs: Dompdf/Snappy (wkhtmltopdf if host supports), simple QR code lib
+	•	Scheduler/Jobs: cPanel Cron (*/1 * * * *) to run php artisan schedule:run and queued jobs via php artisan queue:work --stop-when-empty
+	•	Search: MySQL full‑text (later replaceable with Meilisearch/Elastic when upgrading hosting)
+
+19.2 Multi‑Tenancy on MySQL (Shared Host)
+	•	Default: Single database, every table has tenant_id + composite indexes. Enforce tenant scoping in a global query scope + policy middleware.
+	•	Alt: Database‑per‑tenant if host allows many DBs; simple and strongest isolation but heavier ops.
+	•	Domains: Subpath per tenant /t/{code} by default. Subdomain per tenant possible if wildcard DNS supported.
+
+19.3 Module Mapping (Laravel Packages)
+	•	Auth/SSO: Laravel Breeze/Fortify + 2FA (pragmarx/google2fa)
+	•	Roles/Perms: spatie/laravel-permission (RBAC) + policies for ABAC
+	•	Media: spatie/laravel-medialibrary
+	•	Audit: owenvoke/laravel-auditing or custom audit events
+	•	PDF/QR: barryvdh/laravel-dompdf, simplesoftwareio/simple-qrcode
+	•	Payments: Razorpay/Stripe PHP SDKs
+
+19.4 Directory & App Structure
+	•	Modular monolith via Laravel Modules (nwidart/laravel-modules) or feature folders:
+	•	Modules/Core, Modules/Students, Modules/Attendance, Modules/Fees, Modules/Exams, etc.
+	•	Each module: migrations, models, policies, services, Livewire components, routes, views.
+
+19.5 Deployment on cPanel (No SSH Assumed)
+	1.	Create MySQL DB + user in cPanel; note credentials.
+	2.	Upload project (ZIP) to root; set document root to /public (or use .htaccess rewrite).
+	3.	Edit .env with DB, mail, app key (php artisan key:generate—via SSH; if not, include a pre‑generated key).
+	4.	Run migrations/seed via SSH; if SSH not available, provide a one‑time installer route guarded by a secret to run migrate --force.
+	5.	Set Cron:
+	•	* * * * * php /home/USER/public_html/artisan schedule:run >> /dev/null 2>&1
+	•	*/5 * * * * php /home/USER/public_html/artisan queue:work --stop-when-empty >> /dev/null 2>&1
+	6.	Configure file permissions for storage/ and bootstrap/cache/.
+
+19.6 Real‑Time & Notifications (Shared Constraints)
+	•	Use AJAX polling/Livewire updates for dashboards & exam timers.
+	•	Push notifications via email/SMS; web push (VAPID) optional.
+	•	WebSockets reserved for VPS/cloud upgrade (Pusher/Ably alternative if needed).
+
+19.7 Performance Tuning (within shared limits)
+	•	Enable OPcache; route/model caching (php artisan route:cache, config:cache).
+	•	Page chunking + pagination; database indexes on (tenant_id, foreign_key) combos.
+	•	Simple CDN for assets (host provided) and image thumbnails.
+
+19.8 Migration Path (Future‑proof)
+	•	Keep service interfaces so modules can be moved to services later (payments, notifications).
+	•	Avoid MySQL‑specific quirks that block Postgres migration (e.g., strict SQL, avoid SET @@sql_mode dependencies).
+	•	When upgrading to VPS/Kubernetes, swap: DB queue → Redis, file storage → S3, polling → websockets; keep same domain & DB schema.
+
+19.9 MVP Sprint (Shared Host)
+
+Sprint 1 (Foundation): Auth (Breeze), Tenancy scope, Roles/Perms, Settings, Academic Year/Class/Section, Theme basics.
+
+Sprint 2 (Students & Fees): Student CRUD/import (CSV), Guardians, Fee heads/plans, Invoice generation, Razorpay/Stripe checkout, Receipts.
+
+Sprint 3 (Attendance & Comms): Daily attendance (student/teacher), announcements, email/SMS templates, cron setup for reminders.
+
+Sprint 4 (Exams & Reports): Exam schedule, marks entry, grade scales, report card PDF + QR verification.
+
+Sprint 5 (Library/Transport/Hostel basics): Catalog + issue/return, routes/stops allocations, hostel rooms/allocations.
+
+Always‑on: Accessibility, i18n, testing (Pest/PHPUnit), backups (DB dumps via cPanel), error monitoring (Sentry PHP SDK if allowed).
+
+19.10 Limits to Note
+	•	Long‑running workers and true real‑time are constrained; cron + database queue mitigate most needs.
+	•	Heavy analytics may require offloading (scheduled exports) or later VPS.
+	•	Wildcard subdomains & custom SSL depend on hosting plan.
+
+Bottom line: We can deliver a clean, scalable Laravel + MySQL implementation that runs well on shared hosting now and can upgrade seamlessly later without a rewrite.
+
+⸻
+
+20) React (Frontend) + Node.js (Backend) Plan
+
+You asked to use ReactJS frontend and Node.js backend. Below is a focused plan that keeps MySQL compatibility and remains easy to host (cPanel Node app or a small VPS).
+
+20.1 Tech Choices
+
+Frontend
+	•	React + TypeScript via Vite (fast dev/build).
+	•	UI: Tailwind CSS + shadcn/ui, Lucide icons.
+	•	State/Data: TanStack Query (server cache) + Zustand (local UI state).
+	•	Routing: React Router.
+	•	Forms/Validation: React Hook Form + Zod.
+	•	i18n & Theming: react-i18next, CSS variables, dark mode.
+
+Backend
+	•	NestJS (Node.js 20+) for a structured, testable API (can be Express under the hood).
+	•	Prisma ORM with MySQL 8 / MariaDB (phpMyAdmin friendly).
+	•	Auth: JWT Access + Refresh, optional TOTP 2FA; RBAC/ABAC with Casbin or custom policies.
+	•	Caching/Jobs: Database or Redis (if available). Cron via node-cron (or host cron).
+	•	File Storage: Local (public) or S3-compatible.
+	•	Docs: OpenAPI (Swagger) auto‑generated.
+
+Monorepo
+	•	Turborepo with workspaces: apps/web (React), apps/api (NestJS), packages/ui (design system), packages/types (shared Zod schemas & TS types).
+
+20.2 Tenancy & Data
+	•	Row‑level multi‑tenancy: each table has tenant_id, enforced via request scoped guard/middleware in NestJS and Prisma extensions.
+	•	Optional DB‑per‑tenant if host allows many DBs.
+
+20.3 Project Structure
+
+/ (repo)
+  apps/
+    web/                # React (Vite)
+    api/                # NestJS (src/modules/*)
+  packages/
+    ui/                 # shared React components
+    types/              # zod schemas, api types
+  infra/                # docker-compose for local, deploy scripts
+
+NestJS modules (first wave)
+	•	auth, tenancy, users, roles, settings, academics (year/class/section/subject), students, guardians, attendance, fees (heads/plans/invoices/payments), announcements.
+
+React app pages
+	•	/login, /dashboard, /students, /fees, /attendance, /exams, /settings.
+
+20.4 API Conventions
+	•	REST with OpenAPI; cursor pagination; idempotency key for POST.
+	•	Example paths:
+	•	POST /v1/auth/login
+	•	GET /v1/students?classId=&sectionId=
+	•	POST /v1/fees/invoices (create), POST /v1/payments/razorpay/webhook.
+
+20.5 Hosting (Shared‑friendly)
+
+Option A: cPanel with Node.js App
+	•	Upload built React /dist to public_html (or serve via Nginx if provided).
+	•	Create Node.js app for API (apps/api) with PM2 if allowed; else host’s Node manager.
+	•	Env vars via cPanel; connect to MySQL managed in phpMyAdmin.
+	•	Cron: * * * * * node apps/api/dist/schedule.js or Nest @Cron if app is persistent.
+
+Option B: Small VPS (2 vCPU/2GB)
+	•	Nginx reverse proxy → API (Nest) + static React.
+	•	MySQL managed on the VPS or managed service; phpMyAdmin optional via Docker.
+
+20.6 CI/CD
+	•	GitHub Actions: lint/test/build; create artifacts for web and api.
+	•	Optional deploy via FTP (cPanel) or rsync/SSH; for VPS use Docker Compose.
+
+20.7 Security & Privacy
+	•	Helmet, CORS, rate limits; JWT rotation & device sessions.
+	•	Field‑level encryption for sensitive PII (Prisma middleware) if needed.
+	•	Audit logs; request tracing (pino + OpenTelemetry export optional).
+
+20.8 Sprint Plan (React + Node)
+
+Sprint A — Bootstrap (1 week)
+	•	Monorepo setup, design tokens, auth (login/register, password reset), tenancy guard, RBAC.
+
+Sprint B — Core Academic & People (1–2 weeks)
+	•	Academic year/class/section/subject.
+	•	Students/Guardians CRUD + CSV import; list/detail pages with filters.
+
+Sprint C — Attendance & Announcements (1 week)
+	•	Daily attendance flows (student/teacher), dashboard widgets.
+	•	Announcement center with email/SMS hooks.
+
+Sprint D — Fees & Payments (2 weeks)
+	•	Fee heads/plans, invoice generator, Razorpay/Stripe checkout, receipt PDF.
+
+Sprint E — Exams & Report Cards (2 weeks)
+	•	Exam schedule, marks entry, grade scales; report card PDFs + QR verify.
+
+Continuous: testing (Vitest/RTL + Jest), a11y, i18n, logging, backups.
+
+20.9 Local Dev
+	•	docker-compose up for MySQL + (optional) Redis.
+	•	pnpm dev to run both web and api; .env templates.
+
+20.10 Upgrade Path
+	•	When traffic grows: move to Redis queues, object storage (S3), background workers, and split modules into services if needed—interfaces remain stable.
+
+Outcome: Clean React UI + NestJS API on MySQL, deployable on shared Node hosting now, with a smooth path to VPS/cloud later—no rewrite required.
+
+⸻
+
+21) Final Technical Proposal (React + Node.js + MySQL, 100% Open Source)
+
+21.1 Overview
+
+Build a multi-tenant School Management System with a clean, minimal UI, customizable workflows, and a modular codebase. Frontend in React + TypeScript (Vite), backend in NestJS (Node.js), database MySQL/MariaDB (phpMyAdmin compatible). The product is self-hostable on shared Node hosting or a small VPS, and upgradeable to cloud without rewrite.
+
+21.2 Goals & Non‑Goals
+
+Goals
+	•	Core SIS features mapped to your feature list (students, attendance, fees, exams, communication, etc.)
+	•	Strong RBAC/ABAC, audit logs, and tenant isolation.
+	•	Open‑source stack and libraries; optional paid integrations (SMS/Payments).
+	•	Accessibility (WCAG 2.1 AA), performant and responsive UI.
+
+Non‑Goals (initial)
+	•	Heavy real‑time proctoring, advanced BI dashboards, or device integrations beyond CSV/basic APIs (can be added later).
+
+21.3 Final Tech Stack
+	•	Frontend: React 18 + TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, React Hook Form + Zod, TanStack Query, Zustand, i18next.
+	•	Backend: NestJS, Prisma ORM (MySQL/MariaDB), Passport/JWT, node-cron, pino logging, Swagger/OpenAPI.
+	•	DB/Infra: MySQL 8+/MariaDB 10.6+, optional Redis (later), local/S3 storage, cPanel Node App or small VPS with Nginx.
+	•	Docs & Quality: ESLint/Prettier, Husky + lint-staged, Jest/Vitest, Playwright (E2E), GitHub Actions CI.
+
+21.4 Multi‑Tenancy & Security
+	•	Row‑level multi‑tenancy with tenant_id enforced in service/repository layer and Prisma extensions.
+	•	RBAC via role/permission tables + ABAC with policies (department, class/section).
+	•	2FA (TOTP) optional, device/session management, rate limiting, CORS/Helmet.
+	•	Audit logs for sensitive actions; encryption at rest (DB-level) optional; HTTPS everywhere.
+
+21.5 Customization
+	•	Custom fields per entity via metadata tables and dynamic forms.
+	•	Template designer for IDs/certificates/report cards (HTML → PDF, QR verification).
+	•	Feature flags per tenant and theme branding (logo/colors, dark mode).
+
+21.6 Hosting & Deployment
+	•	Shared Hosting: Build React → upload /dist; run NestJS as cPanel Node app; MySQL managed via phpMyAdmin; cron for scheduled tasks.
+	•	VPS: Docker Compose (Nginx + API + MySQL/Redis). Zero rewrite upgrade path.
+
+21.7 Deliverables
+	•	Monorepo with apps/web, apps/api, shared packages/ui, packages/types.
+	•	Database schema & migrations; seed data; admin panel.
+	•	API docs (Swagger), Postman collection, deployment guides (shared & VPS).
+	•	Test suites (unit/integration/E2E) with reports; accessibility checklist.
+
+21.8 Licensing
+
+All libraries are open source (MIT/Apache/BSD/GPL). Production dependencies listed in lockfiles; third‑party services (SMS/Payments) are optional and paid.
+
+21.9 Success Metrics
+	•	P95 API latency < 300ms on VPS; < 700ms on shared host for core endpoints.
+	•	Lighthouse score ≥ 90 on Performance/Accessibility/Best Practices.
+	•	<1% error rate (5xx) during acceptance tests; 100% of critical paths covered by E2E.
+
+21.10 Risks & Mitigations
+	•	Shared hosting limits → Use polling/cron; design to upgrade to Redis/WebSockets later.
+	•	Data privacy → Strict tenant scoping, audit logs, permission policies.
+	•	Complexity creep → Ship vertical slices; enforce DoD per feature.
+
+⸻
+
+22) Sprint‑Wise Development Plan (8 Sprints, ~8–12 weeks)
+
+Assumes 1–3 devs. Adjust scope/timing to team size.
+
+Sprint 0 — Project Bootstrap (0.5–1 week)
+
+Scope: Monorepo setup (Turborepo), Vite React shell, NestJS API shell, Prisma schema baseline (tenants, users, roles, permissions, academic entities), auth (JWT), theming tokens, CI pipeline, basic logging.
+Deliverables: Running apps (/login), DB migrations, seed admin, Swagger up, CI passing.
+Acceptance: User can sign in as Super Admin, create a tenant, and sign in as School Admin.
+
+Sprint 1 — Academics Core & Settings (1 week)
+
+Scope: Academic Year, Classes, Sections, Subjects; campus settings; i18n; tenant branding.
+UI: CRUD tables with filters, modals, empty states; settings pages.
+Acceptance: Admin can configure a school year and structure; permissions enforced.
+
+Sprint 2 — People: Students & Guardians (1–1.5 weeks)
+
+Scope: Student/Guardian models, admissions (basic), CSV import, custom fields, ID template minimal.
+UI: Students list/detail, create wizard, import mapper.
+Acceptance: Import 500 students; link guardians; generate basic ID PDF with QR.
+
+Sprint 3 — Attendance & Announcements (1 week)
+
+Scope: Daily attendance (student/teacher), attendance reports; announcements (targeted audiences), email/SMS integration stubs.
+Acceptance: Homeroom teacher can post daily attendance and notify parents; dashboard shows KPIs.
+
+Sprint 4 — Fees & Payments (2 weeks)
+
+Scope: Fee heads/plans, invoice generation (per class/section), payments (Razorpay/Stripe), receipts, simple accounting journal.
+Acceptance: Create plans → bulk generate invoices → pay via hosted checkout → receipt PDF; webhook updates status.
+
+Sprint 5 — Exams, Marks & Promotions (1.5–2 weeks)
+
+Scope: Exam schedule, subjects papers, marks entry, grade scales, report card templates, promotion rules.
+Acceptance: Publish exam, enter marks, issue report cards (PDF with QR), promote class to next year.
+
+Sprint 6 — Library / Transport / Hostel (1–1.5 weeks)
+
+Scope: Library catalog + issue/return/fines; Transport routes/stops allocations; Hostel rooms/allocations.
+Acceptance: Issue/return flow complete; assign student to route/room; export CSV reports.
+
+Sprint 7 — Polishing, Reports & Release (1 week)
+
+Scope: Report builder (predefined + CSV/PDF exports), accessibility pass, performance tuning, error states, backups & deployment guides.
+Acceptance: Lighthouse ≥90; P95 API latency targets met; admin export of tenant data; staging → production checklist signed.
+
+⸻
+
+Cross‑Cutting Activities (Every Sprint)
+	•	Testing: Unit (Jest/Vitest), Integration (Testcontainers optional), E2E (Playwright), smoke tests.
+	•	Security: AuthZ tests, rate limit checks, audit logging, dependency scans.
+	•	Docs: Changelog, API docs, user guides, and demo data updates.
+	•	Observability: Pino logs, request IDs; simple metrics dashboard.
+
+⸻
+
+Milestones
+	•	M1 (end Sprint 3): Usable Alpha (students, attendance, announcements).
+	•	M2 (end Sprint 5): Beta with fees/payments + exams/marks.
+	•	M3 (end Sprint 7): Production release with library/transport/hostel and reporting.
+
+⸻
+
+Definition of Done (per Feature)
+	•	API + UI + validations; RBAC & tenancy scope; tests written & passing; Swagger updated; docs/screenshots; i18n keys; accessibility check; analytics event; error handling; seed data; review & merge.
+
+⸻
+
+Handover & Next Steps
+	•	Create repos with the scaffold; push CI templates.
+	•	Prepare environment files and DB migrations; deliver deployment guide for shared hosting and VPS.
+	•	Schedule sprint planning with backlog items (user stories with AC) derived from above scopes.
