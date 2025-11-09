@@ -53,7 +53,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tenantId: user.tenantId,
-      roles: user.roles.map((ur) => ur.role.name),
+      roles: user.roles.map((ur: any) => ur.role.name),
     };
 
     return {
@@ -64,7 +64,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         tenantId: user.tenantId,
-        roles: user.roles.map((ur) => ur.role.name),
+        roles: user.roles.map((ur: any) => ur.role.name),
       },
     };
   }
