@@ -10,7 +10,9 @@ import {
   LogOut,
   Home,
   GraduationCap,
-  ClipboardList
+  ClipboardList,
+  Bus,
+  Building2
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -28,6 +30,9 @@ export default function DashboardPage() {
     { name: 'Teachers', icon: Users, path: '/teachers' },
     { name: 'Attendance', icon: ClipboardList, path: '/attendance' },
     { name: 'Classes', icon: BookOpen, path: '/classes' },
+    { name: 'Library', icon: BookOpen, path: '/library' },
+    { name: 'Transport', icon: Bus, path: '/transport' },
+    { name: 'Hostel', icon: Building2, path: '/hostel' },
     { name: 'Exams', icon: FileText, path: '/exams' },
     { name: 'Fees', icon: DollarSign, path: '/fees' },
     { name: 'Calendar', icon: Calendar, path: '/calendar' },
@@ -54,6 +59,7 @@ export default function DashboardPage() {
           {modules.map((module) => (
             <button
               key={module.name}
+              onClick={() => navigate(module.path)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                 module.active
                   ? 'bg-blue-50 text-blue-600'
