@@ -54,6 +54,7 @@ export default function DashboardPage() {
           {modules.map((module) => (
             <button
               key={module.name}
+              onClick={() => navigate(module.path)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                 module.active
                   ? 'bg-blue-50 text-blue-600'
