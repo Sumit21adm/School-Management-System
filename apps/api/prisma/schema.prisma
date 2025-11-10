@@ -233,6 +233,7 @@ model Student {
   photo        String?
   bloodGroup   String?
   address      String?
+  customFields Json?     // For custom/dynamic fields
   status       String    @default("active") // active, inactive, graduated, transferred
   admissionDate DateTime @default(now())
   createdAt    DateTime  @default(now())
