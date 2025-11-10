@@ -244,6 +244,9 @@ model Student {
   attendanceEntries AttendanceEntry[]
   invoices          Invoice[]
   marks             Mark[]
+  libraryIssues     LibraryIssue[]
+  transportAllocations TransportAllocation[]
+  hostelAllocations    HostelAllocation[]
 
   @@unique([tenantId, admissionNo])
   @@index([tenantId, sectionId])
@@ -560,6 +563,205 @@ model Announcement {
 
   @@index([tenantId, publishAt])
   @@map("announcements")
+}
+
+// ============ Library Management ============
+
+model LibraryBook {
+  id          String   @id @default(cuid())
+  tenantId    String
+  isbn        String?
+  title       String
+  author      String
+  publisher   String?
+  category    String?
+  totalCopies Int      @default(1)
+  available   Int      @default(1)
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  issues      LibraryIssue[]
+
+  @@unique([tenantId, isbn])
+  @@index([tenantId, category])
+  @@index([tenantId, title])
+  @@map("library_books")
+}
+
+model LibraryIssue {
+  id          String    @id @default(cuid())
+  tenantId    String
+  bookId      String
+  studentId   String
+  issueDate   DateTime  @default(now())
+  dueDate     DateTime
+  returnDate  DateTime?
+  status      String    @default("issued") // issued, returned, overdue
+  fineAmount  Decimal   @default(0) @db.Decimal(10, 2)
+  finePaid    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  book    LibraryBook @relation(fields: [bookId], references: [id])
+  student Student     @relation(fields: [studentId], references: [id])
+
+  @@index([tenantId, bookId])
+  @@index([tenantId, studentId])
+  @@index([tenantId, status])
+  @@map("library_issues")
+}
+
+// ============ Transport Management ============
+
+model TransportRoute {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  stops        TransportStop[]
+  allocations  TransportAllocation[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("transport_routes")
+}
+
+model TransportStop {
+  id        String   @id @default(cuid())
+  routeId   String
+  name      String
+  location  String?
+  sequence  Int
+  arrivalTime String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  route TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, sequence])
+  @@index([routeId])
+  @@map("transport_stops")
+}
+
+model TransportVehicle {
+  id            String   @id @default(cuid())
+  tenantId      String
+  vehicleNumber String
+  type          String   // bus, van, car
+  capacity      Int
+  driver        String?
+  phone         String?
+  status        String   @default("active") // active, maintenance, inactive
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  allocations TransportAllocation[]
+
+  @@unique([tenantId, vehicleNumber])
+  @@index([tenantId, status])
+  @@map("transport_vehicles")
+}
+
+model TransportAllocation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  studentId String
+  routeId   String
+  vehicleId String
+  stopName  String?
+  status    String   @default("active") // active, inactive
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  student Student          @relation(fields: [studentId], references: [id])
+  route   TransportRoute   @relation(fields: [routeId], references: [id])
+  vehicle TransportVehicle @relation(fields: [vehicleId], references: [id])
+
+  @@unique([tenantId, studentId])
+  @@index([tenantId, routeId])
+  @@index([tenantId, vehicleId])
+  @@map("transport_allocations")
+}
+
+// ============ Hostel Management ============
+
+model HostelBuilding {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  type      String   // boys, girls, mixed
+  address   String?
+  warden    String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  rooms HostelRoom[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("hostel_buildings")
+}
+
+model HostelRoom {
+  id         String   @id @default(cuid())
+  buildingId String
+  roomNumber String
+  floor      Int?
+  capacity   Int      @default(2)
+  type       String?  // single, double, shared
+  status     String   @default("available") // available, full, maintenance
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  building    HostelBuilding      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  allocations HostelAllocation[]
+
+  @@unique([buildingId, roomNumber])
+  @@index([buildingId])
+  @@map("hostel_rooms")
+}
+
+model HostelAllocation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  studentId String
+  roomId    String
+  bedNumber String?
+  checkIn   DateTime @default(now())
+  checkOut  DateTime?
+  status    String   @default("active") // active, checked_out
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  student Student    @relation(fields: [studentId], references: [id])
+  room    HostelRoom @relation(fields: [roomId], references: [id])
+
+  @@unique([tenantId, studentId])
+  @@index([tenantId, roomId])
+  @@index([tenantId, status])
+  @@map("hostel_allocations")
+}
+
+model HostelAttendance {
+  id        String   @id @default(cuid())
+  tenantId  String
+  studentId String
+  date      DateTime
+  status    String   // present, absent, leave
+  checkIn   String?  // time
+  checkOut  String?  // time
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, studentId, date])
+  @@index([tenantId, date])
+  @@map("hostel_attendances")
 }
 
 // ============ Audit Log ============
