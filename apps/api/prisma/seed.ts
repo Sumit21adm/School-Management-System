@@ -28,26 +28,38 @@ async function main() {
     { key: 'users:read', module: 'users', action: 'read', description: 'View users' },
     { key: 'users:update', module: 'users', action: 'update', description: 'Update users' },
     { key: 'users:delete', module: 'users', action: 'delete', description: 'Delete users' },
-    
+
     // Student Management
     { key: 'students:create', module: 'students', action: 'create', description: 'Create students' },
     { key: 'students:read', module: 'students', action: 'read', description: 'View students' },
     { key: 'students:update', module: 'students', action: 'update', description: 'Update students' },
     { key: 'students:delete', module: 'students', action: 'delete', description: 'Delete students' },
-    
+
     // Attendance
     { key: 'attendance:create', module: 'attendance', action: 'create', description: 'Mark attendance' },
     { key: 'attendance:read', module: 'attendance', action: 'read', description: 'View attendance' },
-    
+
     // Fees
     { key: 'fees:create', module: 'fees', action: 'create', description: 'Create fee plans' },
     { key: 'fees:read', module: 'fees', action: 'read', description: 'View fees' },
     { key: 'fees:update', module: 'fees', action: 'update', description: 'Update fees' },
-    
+
     // Exams
     { key: 'exams:create', module: 'exams', action: 'create', description: 'Create exams' },
     { key: 'exams:read', module: 'exams', action: 'read', description: 'View exams' },
     { key: 'exams:update', module: 'exams', action: 'update', description: 'Update exams' },
+    { key: 'exams:delete', module: 'exams', action: 'delete', description: 'Delete exams' },
+
+    // Marks
+    { key: 'marks:create', module: 'marks', action: 'create', description: 'Enter marks' },
+    { key: 'marks:read', module: 'marks', action: 'read', description: 'View marks' },
+    { key: 'marks:update', module: 'marks', action: 'update', description: 'Update marks' },
+
+    // Promotions
+    { key: 'promotions:execute', module: 'promotions', action: 'execute', description: 'Promote students' },
+
+    // Report Cards
+    { key: 'report-cards:generate', module: 'report-cards', action: 'generate', description: 'Generate report cards' },
   ];
 
   for (const perm of permissions) {
@@ -105,7 +117,7 @@ async function main() {
 
   // Assign all permissions to Super Admin and School Admin
   const allPermissions = await prisma.permission.findMany();
-  
+
   for (const permission of allPermissions) {
     await prisma.rolePermission.upsert({
       where: {
@@ -140,7 +152,7 @@ async function main() {
 
   // Create admin user
   const passwordHash = await bcrypt.hash('admin123', 10);
-  
+
   const adminUser = await prisma.user.upsert({
     where: { tenantId_email: { tenantId: tenant.id, email: 'admin@school.com' } },
     update: {},

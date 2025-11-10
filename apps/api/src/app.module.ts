@@ -7,6 +7,9 @@ import { AuthModule } from './auth/auth.module';
 import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
 import { ReportsModule } from './reports/reports.module';
+import { LibraryModule } from './library/library.module';
+import { TransportModule } from './transport/transport.module';
+import { HostelModule } from './hostel/hostel.module';
 
 @Module({
   imports: [
@@ -18,9 +21,11 @@ import { ReportsModule } from './reports/reports.module';
     StudentsModule,
     ClassesModule,
     ReportsModule,
+    LibraryModule,
+    TransportModule,
+    HostelModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
-
