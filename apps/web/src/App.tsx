@@ -6,6 +6,9 @@ import StudentDetailPage from './pages/StudentDetailPage';
 import StudentFormPage from './pages/StudentFormPage';
 import StudentImportPage from './pages/StudentImportPage';
 import GuardiansListPage from './pages/GuardiansListPage';
+import AttendanceMarkingPage from './pages/AttendanceMarkingPage';
+import AttendanceReportsPage from './pages/AttendanceReportsPage';
+import AnnouncementsPage from './pages/AnnouncementsPage';
 import './index.css';
 
 function App() {
@@ -24,6 +27,13 @@ function App() {
         
         {/* Guardians Routes */}
         <Route path="/guardians" element={<GuardiansListPage />} />
+        
+        {/* Attendance Routes */}
+        <Route path="/attendance/mark" element={<AttendanceMarkingPage />} />
+        <Route path="/attendance/reports" element={<AttendanceReportsPage />} />
+        
+        {/* Announcements Route */}
+        <Route path="/announcements" element={<AnnouncementsPage />} />
         
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
