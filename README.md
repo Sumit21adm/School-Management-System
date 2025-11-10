@@ -16,10 +16,12 @@ A comprehensive, multi-tenant School Management System (SMS) built with React, N
 - **Announcements**: Targeted communications to students/parents/staff
 - **Audit Logging**: Complete audit trail for sensitive operations
 
+### New in Sprint 6 ✨
+- **Library Management**: Books catalog, issue/return, fines, OPAC search, CSV export
+- **Transport Management**: Routes, stops, vehicle assignments, student allocations, CSV export
+- **Hostel Management**: Buildings, rooms, student allocations, attendance tracking, CSV export
+
 ### Coming Soon
-- Library Management
-- Transport Management
-- Hostel Management
 - Online Exams
 - Reports & Analytics
 - Parent Portal
@@ -239,8 +241,51 @@ The system uses a comprehensive database schema with:
 - **Exams**: Exams, papers, marks, grades
 - **Fees**: Plans, invoices, payments
 - **Communications**: Announcements
+- **Library**: Books catalog, issues, fines
+- **Transport**: Routes, stops, vehicles, allocations
+- **Hostel**: Buildings, rooms, allocations, attendance
 
 View the complete schema in `apps/api/prisma/schema.prisma`
+
+## 📚 Library Management
+
+The Library module provides complete library management functionality:
+- **Books Catalog**: Manage books with ISBN, title, author, publisher, category
+- **Issue/Return**: Track book issues to students with due dates
+- **Fine Management**: Automatic fine calculation for overdue books
+- **OPAC Search**: Search books by title, author, or ISBN
+- **CSV Export**: Export books and issues data as CSV
+
+## 🚌 Transport Management
+
+The Transport module manages school transportation:
+- **Routes**: Define transport routes with multiple stops
+- **Vehicles**: Manage vehicles with driver details and capacity
+- **Allocations**: Assign students to routes and vehicles
+- **CSV Export**: Export routes, vehicles, and allocations as CSV
+
+## 🏢 Hostel Management
+
+The Hostel module handles student accommodation:
+- **Buildings**: Manage hostel buildings (boys/girls/mixed)
+- **Rooms**: Track rooms with capacity and availability
+- **Allocations**: Assign students to rooms with check-in/check-out
+- **Attendance**: Track daily hostel attendance
+- **CSV Export**: Export buildings, rooms, and allocations as CSV
+
+## 📊 CSV Export Feature
+
+All three new modules support CSV export for reporting:
+- Library: Books catalog and issue records
+- Transport: Routes, vehicles, and student allocations
+- Hostel: Buildings, rooms, and student allocations
+
+Access CSV exports via the "Export CSV" button on each module page or directly via API:
+- `/api/v1/library/export/{books|issues}`
+- `/api/v1/transport/export/{routes|vehicles|allocations}`
+- `/api/v1/hostel/export/{buildings|rooms|allocations}`
+
+See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for complete API reference.
 
 ## 🔐 Security Features
 
@@ -254,15 +299,55 @@ View the complete schema in `apps/api/prisma/schema.prisma`
 
 ## 📚 API Documentation
 
+Complete API documentation is available in [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+
 Once the backend is running, API documentation will be available at:
 - Swagger UI: http://localhost:3001/api/v1/docs (Coming soon)
 
 ### Key Endpoints:
 
+**Authentication:**
 ```
 POST   /api/v1/auth/login       - User login
 POST   /api/v1/auth/register    - User registration
 GET    /api/v1/                 - Health check
+```
+
+**Library Module:**
+```
+GET    /api/v1/library/books             - Get all books
+POST   /api/v1/library/books             - Add new book
+GET    /api/v1/library/issues            - Get all issues
+POST   /api/v1/library/issues            - Issue a book
+PUT    /api/v1/library/issues/:id/return - Return a book
+GET    /api/v1/library/stats             - Library statistics
+GET    /api/v1/library/export/books      - Export books CSV
+GET    /api/v1/library/export/issues     - Export issues CSV
+```
+
+**Transport Module:**
+```
+GET    /api/v1/transport/routes          - Get all routes
+POST   /api/v1/transport/routes          - Create new route
+GET    /api/v1/transport/vehicles        - Get all vehicles
+POST   /api/v1/transport/vehicles        - Add new vehicle
+GET    /api/v1/transport/allocations     - Get student allocations
+POST   /api/v1/transport/allocations     - Create allocation
+GET    /api/v1/transport/stats           - Transport statistics
+GET    /api/v1/transport/export/*        - Export CSV data
+```
+
+**Hostel Module:**
+```
+GET    /api/v1/hostel/buildings          - Get all buildings
+POST   /api/v1/hostel/buildings          - Create new building
+GET    /api/v1/hostel/allocations        - Get student allocations
+POST   /api/v1/hostel/allocations        - Create allocation
+PUT    /api/v1/hostel/allocations/:id/checkout - Check out student
+GET    /api/v1/hostel/attendance         - Get attendance records
+POST   /api/v1/hostel/attendance         - Mark attendance
+GET    /api/v1/hostel/stats              - Hostel statistics
+GET    /api/v1/hostel/export/*           - Export CSV data
 ```
 
 ## 🧪 Testing
