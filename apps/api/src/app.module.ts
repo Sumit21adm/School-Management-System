@@ -7,6 +7,8 @@ import { AuthModule } from './auth/auth.module';
 import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
 import { GuardiansModule } from './guardians/guardians.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { GuardiansModule } from './guardians/guardians.module';
     StudentsModule,
     ClassesModule,
     GuardiansModule,
+    AttendanceModule,
+    AnnouncementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
