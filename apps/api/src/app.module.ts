@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
+import { ReportsModule } from './reports/reports.module';
 import { LibraryModule } from './library/library.module';
 import { TransportModule } from './transport/transport.module';
 import { HostelModule } from './hostel/hostel.module';
@@ -19,6 +20,7 @@ import { HostelModule } from './hostel/hostel.module';
     AuthModule,
     StudentsModule,
     ClassesModule,
+    ReportsModule,
     LibraryModule,
     TransportModule,
     HostelModule,
@@ -27,4 +29,3 @@ import { HostelModule } from './hostel/hostel.module';
   providers: [AppService],
 })
 export class AppModule {}
-

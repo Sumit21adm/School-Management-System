@@ -12,7 +12,9 @@ import {
   GraduationCap,
   ClipboardList,
   Bus,
-  Building2
+  Building2,
+  Bell,
+  FileBarChart
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -72,6 +74,7 @@ export default function DashboardPage() {
     { name: 'Hostel', icon: Building2, path: '/hostel' },
     { name: 'Exams', icon: FileText, path: '/exams' },
     { name: 'Fees', icon: DollarSign, path: '/fees' },
+    { name: 'Reports', icon: FileBarChart, path: '/reports' },
     { name: 'Calendar', icon: Calendar, path: '/calendar' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
@@ -163,6 +166,62 @@ export default function DashboardPage() {
             ))}
           </div>
 
+          {/* Attendance & Announcements Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Attendance Widget */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Attendance</h3>
+              {attendanceStats ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Students</span>
+                    <span className="text-sm font-semibold">{attendanceStats.today.totalStudents}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Present</span>
+                    <span className="text-sm font-semibold text-green-600">{attendanceStats.today.present}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Absent</span>
+                    <span className="text-sm font-semibold text-red-600">{attendanceStats.today.absent}</span>
+                  </div>
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Attendance Rate</span>
+                      <span className="text-xl font-bold text-blue-600">{attendanceStats.today.attendancePercentage}%</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Loading attendance data...</p>
+              )}
+            </div>
+
+            {/* Announcements Widget */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Announcements</h3>
+              <div className="space-y-4">
+                {recentAnnouncements.length > 0 ? (
+                  recentAnnouncements.map((announcement) => (
+                    <div key={announcement.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                      <Bell className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{announcement.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">{announcement.body}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(announcement.publishAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No recent announcements</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity & Upcoming Events */}
           {/* Attendance Stats */}
           {attendanceStats && (
             <div className="bg-white rounded-lg shadow p-6 mb-6">

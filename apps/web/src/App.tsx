@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import ReportsPage from './pages/ReportsPage';
 import LibraryPage from './pages/LibraryPage';
 import TransportPage from './pages/TransportPage';
 import HostelPage from './pages/HostelPage';
@@ -12,6 +13,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/library" element={<LibraryPage />} />
         <Route path="/transport" element={<TransportPage />} />
         <Route path="/hostel" element={<HostelPage />} />
@@ -22,4 +24,3 @@ function App() {
 }
 
 export default App;
-
