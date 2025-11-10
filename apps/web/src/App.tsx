@@ -9,6 +9,9 @@ import GuardiansListPage from './pages/GuardiansListPage';
 import AttendanceMarkingPage from './pages/AttendanceMarkingPage';
 import AttendanceReportsPage from './pages/AttendanceReportsPage';
 import AnnouncementsPage from './pages/AnnouncementsPage';
+import ExamsPage from './pages/exams/ExamsPage';
+import MarksEntryPage from './pages/exams/MarksEntryPage';
+import PromotionsPage from './pages/exams/PromotionsPage';
 import './index.css';
 
 function App() {
@@ -34,6 +37,11 @@ function App() {
         
         {/* Announcements Route */}
         <Route path="/announcements" element={<AnnouncementsPage />} />
+        
+        {/* Exams Routes */}
+        <Route path="/exams" element={<ExamsPage />} />
+        <Route path="/exams/papers/:examPaperId/marks" element={<MarksEntryPage />} />
+        <Route path="/promotions" element={<PromotionsPage />} />
         
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>

@@ -9,6 +9,10 @@ import { ClassesModule } from './classes/classes.module';
 import { GuardiansModule } from './guardians/guardians.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { ExamsModule } from './exams/exams.module';
+import { GradesModule } from './grades/grades.module';
+import { ReportCardsModule } from './report-cards/report-cards.module';
+import { PromotionsModule } from './promotions/promotions.module';
 
 @Module({
   imports: [
@@ -22,6 +26,10 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     GuardiansModule,
     AttendanceModule,
     AnnouncementsModule,
+    ExamsModule,
+    GradesModule,
+    ReportCardsModule,
+    PromotionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
