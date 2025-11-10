@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
@@ -10,12 +10,51 @@ import {
   LogOut,
   Home,
   GraduationCap,
-  ClipboardList
+  ClipboardList,
+  Bell,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [attendanceStats, setAttendanceStats] = useState<any>(null);
+  const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Mock API calls - in production, fetch from API
+    setAttendanceStats({
+      today: {
+        totalStudents: 1234,
+        present: 1180,
+        absent: 54,
+        attendancePercentage: '95.62',
+      },
+      weeklyTrend: [
+        { date: '2024-11-04', attendancePercentage: '94.5' },
+        { date: '2024-11-05', attendancePercentage: '96.2' },
+        { date: '2024-11-06', attendancePercentage: '95.8' },
+        { date: '2024-11-07', attendancePercentage: '97.1' },
+        { date: '2024-11-08', attendancePercentage: '95.6' },
+      ],
+    });
+
+    setRecentAnnouncements([
+      {
+        id: '1',
+        title: 'Parent-Teacher Meeting',
+        body: 'Annual parent-teacher meeting scheduled for next week.',
+        publishAt: '2024-11-15T00:00:00Z',
+      },
+      {
+        id: '2',
+        title: 'Exam Schedule Released',
+        body: 'Mid-term exam schedule has been released.',
+        publishAt: '2024-11-12T00:00:00Z',
+      },
+    ]);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -26,7 +65,8 @@ export default function DashboardPage() {
     { name: 'Dashboard', icon: Home, path: '/dashboard', active: true },
     { name: 'Students', icon: GraduationCap, path: '/students' },
     { name: 'Teachers', icon: Users, path: '/teachers' },
-    { name: 'Attendance', icon: ClipboardList, path: '/attendance' },
+    { name: 'Attendance', icon: ClipboardList, path: '/attendance/mark' },
+    { name: 'Announcements', icon: Bell, path: '/announcements' },
     { name: 'Classes', icon: BookOpen, path: '/classes' },
     { name: 'Exams', icon: FileText, path: '/exams' },
     { name: 'Fees', icon: DollarSign, path: '/fees' },
@@ -121,7 +161,69 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Recent Activity */}
+          {/* Attendance Stats */}
+          {attendanceStats && (
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Today's Attendance</h3>
+                <button
+                  onClick={() => navigate('/attendance/reports')}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  View Reports
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Total Students</p>
+                  <p className="text-2xl font-bold text-gray-900">{attendanceStats.today.totalStudents}</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Present</p>
+                  <p className="text-2xl font-bold text-green-600">{attendanceStats.today.present}</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Absent</p>
+                  <p className="text-2xl font-bold text-red-600">{attendanceStats.today.absent}</p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Attendance %</p>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-2xl font-bold text-blue-600">{attendanceStats.today.attendancePercentage}%</p>
+                    {parseFloat(attendanceStats.today.attendancePercentage) >= 95 ? (
+                      <TrendingUp className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-5 h-5 text-red-600" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Weekly Trend</h4>
+                <div className="flex items-end space-x-2">
+                  {attendanceStats.weeklyTrend.map((day: any, index: number) => (
+                    <div key={index} className="flex-1">
+                      <div className="bg-blue-500 rounded-t" style={{ height: `${parseFloat(day.attendancePercentage)}px` }}></div>
+                      <p className="text-xs text-gray-600 mt-1 text-center">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => navigate('/attendance/mark')}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Mark Attendance
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Activity and Announcements */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activities</h3>
@@ -146,24 +248,33 @@ export default function DashboardPage() {
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Announcements</h3>
+                <button
+                  onClick={() => navigate('/announcements')}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  View All
+                </button>
+              </div>
               <div className="space-y-4">
-                {[
-                  { event: 'Parent-Teacher Meeting', date: 'Dec 15, 2024', color: 'bg-blue-500' },
-                  { event: 'Annual Sports Day', date: 'Dec 20, 2024', color: 'bg-green-500' },
-                  { event: 'Mid-Term Exams', date: 'Jan 10, 2025', color: 'bg-yellow-500' },
-                  { event: 'Winter Break Starts', date: 'Dec 25, 2024', color: 'bg-purple-500' },
-                ].map((event, index) => (
-                  <div key={index} className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg">
-                    <div className={`w-10 h-10 ${event.color} rounded-lg flex items-center justify-center text-white font-bold text-xs`}>
-                      {event.date.split(' ')[1]}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{event.event}</p>
-                      <p className="text-xs text-gray-500">{event.date}</p>
+                {recentAnnouncements.map((announcement) => (
+                  <div key={announcement.id} className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                    <div className="flex items-start space-x-3">
+                      <Bell className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{announcement.title}</p>
+                        <p className="text-xs text-gray-600 mt-1">{announcement.body}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(announcement.publishAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
+                {recentAnnouncements.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-4">No announcements</p>
+                )}
               </div>
             </div>
           </div>
