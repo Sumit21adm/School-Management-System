@@ -154,7 +154,7 @@ export class StudentsService {
           photo: createStudentDto.photo,
           bloodGroup: createStudentDto.bloodGroup,
           address: createStudentDto.address,
-          customFields: createStudentDto.customFields,
+          // customFields: createStudentDto.customFields, // TODO: Add to Prisma schema
           admissionDate: createStudentDto.admissionDate
             ? new Date(createStudentDto.admissionDate)
             : new Date(),
