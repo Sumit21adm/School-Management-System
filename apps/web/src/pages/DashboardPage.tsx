@@ -10,7 +10,8 @@ import {
   LogOut,
   Home,
   GraduationCap,
-  ClipboardList
+  ClipboardList,
+  FileBarChart
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -30,6 +31,7 @@ export default function DashboardPage() {
     { name: 'Classes', icon: BookOpen, path: '/classes' },
     { name: 'Exams', icon: FileText, path: '/exams' },
     { name: 'Fees', icon: DollarSign, path: '/fees' },
+    { name: 'Reports', icon: FileBarChart, path: '/reports' },
     { name: 'Calendar', icon: Calendar, path: '/calendar' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
@@ -54,6 +56,7 @@ export default function DashboardPage() {
           {modules.map((module) => (
             <button
               key={module.name}
+              onClick={() => navigate(module.path)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                 module.active
                   ? 'bg-blue-50 text-blue-600'
