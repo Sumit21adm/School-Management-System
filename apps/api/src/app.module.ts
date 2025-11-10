@@ -6,13 +6,9 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { StudentsModule } from './students/students.module';
 import { ClassesModule } from './classes/classes.module';
-import { GuardiansModule } from './guardians/guardians.module';
-import { AttendanceModule } from './attendance/attendance.module';
-import { AnnouncementsModule } from './announcements/announcements.module';
-import { ExamsModule } from './exams/exams.module';
-import { GradesModule } from './grades/grades.module';
-import { ReportCardsModule } from './report-cards/report-cards.module';
-import { PromotionsModule } from './promotions/promotions.module';
+import { LibraryModule } from './library/library.module';
+import { TransportModule } from './transport/transport.module';
+import { HostelModule } from './hostel/hostel.module';
 
 @Module({
   imports: [
@@ -23,13 +19,9 @@ import { PromotionsModule } from './promotions/promotions.module';
     AuthModule,
     StudentsModule,
     ClassesModule,
-    GuardiansModule,
-    AttendanceModule,
-    AnnouncementsModule,
-    ExamsModule,
-    GradesModule,
-    ReportCardsModule,
-    PromotionsModule,
+    LibraryModule,
+    TransportModule,
+    HostelModule,
   ],
   controllers: [AppController],
   providers: [AppService],

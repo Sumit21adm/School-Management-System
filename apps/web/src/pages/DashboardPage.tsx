@@ -11,9 +11,8 @@ import {
   Home,
   GraduationCap,
   ClipboardList,
-  Bell,
-  TrendingUp,
-  TrendingDown
+  Bus,
+  Building2
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -68,6 +67,9 @@ export default function DashboardPage() {
     { name: 'Attendance', icon: ClipboardList, path: '/attendance/mark' },
     { name: 'Announcements', icon: Bell, path: '/announcements' },
     { name: 'Classes', icon: BookOpen, path: '/classes' },
+    { name: 'Library', icon: BookOpen, path: '/library' },
+    { name: 'Transport', icon: Bus, path: '/transport' },
+    { name: 'Hostel', icon: Building2, path: '/hostel' },
     { name: 'Exams', icon: FileText, path: '/exams' },
     { name: 'Fees', icon: DollarSign, path: '/fees' },
     { name: 'Calendar', icon: Calendar, path: '/calendar' },
