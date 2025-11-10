@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, Calendar } from 'lucide-react';
+import { getInputClass, getSelectClass } from '../styles/formStyles';
 
 interface Student {
   id: string;
@@ -22,31 +23,53 @@ export default function AttendanceMarkingPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Mock sections data - in production, fetch from API
-    setSections([
-      { id: '1', name: 'Class 1-A', class: { name: 'Class 1' } },
-      { id: '2', name: 'Class 1-B', class: { name: 'Class 1' } },
-      { id: '3', name: 'Class 2-A', class: { name: 'Class 2' } },
-    ]);
+    // Fetch sections from API
+    const fetchSections = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:3001/api/v1/sections', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setSections(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch sections:', error);
+        setSections([]);
+      }
+    };
+    
+    fetchSections();
   }, []);
 
   useEffect(() => {
     if (sectionId) {
       setLoading(true);
-      // Mock students data - in production, fetch from API
-      setTimeout(() => {
-        const mockStudents: Student[] = [
-          { id: '1', user: { firstName: 'John', lastName: 'Doe' }, admissionNo: 'ADM001' },
-          { id: '2', user: { firstName: 'Jane', lastName: 'Smith' }, admissionNo: 'ADM002' },
-          { id: '3', user: { firstName: 'Bob', lastName: 'Johnson' }, admissionNo: 'ADM003' },
-        ];
-        setStudents(mockStudents);
-        // Initialize all as present
-        const initialAttendance: Record<string, string> = {};
-        mockStudents.forEach(s => { initialAttendance[s.id] = 'P'; });
-        setAttendance(initialAttendance);
-        setLoading(false);
-      }, 500);
+      // Fetch students from API
+      const fetchStudents = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:3001/api/v1/sections/${sectionId}/students`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setStudents(data);
+            // Initialize all as present
+            const initialAttendance: Record<string, string> = {};
+            data.forEach((s: Student) => { initialAttendance[s.id] = 'P'; });
+            setAttendance(initialAttendance);
+          }
+        } catch (error) {
+          console.error('Failed to fetch students:', error);
+          setStudents([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchStudents();
     }
   }, [sectionId]);
 
@@ -64,14 +87,22 @@ export default function AttendanceMarkingPage() {
     }));
 
     try {
-      // In production, call API: POST /attendance
-      console.log('Submitting attendance:', { date, sectionId, entries });
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/v1/attendance/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ date, sectionId, entries }),
+      });
       
-      // Mock API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert('Attendance saved successfully!');
-      navigate('/dashboard');
+      if (response.ok) {
+        alert('Attendance saved successfully!');
+        navigate('/dashboard');
+      } else {
+        alert('Failed to save attendance');
+      }
     } catch (error) {
       console.error('Error saving attendance:', error);
       alert('Failed to save attendance');
@@ -97,14 +128,9 @@ export default function AttendanceMarkingPage() {
     <div className="min-h-screen bg-gray-100">
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div>
             <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
-            >
-              Back to Dashboard
-            </button>
+            <p className="text-sm text-gray-500">Record daily student attendance</p>
           </div>
         </div>
       </div>
@@ -114,25 +140,25 @@ export default function AttendanceMarkingPage() {
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Date
                 </label>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getInputClass()}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Section
                 </label>
                 <select
                   value={sectionId}
                   onChange={(e) => setSectionId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getSelectClass()}
                   required
                 >
                   <option value="">Select Section</option>
@@ -226,7 +252,7 @@ export default function AttendanceMarkingPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
               >
                 {saving ? 'Saving...' : 'Save Attendance'}
               </button>

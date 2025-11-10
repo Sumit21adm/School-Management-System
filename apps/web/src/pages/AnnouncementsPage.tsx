@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Bell, Trash2, Edit, Send } from 'lucide-react';
 
 interface Announcement {
@@ -13,7 +12,6 @@ interface Announcement {
 }
 
 export default function AnnouncementsPage() {
-  const navigate = useNavigate();
   const [announcements, setAnnouncements] = useState<Announcement[]>([
     {
       id: '1',
@@ -62,20 +60,17 @@ export default function AnnouncementsPage() {
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Announcements</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Announcements</h1>
+              <p className="text-sm text-gray-500">{announcements.length} total announcements</p>
+            </div>
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4 mr-2" />
                 <span>New Announcement</span>
-              </button>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
-              >
-                Back to Dashboard
               </button>
             </div>
           </div>

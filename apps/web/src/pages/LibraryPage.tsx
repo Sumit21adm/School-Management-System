@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Plus, Search, Download, ArrowLeft } from 'lucide-react';
+import { Plus, Search, Download } from 'lucide-react';
 
 interface Book {
   id: string;
@@ -109,27 +109,23 @@ export default function LibraryPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center space-x-4">
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Library Management</h1>
+              <p className="text-sm text-gray-500">Manage books and track issued items</p>
+            </div>
             <button
-              onClick={() => window.history.back()}
-              className="text-gray-500 hover:text-gray-700"
+              onClick={handleExport}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <Download className="w-4 h-4" />
+              <span>Export CSV</span>
             </button>
-            <BookOpen className="w-8 h-8 text-blue-600" />
-            <h1 className="text-2xl font-semibold text-gray-800">Library Management</h1>
           </div>
-          <button
-            onClick={handleExport}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
-          </button>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className="p-6">
@@ -257,7 +253,7 @@ export default function LibraryPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          {issue.fineAmount > 0 ? `$${issue.fineAmount}` : '-'}
+                          {issue.fineAmount > 0 ? `₹${issue.fineAmount}` : '-'}
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {issue.status === 'issued' && (

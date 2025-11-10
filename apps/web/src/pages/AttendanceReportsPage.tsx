@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BarChart3, Download } from 'lucide-react';
+import { getInputClass, getSelectClass } from '../styles/formStyles';
 
 export default function AttendanceReportsPage() {
-  const navigate = useNavigate();
   const [reportType, setReportType] = useState<'section' | 'student' | 'class'>('section');
   const [sectionId, setSectionId] = useState('');
   const [studentId, setStudentId] = useState('');
@@ -16,61 +15,46 @@ export default function AttendanceReportsPage() {
   const handleGenerateReport = async () => {
     setLoading(true);
     
-    // Mock API call - in production, fetch from API
-    setTimeout(() => {
-      if (reportType === 'section') {
-        setReportData({
-          sectionName: 'Class 1-A',
-          totalDays: 20,
-          students: [
-            {
-              student: { user: { firstName: 'John', lastName: 'Doe' }, admissionNo: 'ADM001' },
-              present: 18,
-              absent: 2,
-              leave: 0,
-              attendancePercentage: '90.00',
-            },
-            {
-              student: { user: { firstName: 'Jane', lastName: 'Smith' }, admissionNo: 'ADM002' },
-              present: 20,
-              absent: 0,
-              leave: 0,
-              attendancePercentage: '100.00',
-            },
-          ],
-        });
-      } else if (reportType === 'student') {
-        setReportData({
-          student: {
-            user: { firstName: 'John', lastName: 'Doe' },
-            admissionNo: 'ADM001',
-            section: { name: 'Class 1-A', class: { name: 'Class 1' } },
-          },
-          stats: {
-            present: 18,
-            absent: 2,
-            leave: 0,
-            total: 20,
-            attendancePercentage: '90.00',
-          },
-        });
+    try {
+      const token = localStorage.getItem('token');
+      let url = 'http://localhost:3001/api/v1/attendance/reports';
+      const params = new URLSearchParams({
+        type: reportType,
+        fromDate,
+        toDate,
+      });
+      
+      if (reportType === 'section' && sectionId) params.append('sectionId', sectionId);
+      if (reportType === 'student' && studentId) params.append('studentId', studentId);
+      if (reportType === 'class' && classId) params.append('classId', classId);
+      
+      const response = await fetch(`${url}?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setReportData(data);
+      } else {
+        alert('Failed to generate report');
+        setReportData(null);
       }
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      alert('Failed to generate report');
+      setReportData(null);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div>
             <h1 className="text-2xl font-bold text-gray-900">Attendance Reports</h1>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
-            >
-              Back to Dashboard
-            </button>
+            <p className="text-sm text-gray-500">View detailed attendance statistics and reports</p>
           </div>
         </div>
       </div>
@@ -79,13 +63,13 @@ export default function AttendanceReportsPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 Report Type
               </label>
               <select
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={getSelectClass()}
               >
                 <option value="section">By Section</option>
                 <option value="student">By Student</option>
@@ -95,13 +79,13 @@ export default function AttendanceReportsPage() {
 
             {reportType === 'section' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Section
                 </label>
                 <select
                   value={sectionId}
                   onChange={(e) => setSectionId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getSelectClass()}
                 >
                   <option value="">Select Section</option>
                   <option value="1">Class 1-A</option>
@@ -112,13 +96,13 @@ export default function AttendanceReportsPage() {
 
             {reportType === 'student' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Student
                 </label>
                 <select
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getSelectClass()}
                 >
                   <option value="">Select Student</option>
                   <option value="1">John Doe (ADM001)</option>
@@ -129,13 +113,13 @@ export default function AttendanceReportsPage() {
 
             {reportType === 'class' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Class
                 </label>
                 <select
                   value={classId}
                   onChange={(e) => setClassId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getSelectClass()}
                 >
                   <option value="">Select Class</option>
                   <option value="1">Class 1</option>
@@ -145,26 +129,26 @@ export default function AttendanceReportsPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 From Date
               </label>
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={getInputClass()}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 To Date
               </label>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={getInputClass()}
               />
             </div>
           </div>
@@ -173,9 +157,9 @@ export default function AttendanceReportsPage() {
             <button
               onClick={handleGenerateReport}
               disabled={loading}
-              className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
             >
-              <BarChart3 className="w-5 h-5" />
+              <BarChart3 className="w-4 h-4 mr-2" />
               <span>{loading ? 'Generating...' : 'Generate Report'}</span>
             </button>
           </div>
@@ -188,8 +172,8 @@ export default function AttendanceReportsPage() {
                 <h2 className="text-xl font-semibold text-gray-900">{reportData.sectionName}</h2>
                 <p className="text-sm text-gray-600">Total Days: {reportData.totalDays}</p>
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                <Download className="w-4 h-4" />
+              <button className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                <Download className="w-4 h-4 mr-2" />
                 <span>Export</span>
               </button>
             </div>
@@ -255,11 +239,11 @@ export default function AttendanceReportsPage() {
                   {reportData.student.user.firstName} {reportData.student.user.lastName}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {reportData.student.admissionNo} - {reportData.student.section.class.name} {reportData.student.section.name}
+                  {reportData.student.section.class.name} {reportData.student.section.name}
                 </p>
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                <Download className="w-4 h-4" />
+              <button className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                <Download className="w-4 h-4 mr-2" />
                 <span>Export</span>
               </button>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, DollarSign, AlertCircle, CheckCircle, Loader2, Plus } from 'lucide-react';
+import { FileText, IndianRupee, AlertCircle, CheckCircle, Loader2, Plus } from 'lucide-react';
 import { invoicesApi, type Invoice } from '../../services/fees.service';
 
 export default function InvoicesPage() {
@@ -102,10 +102,10 @@ export default function InvoicesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-              <p className="text-2xl font-bold text-gray-900">${stats.totalAmount}</p>
-              <p className="text-xs text-green-600 mt-1">Paid: ${stats.paidAmount}</p>
+              <p className="text-2xl font-bold text-gray-900">₹{stats.totalAmount}</p>
+              <p className="text-xs text-green-600 mt-1">Paid: ₹{stats.paidAmount}</p>
             </div>
-            <DollarSign className="w-10 h-10 text-blue-500 opacity-20" />
+            <IndianRupee className="w-10 h-10 text-blue-500 opacity-20" />
           </div>
         </div>
       </div>
@@ -176,7 +176,7 @@ export default function InvoicesPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">${invoice.total}</div>
+                    <div className="text-sm font-medium text-gray-900">₹{invoice.total}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span

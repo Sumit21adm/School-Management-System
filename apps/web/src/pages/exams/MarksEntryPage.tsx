@@ -1,42 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  BookOpen,
-  Users,
-  Calendar,
-  DollarSign,
-  FileText,
-  Settings,
-  LogOut,
-  Home,
-  GraduationCap,
-  ClipboardList,
-  Bell,
-  Save,
-  ArrowLeft,
-} from 'lucide-react';
+import { Save, ArrowLeft } from 'lucide-react';
+import { getInputClass } from '../../styles/formStyles';
 
 export default function MarksEntryPage() {
   const navigate = useNavigate();
   const { examPaperId } = useParams();
-  const [sidebarOpen] = useState(true);
   const [students, setStudents] = useState<any[]>([]);
   const [marks, setMarks] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const modules = [
-    { name: 'Dashboard', icon: Home, path: '/dashboard' },
-    { name: 'Students', icon: GraduationCap, path: '/students' },
-    { name: 'Teachers', icon: Users, path: '/teachers' },
-    { name: 'Attendance', icon: ClipboardList, path: '/attendance/mark' },
-    { name: 'Announcements', icon: Bell, path: '/announcements' },
-    { name: 'Classes', icon: BookOpen, path: '/classes' },
-    { name: 'Exams', icon: FileText, path: '/exams', active: true },
-    { name: 'Fees', icon: DollarSign, path: '/fees' },
-    { name: 'Calendar', icon: Calendar, path: '/calendar' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
-  ];
 
   useEffect(() => {
     fetchMarks();
@@ -142,51 +115,12 @@ export default function MarksEntryPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-md transition-all duration-300`}>
-        <div className="p-4 border-b">
-          <h1 className={`font-bold text-xl text-blue-600 ${!sidebarOpen && 'text-center'}`}>
-            {sidebarOpen ? 'SMS' : 'S'}
-          </h1>
-        </div>
-        <nav className="p-4 space-y-2">
-          {modules.map((module) => (
-            <button
-              key={module.name}
-              onClick={() => navigate(module.path)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                module.active
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <module.icon className="w-5 h-5" />
-              {sidebarOpen && <span>{module.name}</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="absolute bottom-0 w-full p-4 border-t">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span>Logout</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
-          <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
@@ -195,27 +129,31 @@ export default function MarksEntryPage() {
                 <ArrowLeft className="w-6 h-6" />
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-800">Enter Marks</h1>
-                <p className="text-gray-600 mt-2">Enter marks for students</p>
+                <h1 className="text-2xl font-bold text-gray-900">Enter Marks</h1>
+                <p className="text-sm text-gray-500">Enter marks for students</p>
               </div>
             </div>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
             >
-              <Save className="w-5 h-5" />
+              <Save className="w-4 h-4 mr-2" />
               {saving ? 'Saving...' : 'Save Marks'}
             </button>
           </div>
+        </div>
+      </div>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Loading...</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Loading...</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Student Name</th>
@@ -239,7 +177,7 @@ export default function MarksEntryPage() {
                           step="0.01"
                           value={marks[student.id]?.marks || ''}
                           onChange={(e) => handleMarksChange(student.id, e.target.value)}
-                          className="w-24 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className={`w-24 ${getInputClass()}`}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -247,7 +185,7 @@ export default function MarksEntryPage() {
                           type="text"
                           value={marks[student.id]?.grade || ''}
                           onChange={(e) => handleGradeChange(student.id, e.target.value)}
-                          className="w-20 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className={`w-20 ${getInputClass()}`}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -255,7 +193,7 @@ export default function MarksEntryPage() {
                           type="text"
                           value={marks[student.id]?.remarks || ''}
                           onChange={(e) => handleRemarksChange(student.id, e.target.value)}
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className={getInputClass()}
                         />
                       </td>
                     </tr>
@@ -263,9 +201,8 @@ export default function MarksEntryPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-      </main>
+        )}
+      </div>
     </div>
   );
 }

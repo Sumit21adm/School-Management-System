@@ -14,12 +14,21 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // TODO: Implement actual API call
-      // For now, simulate a successful login
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the authentication API
+      const response = await fetch('http://localhost:3001/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
+      }
+
+      const data = await response.json();
       
-      // Store token (mock)
-      localStorage.setItem('token', 'mock-jwt-token');
+      // Store the actual JWT token
+      localStorage.setItem('token', data.token || data.access_token);
       
       navigate('/dashboard');
     } catch (err) {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DollarSign, FileText, CreditCard, Settings } from 'lucide-react';
+import { IndianRupee, FileText, CreditCard, Settings } from 'lucide-react';
 import FeeHeadsPage from './FeeHeadsPage';
 import InvoicesPage from './InvoicesPage';
 
@@ -10,7 +10,7 @@ export default function FeesPage() {
     { id: 'invoices', name: 'Invoices', icon: FileText },
     { id: 'fee-heads', name: 'Fee Heads', icon: Settings },
     { id: 'payments', name: 'Payments', icon: CreditCard },
-    { id: 'fee-plans', name: 'Fee Plans', icon: DollarSign },
+    { id: 'fee-plans', name: 'Fee Plans', icon: IndianRupee },
   ];
 
   return (

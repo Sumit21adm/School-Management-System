@@ -1,24 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  BookOpen,
-  Users,
-  Calendar,
-  DollarSign,
-  FileText,
-  Settings,
-  LogOut,
-  Home,
-  GraduationCap,
-  ClipboardList,
-  Bell,
-  ArrowUp,
-  Eye,
-} from 'lucide-react';
+import { ArrowUp, Eye } from 'lucide-react';
+import { getInputClass, getSelectClass } from '../../styles/formStyles';
 
 export default function PromotionsPage() {
-  const navigate = useNavigate();
-  const [sidebarOpen] = useState(true);
   const [classes, setClasses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -30,20 +14,6 @@ export default function PromotionsPage() {
   });
   const [preview, setPreview] = useState<any>(null);
   const [promoting, setPromoting] = useState(false);
-
-  const modules = [
-    { name: 'Dashboard', icon: Home, path: '/dashboard' },
-    { name: 'Students', icon: GraduationCap, path: '/students' },
-    { name: 'Teachers', icon: Users, path: '/teachers' },
-    { name: 'Attendance', icon: ClipboardList, path: '/attendance/mark' },
-    { name: 'Announcements', icon: Bell, path: '/announcements' },
-    { name: 'Classes', icon: BookOpen, path: '/classes' },
-    { name: 'Exams', icon: FileText, path: '/exams' },
-    { name: 'Promotions', icon: ArrowUp, path: '/promotions', active: true },
-    { name: 'Fees', icon: DollarSign, path: '/fees' },
-    { name: 'Calendar', icon: Calendar, path: '/calendar' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
-  ];
 
   useEffect(() => {
     fetchData();
@@ -127,67 +97,32 @@ export default function PromotionsPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-md transition-all duration-300`}>
-        <div className="p-4 border-b">
-          <h1 className={`font-bold text-xl text-blue-600 ${!sidebarOpen && 'text-center'}`}>
-            {sidebarOpen ? 'SMS' : 'S'}
-          </h1>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Student Promotions</h1>
+            <p className="text-sm text-gray-500">Promote students to the next class</p>
+          </div>
         </div>
-        <nav className="p-4 space-y-2">
-          {modules.map((module) => (
-            <button
-              key={module.name}
-              onClick={() => navigate(module.path)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                module.active
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <module.icon className="w-5 h-5" />
-              {sidebarOpen && <span>{module.name}</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="absolute bottom-0 w-full p-4 border-t">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span>Logout</span>}
-          </button>
-        </div>
-      </aside>
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Student Promotions</h1>
-            <p className="text-gray-600 mt-2">Promote students to the next class</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Promotion Form */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Promotion Criteria</h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">From Class</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">From Class</label>
                   <select
                     value={formData.fromClassId}
                     onChange={(e) => setFormData({ ...formData, fromClassId: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={getSelectClass()}
                   >
                     <option value="">Select Class</option>
                     {classes.map((cls) => (
@@ -197,11 +132,11 @@ export default function PromotionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">To Class</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">To Class</label>
                   <select
                     value={formData.toClassId}
                     onChange={(e) => setFormData({ ...formData, toClassId: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={getSelectClass()}
                   >
                     <option value="">Select Class</option>
                     {classes.map((cls) => (
@@ -211,11 +146,11 @@ export default function PromotionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Based on Exam (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Based on Exam (Optional)</label>
                   <select
                     value={formData.examId}
                     onChange={(e) => setFormData({ ...formData, examId: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={getSelectClass()}
                   >
                     <option value="">All Students</option>
                     {exams.map((exam) => (
@@ -226,14 +161,14 @@ export default function PromotionsPage() {
 
                 {formData.examId && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Percentage</label>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Minimum Percentage</label>
                     <input
                       type="number"
                       min="0"
                       max="100"
                       value={formData.minPercentage}
                       onChange={(e) => setFormData({ ...formData, minPercentage: parseFloat(e.target.value) })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={getInputClass()}
                     />
                   </div>
                 )}
@@ -241,9 +176,9 @@ export default function PromotionsPage() {
                 <button
                   onClick={handlePreview}
                   disabled={!formData.fromClassId || !formData.toClassId}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                  className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 w-full"
                 >
-                  <Eye className="w-5 h-5" />
+                  <Eye className="w-4 h-4 mr-2" />
                   Preview Students
                 </button>
               </div>
@@ -281,17 +216,16 @@ export default function PromotionsPage() {
                   <button
                     onClick={handlePromote}
                     disabled={promoting}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
+                    className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400 w-full"
                   >
-                    <ArrowUp className="w-5 h-5" />
+                    <ArrowUp className="w-4 h-4 mr-2" />
                     {promoting ? 'Promoting...' : 'Promote Students'}
                   </button>
                 </div>
               </div>
             )}
-          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

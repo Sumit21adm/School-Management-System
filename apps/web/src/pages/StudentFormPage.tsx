@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { studentsService } from '../services/students.service';
 import { ArrowLeft, Save } from 'lucide-react';
+import { formStyles, getInputClass, getSelectClass, getTextareaClass } from '../styles/formStyles';
 
 export default function StudentFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -115,42 +116,44 @@ export default function StudentFormPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Basic Information</h2>
+          <div className={formStyles.section.container}>
+            <h2 className={formStyles.section.title}>Basic Information</h2>
           </div>
 
           <div className="p-6 space-y-6">
             {/* Personal Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name <span className="text-red-500">*</span>
+                <label className={formStyles.label.base}>
+                  First Name <span className={formStyles.label.required}>*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getInputClass()}
+                  placeholder="Sumit"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name <span className="text-red-500">*</span>
+                <label className={formStyles.label.base}>
+                  Last Name <span className={formStyles.label.required}>*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getInputClass()}
+                  placeholder="Kumar"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email <span className="text-red-500">*</span>
+                <label className={formStyles.label.base}>
+                  Email <span className={formStyles.label.required}>*</span>
                 </label>
                 <input
                   type="email"
@@ -158,38 +161,38 @@ export default function StudentFormPage() {
                   disabled={isEdit}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                  className={getInputClass(isEdit)}
                 />
               </div>
 
               {!isEdit && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password <span className="text-red-500">*</span>
+                  <label className={formStyles.label.base}>
+                    Password <span className={formStyles.label.required}>*</span>
                   </label>
                   <input
                     type="password"
                     required={!isEdit}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={getInputClass()}
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                <label className={formStyles.label.base}>Phone</label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getInputClass()}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Admission No <span className="text-red-500">*</span>
+                <label className={formStyles.label.base}>
+                  Admission No <span className={formStyles.label.required}>*</span>
                 </label>
                 <input
                   type="text"
@@ -197,28 +200,28 @@ export default function StudentFormPage() {
                   disabled={isEdit}
                   value={formData.admissionNo}
                   onChange={(e) => setFormData({ ...formData, admissionNo: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                  className={getInputClass(isEdit)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={formStyles.label.base}>
                   Date of Birth
                 </label>
                 <input
                   type="date"
                   value={formData.dob}
                   onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getInputClass()}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <label className={formStyles.label.base}>Gender</label>
                 <select
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getSelectClass()}
                 >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
@@ -228,13 +231,13 @@ export default function StudentFormPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={formStyles.label.base}>
                   Blood Group
                 </label>
                 <select
                   value={formData.bloodGroup}
                   onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getSelectClass()}
                 >
                   <option value="">Select Blood Group</option>
                   <option value="A+">A+</option>
@@ -249,12 +252,12 @@ export default function StudentFormPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <label className={formStyles.label.base}>Address</label>
                 <textarea
                   rows={3}
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={getTextareaClass()}
                 ></textarea>
               </div>
             </div>
@@ -264,14 +267,14 @@ export default function StudentFormPage() {
           <div className="p-6 border-t border-gray-200 flex justify-end gap-4">
             <Link
               to="/students"
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              className={formStyles.button.secondary}
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              className={formStyles.button.primary}
             >
               <Save className="w-4 h-4 mr-2" />
               {loading ? 'Saving...' : isEdit ? 'Update Student' : 'Create Student'}

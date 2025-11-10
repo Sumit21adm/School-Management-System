@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FileDown, FileSpreadsheet, FileText, Filter } from 'lucide-react';
 import api from '../lib/api';
 
@@ -14,7 +13,6 @@ interface ReportFilters {
 }
 
 export default function ReportsPage() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState<ReportFilters>({
@@ -71,14 +69,9 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+          <div>
             <h1 className="text-2xl font-bold text-gray-900">Report Builder</h1>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              Back to Dashboard
-            </button>
+            <p className="text-sm text-gray-500">Generate custom reports in multiple formats</p>
           </div>
         </div>
       </div>
