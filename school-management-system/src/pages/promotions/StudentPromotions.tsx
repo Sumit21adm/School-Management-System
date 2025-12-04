@@ -24,7 +24,7 @@ import {
     DialogActions,
     Chip,
 } from '@mui/material';
-import { promotionService, sessionService } from '../../lib/api';
+import { promotionService } from '../../lib/api';
 import { useSession } from '../../contexts/SessionContext';
 
 export default function StudentPromotions() {

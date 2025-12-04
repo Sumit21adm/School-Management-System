@@ -40,9 +40,10 @@ const drawerWidth = 260;
 const menuItems = [
   { path: '/', label: 'Dashboard', icon: DashboardIcon },
   { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
+  { path: '/promotions', label: 'Promotions', icon: TrendingUp },
   { path: '/fees/collection', label: 'Fee Collection', icon: MoneyIcon },
-  { path: '/settings/sessions', label: 'Sessions', icon: SettingsIcon },
-  { path: '/settings/fee-structure', label: 'Fee Management', icon: SettingsIcon },
+  { path: '/settings/sessions', label: 'Sessions', icon: Settings },
+  { path: '/settings/fee-structure', label: 'Fee Management', icon: Settings },
 ];
 
 export default function Layout({ children, onLogout }: LayoutProps) {
@@ -65,18 +66,10 @@ export default function Layout({ children, onLogout }: LayoutProps) {
           py: 2,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar
-            sx={{
-              bgcolor: 'primary.main',
-              width: 36,
-              height: 36,
-            }}
-          >
-            <SchoolIcon />
-          </Avatar>
-          <Typography variant="h6" fontWeight={600} color="primary">
-            School MS
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5 }}>
+          <School sx={{ fontSize: 28, color: 'primary.main' }} />
+          <Typography variant="h6" fontWeight={700}>
+            School ERP
           </Typography>
         </Box>
         <IconButton
