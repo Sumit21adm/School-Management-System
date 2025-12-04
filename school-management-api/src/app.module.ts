@@ -9,6 +9,8 @@ import { FeesModule } from './fees/fees.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SessionsModule } from './sessions/sessions.module';
+import { FeeTypesModule } from './fee-types/fee-types.module';
+import { FeeStructureModule } from './fee-structure/fee-structure.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { SessionsModule } from './sessions/sessions.module';
     InventoryModule,
     DashboardModule,
     SessionsModule,
+    FeeTypesModule,
+    FeeStructureModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
