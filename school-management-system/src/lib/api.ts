@@ -44,6 +44,39 @@ export const dashboardService = {
   },
 };
 
+export const sessionService = {
+  getAll: async (includeInactive: boolean = true) => {
+    const { data } = await apiClient.get('/sessions', {
+      params: { includeInactive },
+    });
+    return data;
+  },
+  getActive: async () => {
+    const { data } = await apiClient.get('/sessions/active');
+    return data;
+  },
+  getById: async (id: number) => {
+    const { data } = await apiClient.get(`/sessions/${id}`);
+    return data;
+  },
+  create: async (sessionData: any) => {
+    const { data } = await apiClient.post('/sessions', sessionData);
+    return data;
+  },
+  update: async (id: number, sessionData: any) => {
+    const { data } = await apiClient.put(`/sessions/${id}`, sessionData);
+    return data;
+  },
+  activate: async (id: number) => {
+    const { data } = await apiClient.post(`/sessions/${id}/activate`);
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await apiClient.delete(`/sessions/${id}`);
+    return data;
+  },
+};
+
 export const admissionService = {
   createStudent: (data: FormData) => apiClient.post('/admissions', data, {
     headers: { 'Content-Type': 'multipart/form-data' },

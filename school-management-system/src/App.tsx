@@ -11,6 +11,7 @@ import AdmissionForm from './pages/admissions/AdmissionForm';
 import FeeCollection from './pages/fees/FeeCollection';
 import FeeReports from './pages/fees/FeeReports';
 import { processSyncQueue } from './lib/db';
+import { SessionProvider } from './contexts/SessionContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -51,22 +52,24 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Layout onLogout={() => setIsAuthenticated(false)}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
+      <SessionProvider>
+        <Layout onLogout={() => setIsAuthenticated(false)}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
 
-          {/* Admission Routes */}
-          <Route path="/admissions" element={<AdmissionList />} />
-          <Route path="/admissions/new" element={<AdmissionForm />} />
-          <Route path="/admissions/:id/edit" element={<AdmissionForm />} />
+            {/* Admission Routes */}
+            <Route path="/admissions" element={<AdmissionList />} />
+            <Route path="/admissions/new" element={<AdmissionForm />} />
+            <Route path="/admissions/:id/edit" element={<AdmissionForm />} />
 
-          {/* Fee Routes */}
-          <Route path="/fees/collection" element={<FeeCollection />} />
-          <Route path="/fees/reports" element={<FeeReports />} />
+            {/* Fee Routes */}
+            <Route path="/fees/collection" element={<FeeCollection />} />
+            <Route path="/fees/reports" element={<FeeReports />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+      </SessionProvider>
     </ThemeProvider>
   );
 }

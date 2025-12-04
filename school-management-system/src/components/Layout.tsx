@@ -26,6 +26,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   School as SchoolIcon,
 } from '@mui/icons-material';
+import SessionSelector from './SessionSelector';
 
 interface LayoutProps {
   children: ReactNode;
@@ -181,25 +182,28 @@ export default function Layout({ children, onLogout }: LayoutProps) {
             School Management System
           </Typography>
 
-          <Chip
-            label={isOnline ? 'Online' : 'Offline'}
-            size="small"
-            color={isOnline ? 'success' : 'error'}
-            sx={{ mr: 2, fontWeight: 500 }}
-          />
+          {/* Session Selector */}
+          <Box sx={{ ml: 'auto', mr: 2 }}>
+            <SessionSelector />
+          </Box>
 
-          <IconButton
-            color="inherit"
-            onClick={onLogout}
-            sx={{
-              '&:hover': {
-                bgcolor: 'error.light',
-                color: 'error.contrastText',
-              },
-            }}
-          >
-            <LogoutIcon />
-          </IconButton>
+          {/* User Profile */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+              A
+            </Avatar>
+            <IconButton
+              onClick={onLogout}
+              color="inherit"
+              sx={{
+                bgcolor: 'error.main',
+                color: 'white',
+                '&:hover': { bgcolor: 'error.dark' },
+              }}
+            >
+              <LogoutIcon />
+            </IconButton>
+          </Box>
         </Toolbar>
       </AppBar>
 
