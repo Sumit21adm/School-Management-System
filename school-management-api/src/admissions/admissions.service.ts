@@ -12,14 +12,15 @@ export class AdmissionsService {
         });
     }
 
-    async findAll(params: { search?: string; className?: string; section?: string; status?: string; page?: number; limit?: number }) {
-        const { search, className, section, status = 'active', page = 1, limit = 10 } = params;
+    async findAll(params: { search?: string; className?: string; section?: string; status?: string; sessionId?: number; page?: number; limit?: number }) {
+        const { search, className, section, status = 'active', sessionId, page = 1, limit = 10 } = params;
         const skip = (page - 1) * limit;
 
         const where: Prisma.StudentDetailsWhereInput = {
             AND: [
                 className ? { className } : {},
                 section ? { section } : {},
+                sessionId ? { sessionId } : {},
                 search ? {
                     OR: [
                         { name: { contains: search } },
@@ -36,6 +37,9 @@ export class AdmissionsService {
                 skip,
                 take: +limit,
                 orderBy: { createdAt: 'desc' },
+                include: {
+                    session: true, // Include session data
+                }
             }),
             this.prisma.studentDetails.count({ where }),
         ]);

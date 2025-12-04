@@ -106,15 +106,24 @@ export class AdmissionsController {
     }
 
     @Get()
-    findAll(
+    async findAll(
         @Query('search') search?: string,
-        @Query('class') className?: string,
+        @Query('className') className?: string,
         @Query('section') section?: string,
         @Query('status') status?: string,
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
+        @Query('sessionId') sessionId?: string,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
     ) {
-        return this.admissionsService.findAll({ search, className, section, status, page, limit });
+        return this.admissionsService.findAll({
+            search,
+            className,
+            section,
+            status,
+            sessionId: sessionId ? parseInt(sessionId) : undefined,
+            page: page ? parseInt(page) : undefined,
+            limit: limit ? parseInt(limit) : undefined,
+        });
     }
 
     @Get(':id')

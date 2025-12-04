@@ -23,8 +23,10 @@ import {
   CurrencyRupee as MoneyIcon,
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
-  School as SchoolIcon,
-  Settings as SettingsIcon,
+  School,
+  Settings,
+  Receipt,
+  TrendingUp,
 } from '@mui/icons-material';
 import SessionSelector from './SessionSelector';
 

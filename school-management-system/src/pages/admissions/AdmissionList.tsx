@@ -50,8 +50,10 @@ import {
 } from '@mui/icons-material';
 import { admissionService } from '../../lib/api';
 import { db } from '../../lib/db';
+import { useSession } from '../../contexts/SessionContext';
 
 export default function AdmissionList() {
+  const { selectedSession } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
@@ -107,7 +109,7 @@ export default function AdmissionList() {
 
   // Try to fetch from API, fallback to IndexedDB if offline
   const { data: response = { data: [], meta: { total: 0 } }, isLoading, refetch } = useQuery({
-    queryKey: ['students', searchTerm, classFilter, sectionFilter, statusFilter, page, rowsPerPage],
+    queryKey: ['students', searchTerm, classFilter, sectionFilter, statusFilter, selectedSession?.id, page, rowsPerPage],
     queryFn: async () => {
       if (navigator.onLine) {
         const response = await admissionService.getStudents({
@@ -115,6 +117,7 @@ export default function AdmissionList() {
           class: classFilter,
           section: sectionFilter,
           status: statusFilter,
+          sessionId: selectedSession?.id,
           page: page + 1, // API is 1-indexed
           limit: rowsPerPage
         });

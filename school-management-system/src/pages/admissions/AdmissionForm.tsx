@@ -248,8 +248,14 @@ export default function AdmissionForm() {
         // Submit to API
         if (id) {
           await admissionService.updateStudent(id, formData); // Ensure API supports FormData for update
+          alert('Student updated successfully!');
+          navigate('/admissions');
         } else {
-          await admissionService.createStudent(formData);
+          const response = await admissionService.createStudent(formData);
+          const newStudentId = response.data.studentId; // Get the created student's ID
+          alert('Student created successfully! You can now add fee discounts below.');
+          // Redirect to edit mode so user can add discounts
+          navigate(`/admissions/${newStudentId}/edit`, { replace: true });
         }
       } else {
         // Offline handling (simplified - might not support file upload offline easily without IndexedDB blob storage)
@@ -257,7 +263,6 @@ export default function AdmissionForm() {
         setLoading(false);
         return;
       }
-
       navigate('/admissions');
     } catch (err: any) {
       console.error('Submission error:', err);
@@ -705,22 +710,26 @@ export default function AdmissionForm() {
                 </Grid>
               </Grid>
 
-              {/* Fee Discounts Section - Only for existing students */}
-              {id && (
-                <>
-                  <Divider sx={{ my: 4 }} />
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <School size={24} />
-                      Fee Discounts
-                    </Typography>
+              {/* Fee Discounts Section */}
+              <Divider sx={{ my: 4 }} />
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <School size={24} />
+                  Fee Discounts
+                </Typography>
+                {id ? (
+                  <>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       Manage special fee discounts for this student (scholarships, sibling discounts, etc.)
                     </Typography>
                     <StudentDiscounts studentId={id} />
-                  </Box>
-                </>
-              )}
+                  </>
+                ) : (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    💡 <strong>Tip:</strong> Save the student details first, then you can add fee discounts on the next screen.
+                  </Alert>
+                )}
+              </Box>
 
               <Box sx={{ mt: 5, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button

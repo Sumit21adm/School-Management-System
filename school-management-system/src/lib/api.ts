@@ -156,6 +156,28 @@ export const admissionService = {
   deleteStudent: (id: number) => apiClient.delete(`/admissions/${id}`),
 };
 
+export const promotionService = {
+  preview: async (params: {
+    currentSessionId: number;
+    className: string;
+    section: string;
+  }) => {
+    const { data } = await apiClient.get('/promotions/preview', { params });
+    return data;
+  },
+  execute: async (promotionData: {
+    studentIds: number[];
+    currentSessionId: number;
+    nextSessionId: number;
+    nextClass: string;
+    nextSection: string;
+    markAsPassout: boolean;
+  }) => {
+    const { data } = await apiClient.post('/promotions/execute', promotionData);
+    return data;
+  },
+};
+
 export const feeService = {
   collectFee: (data: any) => apiClient.post('/fees/collect', data),
   getTransactions: (params?: any) => apiClient.get('/fees/transactions', { params }),

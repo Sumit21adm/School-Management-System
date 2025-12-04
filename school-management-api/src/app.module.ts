@@ -12,6 +12,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { FeeTypesModule } from './fee-types/fee-types.module';
 import { FeeStructureModule } from './fee-structure/fee-structure.module';
 import { DiscountsModule } from './discounts/discounts.module';
+import { PromotionsModule } from './promotions/promotions.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { DiscountsModule } from './discounts/discounts.module';
     FeeTypesModule,
     FeeStructureModule,
     DiscountsModule,
+    PromotionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
