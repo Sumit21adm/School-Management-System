@@ -38,7 +38,6 @@ model StudentDetails {
   feeTransactions FeeTransaction[]
   examResults     ExamResult[]
   transportAssignments TransportAssignment[]
-  hostelAssignments HostelAssignment[]
 
   @@map("student_details")
 }
@@ -132,38 +131,6 @@ model TransportAssignment {
   @@map("transport_assignments")
 }
 
-// Hostel Tables
-model Hostel {
-  id          Int      @id @default(autoincrement())
-  roomNo      String   @unique @db.VarChar(10)
-  hostelType  String   @db.VarChar(20)
-  floor       Int
-  capacity    Int
-  occupied    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  assignments HostelAssignment[]
-
-  @@map("hostel")
-}
-
-model HostelAssignment {
-  id          Int      @id @default(autoincrement())
-  studentId   String   @db.VarChar(20)
-  hostelId    Int
-  bedNo       Int?
-  fee         Decimal? @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  student     StudentDetails @relation(fields: [studentId], references: [studentId])
-  hostel      Hostel        @relation(fields: [hostelId], references: [id])
-
-  @@index([studentId])
-  @@index([hostelId])
-  @@map("hostel_assignments")
-}
 
 // Inventory Tables
 model Inventory {

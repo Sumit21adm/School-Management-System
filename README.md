@@ -65,14 +65,6 @@ A complete school management system built with modern web technologies, featurin
 - ✅ Student transport assignment
 - ✅ Transport fee management
 
-### 🏠 **Hostel Management**
-- ✅ Room creation and management
-- ✅ Floor-wise organization
-- ✅ Hostel type (Boys/Girls) separation
-- ✅ Occupancy tracking
-- ✅ Student room assignment
-- ✅ Fee management
-
 ### 📦 **Inventory Management**
 - ✅ Item cataloging
 - ✅ Category management
@@ -239,7 +231,6 @@ The system uses a comprehensive database schema with key tables:
 - `feetransaction_new` - Fee transactions
 - `exam_creator`, `exam_results` - Examination management
 - `transport`, `transport_assignments` - Transport management
-- `hostel`, `hostel_assignments` - Hostel management
 - `inventory`, `stock_movements` - Inventory tracking
 - `users` - System users and authentication
 
@@ -315,6 +306,15 @@ http://localhost:3001
 ---
 
 ## 📋 Changelog
+
+### [2025-12-04] - Hostel Management Removal
+
+#### Removed
+- 🗑️ **Hostel Management module** - Feature not required for current school operations
+  - Backend hostel module deleted
+  - Database tables removed (`hostel`, `hostel_assignments`)
+  - Removed from schema relations
+  - Documentation updated
 
 ### [2025-12-04] - Session 1: Form Enhancements & Network Access
 

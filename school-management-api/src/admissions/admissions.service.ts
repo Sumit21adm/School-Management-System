@@ -57,7 +57,6 @@ export class AdmissionsService {
                 feeTransactions: true,
                 examResults: true,
                 transportAssignments: true,
-                hostelAssignments: true,
             },
         });
     }
