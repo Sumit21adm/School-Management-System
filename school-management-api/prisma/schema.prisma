@@ -36,6 +36,7 @@ model StudentDetails {
   updatedAt       DateTime  @updatedAt
 
   feeTransactions FeeTransaction[]
+  discounts       StudentFeeDiscount[]
 
   @@map("student_details")
 }
@@ -73,6 +74,7 @@ model AcademicSession {
   updatedAt   DateTime @updatedAt
 
   feeStructures FeeStructure[]
+  discounts     StudentFeeDiscount[]
 
   @@index([isActive])
   @@index([startDate, endDate])
@@ -90,6 +92,7 @@ model FeeType {
   updatedAt   DateTime @updatedAt
 
   structureItems FeeStructureItem[]
+  discounts      StudentFeeDiscount[]
 
   @@index([isActive])
   @@map("fee_types")
@@ -127,6 +130,34 @@ model FeeStructureItem {
   @@index([structureId])
   @@index([feeTypeId])
   @@map("fee_structure_items")
+}
+
+model StudentFeeDiscount {
+  id            Int          @id @default(autoincrement())
+  studentId     String       @db.VarChar(20)
+  feeTypeId     Int
+  sessionId     Int
+  discountType  DiscountType
+  discountValue Decimal      @db.Decimal(10, 2)
+  reason        String?      @db.VarChar(200)
+  approvedBy    String?      @db.VarChar(100)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  student StudentDetails  @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  feeType FeeType         @relation(fields: [feeTypeId], references: [id])
+  session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, feeTypeId, sessionId])
+  @@index([studentId])
+  @@index([feeTypeId])
+  @@index([sessionId])
+  @@map("student_fee_discounts")
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
 }
 
 // Exam Tables
