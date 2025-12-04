@@ -47,17 +47,6 @@ const menuItems = [
 export default function Layout({ children, onLogout }: LayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  useState(() => {
-    const handleOnlineStatus = () => setIsOnline(navigator.onLine);
-    window.addEventListener('online', handleOnlineStatus);
-    window.addEventListener('offline', handleOnlineStatus);
-    return () => {
-      window.removeEventListener('online', handleOnlineStatus);
-      window.removeEventListener('offline', handleOnlineStatus);
-    };
-  });
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -187,13 +176,6 @@ export default function Layout({ children, onLogout }: LayoutProps) {
 
           {/* Session Selector */}
           <SessionSelector />
-
-          <Chip
-            label={isOnline ? 'Online' : 'Offline'}
-            size="small"
-            color={isOnline ? 'success' : 'error'}
-            sx={{ mr: 2, fontWeight: 500 }}
-          />
 
           <IconButton
             color="inherit"

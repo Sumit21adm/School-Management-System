@@ -34,6 +34,7 @@ export default function SessionsManagement() {
     const [openDialog, setOpenDialog] = useState(false);
     const [editingSession, setEditingSession] = useState<any>(null);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         startDate: '',
@@ -43,7 +44,7 @@ export default function SessionsManagement() {
 
     const { data, isLoading } = useQuery({
         queryKey: ['sessions'],
-        queryFn: () => sessionService.getAll(false),
+        queryFn: () => sessionService.getAll(true),
     });
 
     const createMutation = useMutation({
@@ -51,7 +52,7 @@ export default function SessionsManagement() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
             handleCloseDialog();
-            alert('Session created successfully!');
+            setSuccessMessage('Session created successfully!');
         },
         onError: (error: any) => {
             setError(error?.response?.data?.message || 'Failed to create session');
@@ -63,7 +64,7 @@ export default function SessionsManagement() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
             handleCloseDialog();
-            alert('Session updated successfully!');
+            setSuccessMessage('Session updated successfully!');
         },
         onError: (error: any) => {
             setError(error?.response?.data?.message || 'Failed to update session');
@@ -74,7 +75,7 @@ export default function SessionsManagement() {
         mutationFn: sessionService.activate,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
-            alert('Session activated successfully!');
+            setSuccessMessage('Session activated successfully!');
         },
         onError: (error: any) => {
             setError(error?.response?.data?.message || 'Failed to activate session');
@@ -85,7 +86,7 @@ export default function SessionsManagement() {
         mutationFn: sessionService.delete,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
-            alert('Session deleted successfully!');
+            setSuccessMessage('Session deleted successfully!');
         },
         onError: (error: any) => {
             setError(error?.response?.data?.message || 'Failed to delete session');
@@ -285,6 +286,18 @@ export default function SessionsManagement() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Success Snackbar */}
+            <Snackbar
+                open={!!successMessage}
+                autoHideDuration={4000}
+                onClose={() => setSuccessMessage('')}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setSuccessMessage('')} severity="success" sx={{ width: '100%' }}>
+                    {successMessage}
+                </Alert>
+            </Snackbar>
 
             {/* Error Snackbar */}
             <Snackbar
