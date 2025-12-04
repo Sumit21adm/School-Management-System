@@ -11,6 +11,7 @@ import AdmissionForm from './pages/admissions/AdmissionForm';
 import FeeCollection from './pages/fees/FeeCollection';
 import FeeReports from './pages/fees/FeeReports';
 import FeeStructure from './pages/settings/FeeStructure';
+import SessionsManagement from './pages/settings/SessionsManagement';
 import { processSyncQueue } from './lib/db';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -69,6 +70,7 @@ function App() {
 
             {/* Settings Routes */}
             <Route path="/settings/fee-structure" element={<FeeStructure />} />
+            <Route path="/settings/sessions" element={<SessionsManagement />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

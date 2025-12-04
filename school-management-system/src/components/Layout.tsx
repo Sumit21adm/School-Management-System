@@ -40,6 +40,7 @@ const menuItems = [
   { path: '/', label: 'Dashboard', icon: DashboardIcon },
   { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
   { path: '/fees/collection', label: 'Fee Collection', icon: MoneyIcon },
+  { path: '/settings/sessions', label: 'Sessions', icon: SettingsIcon },
   { path: '/settings/fee-structure', label: 'Fee Management', icon: SettingsIcon },
 ];
 
