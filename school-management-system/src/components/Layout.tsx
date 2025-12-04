@@ -25,6 +25,7 @@ import {
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
   School as SchoolIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import SessionSelector from './SessionSelector';
 
@@ -39,6 +40,7 @@ const menuItems = [
   { path: '/', label: 'Dashboard', icon: DashboardIcon },
   { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
   { path: '/fees/collection', label: 'Fee Collection', icon: MoneyIcon },
+  { path: '/settings/fee-structure', label: 'Fee Management', icon: SettingsIcon },
 ];
 
 export default function Layout({ children, onLogout }: LayoutProps) {
