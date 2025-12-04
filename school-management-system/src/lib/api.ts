@@ -117,6 +117,27 @@ export const feeStructureService = {
   },
 };
 
+export const discountService = {
+  getByStudent: async (studentId: string, sessionId?: number) => {
+    const { data } = await apiClient.get(`/discounts/student/${studentId}`, {
+      ...(sessionId && { params: { sessionId } }),
+    });
+    return data;
+  },
+  create: async (discountData: any) => {
+    const { data } = await apiClient.post('/discounts', discountData);
+    return data;
+  },
+  update: async (id: number, discountData: any) => {
+    const { data } = await apiClient.put(`/discounts/${id}`, discountData);
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await apiClient.delete(`/discounts/${id}`);
+    return data;
+  },
+};
+
 export const admissionService = {
   createStudent: (data: FormData) => apiClient.post('/admissions', data, {
     headers: { 'Content-Type': 'multipart/form-data' },

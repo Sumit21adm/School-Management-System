@@ -95,9 +95,33 @@ export class DiscountsService {
         const updated = await this.prisma.studentFeeDiscount.update({
             where: { id },
             data: {
-            }
+                ...(updateDiscountDto.discountType && { discountType: updateDiscountDto.discountType }),
+                ...(updateDiscountDto.discountValue !== undefined && { discountValue: new Decimal(updateDiscountDto.discountValue) }),
+                ...(updateDiscountDto.reason !== undefined && { reason: updateDiscountDto.reason }),
+                ...(updateDiscountDto.approvedBy !== undefined && { approvedBy: updateDiscountDto.approvedBy }),
+            },
+            include: {
+                feeType: true,
+                session: true,
+            },
+        });
 
-    await this.prisma.studentFeeDiscount.delete({ where: { id } });
-            return { message: 'Discount deleted successfully' };
+        return {
+            ...updated,
+            discountValue: Number(updated.discountValue),
+        };
+    }
+
+    async delete(id: number) {
+        const discount = await this.prisma.studentFeeDiscount.findUnique({
+            where: { id },
+        });
+
+        if (!discount) {
+            throw new NotFoundException('Discount not found');
         }
+
+        await this.prisma.studentFeeDiscount.delete({ where: { id } });
+        return { message: 'Discount deleted successfully' };
+    }
 }
