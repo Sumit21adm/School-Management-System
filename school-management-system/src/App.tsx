@@ -10,9 +10,6 @@ import AdmissionList from './pages/admissions/AdmissionList';
 import AdmissionForm from './pages/admissions/AdmissionForm';
 import FeeCollection from './pages/fees/FeeCollection';
 import FeeReports from './pages/fees/FeeReports';
-import ExamManagement from './pages/exams/ExamManagement';
-import MarksEntry from './pages/exams/MarksEntry';
-import TransportManagement from './pages/transport/TransportManagement';
 import { processSyncQueue } from './lib/db';
 
 function App() {
@@ -67,13 +64,6 @@ function App() {
           <Route path="/fees/collection" element={<FeeCollection />} />
           <Route path="/fees/reports" element={<FeeReports />} />
 
-          {/* Exam Routes */}
-          <Route path="/exams" element={<ExamManagement />} />
-          <Route path="/exams/:id/marks" element={<MarksEntry />} />
-
-          {/* Transport Routes */}
-          <Route path="/transport" element={<TransportManagement />} />
-
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
@@ -82,3 +72,4 @@ function App() {
 }
 
 export default App;
+

@@ -55,8 +55,6 @@ export class AdmissionsService {
             where: { id },
             include: {
                 feeTransactions: true,
-                examResults: true,
-                transportAssignments: true,
             },
         });
     }

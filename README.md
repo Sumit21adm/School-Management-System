@@ -56,21 +56,6 @@ A modern, full-stack school management system built with React, NestJS, and MySQ
 - ✅ **Date-Range Reports** - Filter by date range
 - ✅ **Export Functionality** - Excel/PDF export
 
-### 📝 **Exam Management**
-#### Fully Functional Features:
-- ✅ **Exam Creation** - Schedule exams with details
-- ✅ **Marks Entry** - Subject-wise marks recording
-- ✅ **Student Results** - View individual exam results
-- ✅ **Grade Calculation** - Automatic grade assignment
-
-### 🚌 **Transport Management**
-#### Fully Functional Features:
-- ✅ **Vehicle Management** - Track school vehicles
-- ✅ **Route Creation** - Define transport routes
-- ✅ **Driver Details** - Manage driver information
-- ✅ **Student Assignment** - Assign students to routes
-- ✅ **Capacity Tracking** - Monitor vehicle capacity
-
 ### 📦 **Inventory Management**
 #### Fully Functional Features:
 - ✅ **Item Catalog** - Manage school inventory items
@@ -323,25 +308,15 @@ server: {
 
 ### Fee Management
 - **`feetransaction_new`** - Fee transactions with payment details
-
-### Exam Management
-- **`exam_creator`** - Exam definitions
-- **`exam_results`** - Student exam results
-
-### Transport Management
-- **`transport`** - Vehicle information
-- **`transport_assignments`** - Student-vehicle assignments
-
-### Inventory Management
-- **`inventory`** - Item catalog
-- **`stock_movements`** - Stock in/out tracking
-
-### Authentication
-- **`users`** - System users and credentials
+### Core Tables
+- **`student_details`** - Student information
+- **`feetransaction_new`** - Fee transactions
+- **`inventory`**, **`stock_movements`** - Inventory tracking
+- **`users`** - System users and authentication
 
 ---
 
-## � Default Credentials
+##  Default Credentials
 
 ```
 Username: admin
@@ -375,17 +350,6 @@ http://localhost:3001
 - `GET /fees/transactions` - List all transactions
 - `GET /fees/receipt/:receiptNo` - Get receipt details
 - `GET /fees/export` - Export transactions
-
-### Exams
-- `GET /exams` - List all exams
-- `POST /exams` - Create new exam
-- `POST /exams/:id/marks` - Enter student marks
-- `GET /exams/results/:studentId` - Get student results
-
-### Transport
-- `GET /transport` - List all vehicles
-- `POST /transport` - Add new vehicle
-- `GET /transport/:id` - Get vehicle details
 
 ---
 
@@ -454,6 +418,22 @@ npx prisma migrate reset
 ---
 
 ## 📋 Changelog
+
+### [2025-12-04] - Exams and Transport Removal
+
+#### Removed
+- 🗑️ **Exams Management module**
+  - Frontend pages deleted (ExamManagement, MarksEntry)
+  - Backend module removed
+  - Database tables dropped (exam_creator, exam_results)
+  - Removed from routes and navigation
+- 🗑️ **Transport Management module**
+  - Frontend page deleted (TransportManagement)
+  - Backend module removed
+  - Database tables dropped (transport, transport_assignments)
+  - Removed from routes and navigation
+
+**Reason:** Focusing development on core features (Admissions, Fees, Inventory) one module at a time.
 
 ### [2025-12-04] - Hostel Management Removal
 

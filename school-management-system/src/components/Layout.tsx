@@ -22,10 +22,9 @@ import {
   Dashboard as DashboardIcon,
   PersonAdd as PersonAddIcon,
   CurrencyRupee as MoneyIcon,
-  School as SchoolIcon,
-  DirectionsBus as BusIcon,
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
+  School as SchoolIcon,
 } from '@mui/icons-material';
 
 interface LayoutProps {
@@ -39,8 +38,6 @@ const menuItems = [
   { path: '/', label: 'Dashboard', icon: DashboardIcon },
   { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
   { path: '/fees/collection', label: 'Fee Collection', icon: MoneyIcon },
-  { path: '/exams', label: 'Exams', icon: SchoolIcon },
-  { path: '/transport', label: 'Transport', icon: BusIcon },
 ];
 
 export default function Layout({ children, onLogout }: LayoutProps) {
