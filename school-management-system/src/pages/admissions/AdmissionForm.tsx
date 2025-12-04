@@ -25,6 +25,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import StudentDiscounts from '../../components/StudentDiscounts';
 import { admissionService } from '../../lib/api';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../utils/cropImage';
@@ -703,6 +704,23 @@ export default function AdmissionForm() {
                   />
                 </Grid>
               </Grid>
+
+              {/* Fee Discounts Section - Only for existing students */}
+              {id && (
+                <>
+                  <Divider sx={{ my: 4 }} />
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <School size={24} />
+                      Fee Discounts
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Manage special fee discounts for this student (scholarships, sibling discounts, etc.)
+                    </Typography>
+                    <StudentDiscounts studentId={id} />
+                  </Box>
+                </>
+              )}
 
               <Box sx={{ mt: 5, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button
