@@ -27,8 +27,11 @@ import {
     Delete as DeleteIcon,
     CheckCircle as ActivateIcon,
 } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { sessionService } from '../../lib/api';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 
 export default function SessionsManagement() {
     const [openDialog, setOpenDialog] = useState(false);
@@ -241,39 +244,57 @@ export default function SessionsManagement() {
                     {editingSession ? 'Edit Session' : 'Add New Session'}
                 </DialogTitle>
                 <DialogContent>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                        {error && (
-                            <Alert severity="error" onClose={() => setError('')}>
-                                {error}
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                            {error && (
+                                <Alert severity="error" onClose={() => setError('')}>
+                                    {error}
+                                </Alert>
+                            )}
+                            <TextField
+                                label="Session Name"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                fullWidth
+                                placeholder="e.g., APR 2025-MAR 2026"
+                            />
+                            <DatePicker
+                                label="Start Date"
+                                value={formData.startDate ? parse(formData.startDate, 'yyyy-MM-dd', new Date()) : null}
+                                onChange={(date) => {
+                                    setFormData({
+                                        ...formData,
+                                        startDate: date ? format(date, 'yyyy-MM-dd') : '',
+                                    });
+                                }}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        helperText: 'Academic year starts (usually April 1st)',
+                                    },
+                                }}
+                            />
+                            <DatePicker
+                                label="End Date"
+                                value={formData.endDate ? parse(formData.endDate, 'yyyy-MM-dd', new Date()) : null}
+                                onChange={(date) => {
+                                    setFormData({
+                                        ...formData,
+                                        endDate: date ? format(date, 'yyyy-MM-dd') : '',
+                                    });
+                                }}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        helperText: 'Academic year ends (usually March 31st)',
+                                    },
+                                }}
+                            />
+                            <Alert severity="info" sx={{ mt: 1 }}>
+                                Academic sessions typically run from April 1st to March 31st of the following year.
                             </Alert>
-                        )}
-                        <TextField
-                            label="Session Name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            fullWidth
-                            placeholder="e.g., APR 2025-MAR 2026"
-                        />
-                        <TextField
-                            label="Start Date"
-                            type="date"
-                            value={formData.startDate}
-                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
-                        />
-                        <TextField
-                            label="End Date"
-                            type="date"
-                            value={formData.endDate}
-                            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
-                        />
-                        <Alert severity="info" sx={{ mt: 1 }}>
-                            Academic sessions typically run from April 1st to March 31st of the following year.
-                        </Alert>
-                    </Box>
+                        </Box>
+                    </LocalizationProvider>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDialog}>Cancel</Button>

@@ -22,6 +22,9 @@ import {
   Divider,
   Avatar
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { admissionService } from '../../lib/api';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../utils/cropImage';
@@ -273,82 +276,191 @@ export default function AdmissionForm() {
   );
 
   return (
-    <Box maxWidth="lg" mx="auto">
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" component="h1" fontWeight={700} color="text.primary">
-          {id ? 'Edit Admission' : 'New Admission'}
-        </Typography>
-      </Stack>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
+            <Typography variant="h4" component="h1" fontWeight={700} color="text.primary">
+              {id ? 'Edit Admission' : 'New Admission'}
+            </Typography>
+          </Stack>
 
-      <Paper elevation={3} sx={{ p: { xs: 3, md: 5 }, borderRadius: 4 }}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
+          <Paper elevation={3} sx={{ p: { xs: 3, md: 5 }, borderRadius: 4 }}>
+            <form onSubmit={handleSubmit(onSubmit)}>
+              {error && (
+                <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }}>
+                  {error}
+                </Alert>
+              )}
 
-          {/* Personal Details Section */}
-          <SectionHeader icon={User} title="Personal Details" />
-          <Grid container spacing={4} sx={{ mb: 4 }}>
-            {/* Left Column: Photo Upload */}
-            <Grid size={{ xs: 12, md: 3 }} display="flex" flexDirection="column" alignItems="center">
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2,
-                  border: '1px dashed',
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  width: '100%'
-                }}
-              >
-                <Avatar
-                  src={photoPreview || undefined}
-                  sx={{ width: 120, height: 120, bgcolor: 'grey.100', mb: 2 }}
-                >
-                  {!photoPreview && <User size={48} color="#9ca3af" />}
-                </Avatar>
-                <Button
-                  component="label"
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Upload size={16} />}
-                  fullWidth
-                >
-                  Upload Photo
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                  />
-                </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
-                  Allowed *.jpeg, *.jpg, *.png
-                </Typography>
-              </Paper>
-            </Grid>
+              {/* Personal Details Section */}
+              <SectionHeader icon={User} title="Personal Details" />
+              <Grid container spacing={4} sx={{ mb: 4 }}>
+                {/* Left Column: Photo Upload */}
+                <Grid size={{ xs: 12, md: 3 }} display="flex" flexDirection="column" alignItems="center">
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      width: '100%'
+                    }}
+                  >
+                    <Avatar
+                      src={photoPreview || undefined}
+                      sx={{ width: 120, height: 120, bgcolor: 'grey.100', mb: 2 }}
+                    >
+                      {!photoPreview && <User size={48} color="#9ca3af" />}
+                    </Avatar>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Upload size={16} />}
+                      fullWidth
+                    >
+                      Upload Photo
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handlePhotoChange}
+                      />
+                    </Button>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                      Allowed *.jpeg, *.jpg, *.png
+                    </Typography>
+                  </Paper>
+                </Grid>
 
-            {/* Right Column: Personal Details Fields */}
-            <Grid size={{ xs: 12, md: 9 }}>
-              <Grid container spacing={3}>
+                {/* Right Column: Personal Details Fields */}
+                <Grid size={{ xs: 12, md: 9 }}>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="studentId"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Student ID"
+                            fullWidth
+                            required
+                            error={!!errors.studentId}
+                            helperText={errors.studentId?.message}
+                            placeholder="e.g. STU2024001"
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="name"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Student Name"
+                            fullWidth
+                            required
+                            error={!!errors.name}
+                            helperText={errors.name?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="gender"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth error={!!errors.gender}>
+                            <InputLabel id="gender-label" shrink>Gender *</InputLabel>
+                            <Select
+                              {...field}
+                              labelId="gender-label"
+                              label="Gender *"
+                              displayEmpty
+                              renderValue={(selected) => {
+                                // Capitalize first letter
+                                return (selected as string).charAt(0).toUpperCase() + (selected as string).slice(1);
+                              }}
+                            >
+                              <MenuItem value="male">Male</MenuItem>
+                              <MenuItem value="female">Female</MenuItem>
+                              <MenuItem value="other">Other</MenuItem>
+                            </Select>
+                            {errors.gender && <FormHelperText>{errors.gender.message}</FormHelperText>}
+                          </FormControl>
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="dob"
+                        control={control}
+                        render={({ field }) => (
+                          <DatePicker
+                            label="Date of Birth"
+                            value={field.value ? new Date(field.value) : null}
+                            onChange={(date) => field.onChange(date?.toISOString().split('T')[0])}
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                required: true,
+                                error: !!errors.dob,
+                                helperText: errors.dob?.message,
+                              },
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="aadharCardNo"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Aadhar Card No"
+                            fullWidth
+                            placeholder="e.g. 123456789012 (12 digits)"
+                            error={!!errors.aadharCardNo}
+                            helperText={errors.aadharCardNo?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Parents Details Section */}
+              <SectionHeader icon={User} title="Parents Details" />
+              <Grid container spacing={3} sx={{ mb: 4 }}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
-                    name="studentId"
+                    name="fatherName"
                     control={control}
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Student ID"
+                        label="Father's Name"
                         fullWidth
                         required
-                        error={!!errors.studentId}
-                        helperText={errors.studentId?.message}
-                        placeholder="e.g. STU2024001"
+                        error={!!errors.fatherName}
+                        helperText={errors.fatherName?.message}
                         InputLabelProps={{ shrink: true }}
                       />
                     )}
@@ -356,16 +468,15 @@ export default function AdmissionForm() {
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
-                    name="name"
+                    name="fatherOccupation"
                     control={control}
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Student Name"
+                        label="Father's Occupation"
                         fullWidth
-                        required
-                        error={!!errors.name}
-                        helperText={errors.name?.message}
+                        error={!!errors.fatherOccupation}
+                        helperText={errors.fatherOccupation?.message}
                         InputLabelProps={{ shrink: true }}
                       />
                     )}
@@ -373,386 +484,288 @@ export default function AdmissionForm() {
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
-                    name="gender"
+                    name="motherName"
                     control={control}
                     render={({ field }) => (
-                      <FormControl fullWidth error={!!errors.gender}>
-                        <InputLabel id="gender-label" shrink>Gender *</InputLabel>
+                      <TextField
+                        {...field}
+                        label="Mother's Name"
+                        fullWidth
+                        required
+                        error={!!errors.motherName}
+                        helperText={errors.motherName?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="motherOccupation"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Mother's Occupation"
+                        fullWidth
+                        error={!!errors.motherOccupation}
+                        helperText={errors.motherOccupation?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Academic Details Section */}
+              <SectionHeader icon={School} title="Academic Details" />
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="admissionDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        label="Admission Date"
+                        value={field.value ? new Date(field.value) : null}
+                        onChange={(date) => field.onChange(date?.toISOString().split('T')[0])}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            required: true,
+                            error: !!errors.admissionDate,
+                            helperText: errors.admissionDate?.message,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Controller
+                    name="className"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth error={!!errors.className}>
+                        <InputLabel id="class-label" shrink>Class *</InputLabel>
                         <Select
                           {...field}
-                          labelId="gender-label"
-                          label="Gender *"
+                          labelId="class-label"
+                          label="Class *"
                           displayEmpty
                           renderValue={(selected) => {
-                            // Capitalize first letter
-                            return (selected as string).charAt(0).toUpperCase() + (selected as string).slice(1);
+                            if (selected === '') {
+                              return <Typography color="text.secondary">Select Class</Typography>;
+                            }
+                            return `Class ${selected}`;
                           }}
                         >
-                          <MenuItem value="male">Male</MenuItem>
-                          <MenuItem value="female">Female</MenuItem>
-                          <MenuItem value="other">Other</MenuItem>
+                          <MenuItem value="" disabled>
+                            Select Class
+                          </MenuItem>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(c => (
+                            <MenuItem key={c} value={c.toString()}>Class {c}</MenuItem>
+                          ))}
                         </Select>
-                        {errors.gender && <FormHelperText>{errors.gender.message}</FormHelperText>}
+                        {errors.className && <FormHelperText>{errors.className.message}</FormHelperText>}
                       </FormControl>
                     )}
                   />
                 </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Controller
+                    name="section"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth error={!!errors.section}>
+                        <InputLabel id="section-label" shrink>Section *</InputLabel>
+                        <Select
+                          {...field}
+                          labelId="section-label"
+                          label="Section *"
+                          displayEmpty
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return <Typography color="text.secondary">Select Section</Typography>;
+                            }
+                            return `Section ${selected}`;
+                          }}
+                        >
+                          <MenuItem value="A">Section A</MenuItem>
+                          <MenuItem value="B">Section B</MenuItem>
+                          <MenuItem value="C">Section C</MenuItem>
+                          <MenuItem value="D">Section D</MenuItem>
+                        </Select>
+                        {errors.section && <FormHelperText>{errors.section.message}</FormHelperText>}
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+                {/* Conditional Subjects Field */}
+                {isSeniorSecondary && (
+                  <Grid size={{ xs: 12 }}>
+                    <Controller
+                      name="subjects"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          label="Subjects / Courses"
+                          fullWidth
+                          placeholder="e.g. Physics, Chemistry, Maths"
+                          error={!!errors.subjects}
+                          helperText={errors.subjects?.message}
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      )}
+                    />
+                  </Grid>
+                )}
+              </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Contact Details Section */}
+              <SectionHeader icon={Phone} title="Contact Details" />
+              <Grid container spacing={3}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
-                    name="dob"
+                    name="email"
                     control={control}
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Date of Birth"
-                        type="date"
+                        label="Email Address"
+                        type="email"
+                        fullWidth
+                        placeholder="e.g. student@example.com"
+                        error={!!errors.email}
+                        helperText={errors.email?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="phone"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Phone Number"
                         fullWidth
                         required
+                        placeholder="e.g. 9876543210 (10-15 digits)"
+                        error={!!errors.phone}
+                        helperText={errors.phone?.message}
                         InputLabelProps={{ shrink: true }}
-                        error={!!errors.dob}
-                        helperText={errors.dob?.message}
                       />
                     )}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
-                    name="aadharCardNo"
+                    name="whatsAppNo"
                     control={control}
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Aadhar Card No"
+                        label="WhatsApp Number"
                         fullWidth
-                        placeholder="e.g. 123456789012 (12 digits)"
-                        error={!!errors.aadharCardNo}
-                        helperText={errors.aadharCardNo?.message}
+                        placeholder="e.g. 9876543210 (10-15 digits)"
+                        error={!!errors.whatsAppNo}
+                        helperText={errors.whatsAppNo?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Controller
+                    name="address"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Address"
+                        multiline
+                        rows={3}
+                        fullWidth
+                        required
+                        error={!!errors.address}
+                        helperText={errors.address?.message}
                         InputLabelProps={{ shrink: true }}
                       />
                     )}
                   />
                 </Grid>
               </Grid>
-            </Grid>
-          </Grid>
 
-          <Divider sx={{ my: 4 }} />
+              <Box sx={{ mt: 5, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => navigate('/admissions')}
+                  sx={{ px: 4 }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Save size={20} />}
+                  sx={{ px: 5 }}
+                >
+                  {loading ? 'Saving...' : 'Save Admission'}
+                </Button>
+              </Box>
+            </form>
+          </Paper>
 
-          {/* Parents Details Section */}
-          <SectionHeader icon={User} title="Parents Details" />
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Controller
-                name="fatherName"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Father's Name"
-                    fullWidth
-                    required
-                    error={!!errors.fatherName}
-                    helperText={errors.fatherName?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Controller
-                name="fatherOccupation"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Father's Occupation"
-                    fullWidth
-                    error={!!errors.fatherOccupation}
-                    helperText={errors.fatherOccupation?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Controller
-                name="motherName"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Mother's Name"
-                    fullWidth
-                    required
-                    error={!!errors.motherName}
-                    helperText={errors.motherName?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Controller
-                name="motherOccupation"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Mother's Occupation"
-                    fullWidth
-                    error={!!errors.motherOccupation}
-                    helperText={errors.motherOccupation?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-          </Grid>
 
-          <Divider sx={{ my: 4 }} />
-
-          {/* Academic Details Section */}
-          <SectionHeader icon={School} title="Academic Details" />
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Controller
-                name="admissionDate"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Admission Date"
-                    type="date"
-                    fullWidth
-                    required
-                    InputLabelProps={{ shrink: true }}
-                    error={!!errors.admissionDate}
-                    helperText={errors.admissionDate?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Controller
-                name="className"
-                control={control}
-                render={({ field }) => (
-                  <FormControl fullWidth error={!!errors.className}>
-                    <InputLabel id="class-label" shrink>Class *</InputLabel>
-                    <Select
-                      {...field}
-                      labelId="class-label"
-                      label="Class *"
-                      displayEmpty
-                      renderValue={(selected) => {
-                        if (selected === '') {
-                          return <Typography color="text.secondary">Select Class</Typography>;
-                        }
-                        return `Class ${selected}`;
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        Select Class
-                      </MenuItem>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(c => (
-                        <MenuItem key={c} value={c.toString()}>Class {c}</MenuItem>
-                      ))}
-                    </Select>
-                    {errors.className && <FormHelperText>{errors.className.message}</FormHelperText>}
-                  </FormControl>
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Controller
-                name="section"
-                control={control}
-                render={({ field }) => (
-                  <FormControl fullWidth error={!!errors.section}>
-                    <InputLabel id="section-label" shrink>Section *</InputLabel>
-                    <Select
-                      {...field}
-                      labelId="section-label"
-                      label="Section *"
-                      displayEmpty
-                      renderValue={(selected) => {
-                        if (!selected) {
-                          return <Typography color="text.secondary">Select Section</Typography>;
-                        }
-                        return `Section ${selected}`;
-                      }}
-                    >
-                      <MenuItem value="A">Section A</MenuItem>
-                      <MenuItem value="B">Section B</MenuItem>
-                      <MenuItem value="C">Section C</MenuItem>
-                      <MenuItem value="D">Section D</MenuItem>
-                    </Select>
-                    {errors.section && <FormHelperText>{errors.section.message}</FormHelperText>}
-                  </FormControl>
-                )}
-              />
-            </Grid>
-            {/* Conditional Subjects Field */}
-            {isSeniorSecondary && (
-              <Grid size={{ xs: 12 }}>
-                <Controller
-                  name="subjects"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Subjects / Courses"
-                      fullWidth
-                      placeholder="e.g. Physics, Chemistry, Maths"
-                      error={!!errors.subjects}
-                      helperText={errors.subjects?.message}
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  )}
+          {/* Crop Dialog */}
+          <Dialog
+            open={isCropDialogOpen}
+            onClose={handleCropCancel}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>Crop Photo</DialogTitle>
+            <DialogContent>
+              <Box sx={{ position: 'relative', width: '100%', height: 400, bgcolor: '#333', mb: 2 }}>
+                <Cropper
+                  image={tempPhotoUrl || ''}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
                 />
-              </Grid>
-            )}
-          </Grid>
-
-          <Divider sx={{ my: 4 }} />
-
-          {/* Contact Details Section */}
-          <SectionHeader icon={Phone} title="Contact Details" />
-          <Grid container spacing={3}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Controller
-                name="email"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Email Address"
-                    type="email"
-                    fullWidth
-                    placeholder="e.g. student@example.com"
-                    error={!!errors.email}
-                    helperText={errors.email?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Controller
-                name="phone"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Phone Number"
-                    fullWidth
-                    required
-                    placeholder="e.g. 9876543210 (10-15 digits)"
-                    error={!!errors.phone}
-                    helperText={errors.phone?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Controller
-                name="whatsAppNo"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="WhatsApp Number"
-                    fullWidth
-                    placeholder="e.g. 9876543210 (10-15 digits)"
-                    error={!!errors.whatsAppNo}
-                    helperText={errors.whatsAppNo?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <Controller
-                name="address"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Address"
-                    multiline
-                    rows={3}
-                    fullWidth
-                    required
-                    error={!!errors.address}
-                    helperText={errors.address?.message}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                )}
-              />
-            </Grid>
-          </Grid>
-
-          <Box sx={{ mt: 5, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => navigate('/admissions')}
-              sx={{ px: 4 }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Save size={20} />}
-              sx={{ px: 5 }}
-            >
-              {loading ? 'Saving...' : 'Save Admission'}
-            </Button>
-          </Box>
-        </form>
-      </Paper>
-
-
-      {/* Crop Dialog */}
-      <Dialog
-        open={isCropDialogOpen}
-        onClose={handleCropCancel}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Crop Photo</DialogTitle>
-        <DialogContent>
-          <Box sx={{ position: 'relative', width: '100%', height: 400, bgcolor: '#333', mb: 2 }}>
-            <Cropper
-              image={tempPhotoUrl || ''}
-              crop={crop}
-              zoom={zoom}
-              aspect={1}
-              onCropChange={setCrop}
-              onCropComplete={onCropComplete}
-              onZoomChange={setZoom}
-            />
-          </Box>
-          <Box sx={{ px: 2 }}>
-            <Typography gutterBottom>Zoom</Typography>
-            <Slider
-              value={zoom}
-              min={1}
-              max={3}
-              step={0.1}
-              onChange={(_e, zoom) => setZoom(zoom as number)}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCropCancel}>Cancel</Button>
-          <Button onClick={handleCropSave} variant="contained">Save Photo</Button>
-        </DialogActions>
-      </Dialog>
+              </Box>
+              <Box sx={{ px: 2 }}>
+                <Typography gutterBottom>Zoom</Typography>
+                <Slider
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  onChange={(_e, zoom) => setZoom(zoom as number)}
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={handleCropCancel}>Cancel</Button>
+              <Button onClick={handleCropSave} variant="contained">Save Photo</Button>
+            </DialogActions>
+          </Dialog>
+        </Paper>
+      </LocalizationProvider>
     </Box >
   );
 }
