@@ -12,6 +12,7 @@ import FeeCollection from './pages/fees/FeeCollection';
 import FeeReports from './pages/fees/FeeReports';
 import FeeStructure from './pages/settings/FeeStructure';
 import SessionsManagement from './pages/settings/SessionsManagement';
+import StudentDiscountsPage from './pages/students/StudentDiscountsPage';
 import { processSyncQueue } from './lib/db';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -71,6 +72,9 @@ function App() {
             {/* Settings Routes */}
             <Route path="/settings/fee-structure" element={<FeeStructure />} />
             <Route path="/settings/sessions" element={<SessionsManagement />} />
+
+            {/* Student Routes */}
+            <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
