@@ -72,9 +72,61 @@ model AcademicSession {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  feeStructures FeeStructure[]
+
   @@index([isActive])
   @@index([startDate, endDate])
   @@map("academic_sessions")
+}
+
+// Fee Management
+model FeeType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50)
+  description String?  @db.VarChar(200)
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  structureItems FeeStructureItem[]
+
+  @@index([isActive])
+  @@map("fee_types")
+}
+
+model FeeStructure {
+  id          Int      @id @default(autoincrement())
+  sessionId   Int
+  className   String   @db.VarChar(20)
+  description String?  @db.VarChar(200)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session    AcademicSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  feeItems   FeeStructureItem[]
+
+  @@unique([sessionId, className])
+  @@index([sessionId])
+  @@map("fee_structures")
+}
+
+model FeeStructureItem {
+  id          Int      @id @default(autoincrement())
+  structureId Int
+  feeTypeId   Int
+  amount      Decimal  @db.Decimal(10, 2)
+  isOptional  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  structure FeeStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  feeType   FeeType      @relation(fields: [feeTypeId], references: [id])
+
+  @@unique([structureId, feeTypeId])
+  @@index([structureId])
+  @@index([feeTypeId])
+  @@map("fee_structure_items")
 }
 
 // Exam Tables
