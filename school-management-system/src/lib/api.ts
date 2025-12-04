@@ -37,6 +37,13 @@ apiClient.interceptors.response.use(
 export const isOnline = () => navigator.onLine;
 
 // API Services
+export const dashboardService = {
+  getStats: async () => {
+    const { data } = await apiClient.get('/dashboard/stats');
+    return data;
+  },
+};
+
 export const admissionService = {
   createStudent: (data: FormData) => apiClient.post('/admissions', data, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -61,22 +68,6 @@ export const feeService = {
   getReceipt: (receiptNo: string) => apiClient.get(`/fees/receipt/${receiptNo}`),
   getDues: (studentId: string) => apiClient.get(`/fees/dues/${studentId}`),
   getFeeStructure: (classId: string) => apiClient.get(`/fees/structure/${classId}`),
-};
-
-export const examService = {
-  createExam: (data: any) => apiClient.post('/exams', data),
-  getExams: (params?: any) => apiClient.get('/exams', { params }),
-  enterMarks: (examId: string, data: any) => apiClient.post(`/exams/${examId}/marks`, data),
-  getResults: (studentId: string) => apiClient.get(`/exams/results/${studentId}`),
-  generateReportCard: (studentId: string, examId: string) =>
-    apiClient.get(`/exams/report-card/${studentId}/${examId}`, { responseType: 'blob' }),
-};
-
-export const transportService = {
-  createRoute: (data: any) => apiClient.post('/transport/routes', data),
-  getRoutes: () => apiClient.get('/transport/routes'),
-  assignStudent: (data: any) => apiClient.post('/transport/assign', data),
-  getVehicles: () => apiClient.get('/transport/vehicles'),
 };
 
 export const authService = {

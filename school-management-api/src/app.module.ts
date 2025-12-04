@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { AdmissionsModule } from './admissions/admissions.module';
 import { FeesModule } from './fees/fees.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -15,9 +16,11 @@ import { InventoryModule } from './inventory/inventory.module';
     AdmissionsModule,
     FeesModule,
     InventoryModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
   exports: [PrismaService],
 })
 export class AppModule { }
+

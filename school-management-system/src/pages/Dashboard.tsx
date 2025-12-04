@@ -10,44 +10,66 @@ import {
   ListItemIcon,
   Divider,
   Avatar,
+  Skeleton,
+  Alert,
 } from '@mui/material';
 import {
   People as PeopleIcon,
   CurrencyRupee as MoneyIcon,
   TrendingUp as TrendingUpIcon,
-  School as SchoolIcon,
+  PersonAdd as PersonAddIcon,
   FiberManualRecord as DotIcon,
 } from '@mui/icons-material';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardService } from '../lib/api';
+import { format } from 'date-fns';
+
+interface DashboardStats {
+  students: {
+    total: number;
+    active: number;
+    newThisMonth: number;
+  };
+  fees: {
+    todayCollection: number;
+    monthCollection: number;
+  };
+  recentAdmissions: Array<{
+    id: number;
+    studentId: string;
+    name: string;
+    className: string;
+    section: string;
+    createdAt: string;
+  }>;
+  recentFees: Array<{
+    id: number;
+    studentId: string;
+    amount: number;
+    paymentMode: string;
+    date: string;
+    student: {
+      name: string;
+    };
+  }>;
+}
 
 export default function Dashboard() {
-  // Mock data - will be replaced with real API calls
-  const stats = {
-    totalStudents: 1250,
-    todayCollection: 45000,
-    pendingDues: 125000,
-    upcomingExams: 3,
-  };
+  // Fetch dashboard stats with auto-refresh every 30 seconds
+  const { data, isLoading, error } = useQuery<DashboardStats>({
+    queryKey: ['dashboardStats'],
+    queryFn: dashboardService.getStats,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    staleTime: 20000, // Consider data stale after 20 seconds
+  });
 
-  const recentActivities = [
-    {
-      title: 'New admission',
-      description: 'Rajesh Kumar admitted to Class 10-A',
-      time: '5 minutes ago',
-      color: 'primary',
-    },
-    {
-      title: 'Fee collected',
-      description: '₹8,500 collected from student ID 2467',
-      time: '15 minutes ago',
-      color: 'success',
-    },
-    {
-      title: 'Exam created',
-      description: 'Mid-term exam scheduled for Class 8',
-      time: '1 hour ago',
-      color: 'info',
-    },
-  ];
+  if (error) {
+    return (
+      <Alert severity="error">
+        Failed to load dashboard data. Please try refreshing the page.
+      </Alert>
+    );
+  }
 
   return (
     <Box>
@@ -61,40 +83,56 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Students"
-            value={stats.totalStudents.toLocaleString()}
-            icon={<PeopleIcon sx={{ fontSize: 40 }} />}
-            color="#1976d2"
-            bgcolor="#e3f2fd"
-          />
+          {isLoading ? (
+            <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
+          ) : (
+            <StatCard
+              title="Total Students"
+              value={data?.students.total.toLocaleString() || '0'}
+              icon={<PeopleIcon sx={{ fontSize: 40 }} />}
+              color="#1976d2"
+              bgcolor="#e3f2fd"
+            />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Today's Collection"
-            value={`₹${stats.todayCollection.toLocaleString()}`}
-            icon={<MoneyIcon sx={{ fontSize: 40 }} />}
-            color="#2e7d32"
-            bgcolor="#e8f5e9"
-          />
+          {isLoading ? (
+            <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
+          ) : (
+            <StatCard
+              title="Today's Collection"
+              value={`₹${(data?.fees.todayCollection || 0).toLocaleString()}`}
+              icon={<MoneyIcon sx={{ fontSize: 40 }} />}
+              color="#2e7d32"
+              bgcolor="#e8f5e9"
+            />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Pending Dues"
-            value={`₹${stats.pendingDues.toLocaleString()}`}
-            icon={<TrendingUpIcon sx={{ fontSize: 40 }} />}
-            color="#d32f2f"
-            bgcolor="#ffebee"
-          />
+          {isLoading ? (
+            <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
+          ) : (
+            <StatCard
+              title="Monthly Collection"
+              value={`₹${(data?.fees.monthCollection || 0).toLocaleString()}`}
+              icon={<TrendingUpIcon sx={{ fontSize: 40 }} />}
+              color="#ed6c02"
+              bgcolor="#fff4e5"
+            />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Upcoming Exams"
-            value={stats.upcomingExams.toString()}
-            icon={<SchoolIcon sx={{ fontSize: 40 }} />}
-            color="#9c27b0"
-            bgcolor="#f3e5f5"
-          />
+          {isLoading ? (
+            <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
+          ) : (
+            <StatCard
+              title="Active Students"
+              value={data?.students.active.toLocaleString() || '0'}
+              icon={<PersonAddIcon sx={{ fontSize: 40 }} />}
+              color="#9c27b0"
+              bgcolor="#f3e5f5"
+            />
+          )}
         </Grid>
       </Grid>
 
@@ -114,64 +152,136 @@ export default function Dashboard() {
             Recent Activity
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Latest updates and activities
+            Latest admissions and fee payments
           </Typography>
 
           <Divider sx={{ mb: 2 }} />
 
-          <List disablePadding>
-            {recentActivities.map((activity, index) => (
-              <Box key={index}>
-                <ListItem
-                  disablePadding
-                  sx={{
-                    py: 2,
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                      borderRadius: 1,
-                      px: 1,
-                      mx: -1,
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Avatar
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        bgcolor: `${activity.color}.light`,
-                      }}
-                    >
-                      <DotIcon
+          {isLoading ? (
+            <Box>
+              {[1, 2, 3].map((i) => (
+                <Box key={i} sx={{ mb: 2 }}>
+                  <Skeleton variant="text" width="40%" />
+                  <Skeleton variant="text" width="80%" />
+                  <Skeleton variant="text" width="30%" />
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <List disablePadding>
+              {/* Recent Admissions */}
+              {data?.recentAdmissions.slice(0, 3).map((admission, index) => (
+                <Box key={`admission-${admission.id}`}>
+                  <ListItem
+                    disablePadding
+                    sx={{
+                      py: 2,
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        borderRadius: 1,
+                        px: 1,
+                        mx: -1,
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <Avatar
                         sx={{
-                          fontSize: 16,
-                          color: `${activity.color}.dark`,
+                          width: 32,
+                          height: 32,
+                          bgcolor: 'primary.light',
                         }}
-                      />
-                    </Avatar>
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body1" fontWeight={500}>
-                        {activity.title}
-                      </Typography>
-                    }
-                    secondary={
-                      <>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                          {activity.description}
+                      >
+                        <DotIcon
+                          sx={{
+                            fontSize: 16,
+                            color: 'primary.dark',
+                          }}
+                        />
+                      </Avatar>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography variant="body1" fontWeight={500}>
+                          New admission
                         </Typography>
-                        <Typography variant="caption" color="text.disabled">
-                          {activity.time}
+                      }
+                      secondary={
+                        <>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            {admission.name} admitted to Class {admission.className}-{admission.section}
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled">
+                            {format(new Date(admission.createdAt), 'MMM dd, yyyy h:mm a')}
+                          </Typography>
+                        </>
+                      }
+                    />
+                  </ListItem>
+                  <Divider />
+                </Box>
+              ))}
+
+              {/* Recent Fee Payments */}
+              {data?.recentFees.slice(0, 2).map((fee) => (
+                <Box key={`fee-${fee.id}`}>
+                  <ListItem
+                    disablePadding
+                    sx={{
+                      py: 2,
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        borderRadius: 1,
+                        px: 1,
+                        mx: -1,
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: 'success.light',
+                        }}
+                      >
+                        <DotIcon
+                          sx={{
+                            fontSize: 16,
+                            color: 'success.dark',
+                          }}
+                        />
+                      </Avatar>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography variant="body1" fontWeight={500}>
+                          Fee collected
                         </Typography>
-                      </>
-                    }
-                  />
-                </ListItem>
-                {index < recentActivities.length - 1 && <Divider />}
-              </Box>
-            ))}
-          </List>
+                      }
+                      secondary={
+                        <>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            ₹{fee.amount.toLocaleString()} from {fee.student.name} ({fee.paymentMode})
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled">
+                            {format(new Date(fee.date), 'MMM dd, yyyy')}
+                          </Typography>
+                        </>
+                      }
+                    />
+                  </ListItem>
+                  {data.recentFees.indexOf(fee) < data.recentFees.slice(0, 2).length - 1 && <Divider />}
+                </Box>
+              ))}
+
+              {(!data?.recentAdmissions?.length && !data?.recentFees?.length) && (
+                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
+                  No recent activity
+                </Typography>
+              )}
+            </List>
+          )}
         </CardContent>
       </Card>
     </Box>
