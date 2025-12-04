@@ -1,3 +1,4 @@
+```typescript
 import { type ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -13,7 +14,6 @@ import {
   ListItemText,
   Toolbar,
   Typography,
-  Chip,
   Divider,
   Avatar
 } from '@mui/material';
@@ -154,8 +154,8 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         position="fixed"
         elevation={1}
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: { sm: `calc(100 % - ${ drawerWidth }px)` },
+          ml: { sm: `${ drawerWidth } px` },
           bgcolor: 'background.paper',
           color: 'text.primary',
         }}
@@ -240,7 +240,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         sx={{
           flexGrow: 1,
           p: { xs: 2, sm: 3, md: 4 },
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          width: { sm: `calc(100 % - ${ drawerWidth }px)` },
           minHeight: '100vh',
           bgcolor: 'background.default',
         }}
