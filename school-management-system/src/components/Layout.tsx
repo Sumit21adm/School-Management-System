@@ -183,27 +183,27 @@ export default function Layout({ children, onLogout }: LayoutProps) {
           </Typography>
 
           {/* Session Selector */}
-          <Box sx={{ ml: 'auto', mr: 2 }}>
-            <SessionSelector />
-          </Box>
+          <SessionSelector />
 
-          {/* User Profile */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-              A
-            </Avatar>
-            <IconButton
-              onClick={onLogout}
-              color="inherit"
-              sx={{
-                bgcolor: 'error.main',
-                color: 'white',
-                '&:hover': { bgcolor: 'error.dark' },
-              }}
-            >
-              <LogoutIcon />
-            </IconButton>
-          </Box>
+          <Chip
+            label={isOnline ? 'Online' : 'Offline'}
+            size="small"
+            color={isOnline ? 'success' : 'error'}
+            sx={{ mr: 2, fontWeight: 500 }}
+          />
+
+          <IconButton
+            color="inherit"
+            onClick={onLogout}
+            sx={{
+              '&:hover': {
+                bgcolor: 'error.light',
+                color: 'error.contrastText',
+              },
+            }}
+          >
+            <LogoutIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
 
