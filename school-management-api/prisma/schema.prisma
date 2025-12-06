@@ -41,6 +41,7 @@ model StudentDetails {
 
   feeTransactions  FeeTransaction[]
   discounts        StudentFeeDiscount[]
+  demandBills      DemandBill[]
 
   @@index([className])
   @@index([section])
@@ -54,20 +55,101 @@ model FeeTransaction {
   id            Int      @id @default(autoincrement())
   transactionId String   @unique @db.VarChar(50)
   studentId     String   @db.VarChar(20)
+  sessionId     Int
   receiptNo     String   @unique @db.VarChar(50)
   amount        Decimal  @db.Decimal(10, 2)
   description   String   @db.VarChar(100)
   paymentMode   String   @db.VarChar(20)
   date          DateTime @db.Date
   yearId        Int
+  remarks       String?  @db.Text
+  collectedBy   String?  @db.VarChar(100)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  student       StudentDetails @relation(fields: [studentId], references: [studentId])
+  student       StudentDetails  @relation(fields: [studentId], references: [studentId])
+  session       AcademicSession @relation(fields: [sessionId], references: [id])
+  paymentDetails FeePaymentDetail[]
 
   @@index([studentId])
+  @@index([sessionId])
   @@index([date])
   @@map("feetransaction_new")
+}
+
+model FeePaymentDetail {
+  id            Int      @id @default(autoincrement())
+  transactionId Int
+  feeTypeId     Int
+  amount        Decimal  @db.Decimal(10, 2)
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  netAmount     Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+
+  transaction   FeeTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  feeType       FeeType        @relation(fields: [feeTypeId], references: [id])
+
+  @@index([transactionId])
+  @@index([feeTypeId])
+  @@map("fee_payment_details")
+}
+
+model DemandBill {
+  id            Int      @id @default(autoincrement())
+  billNo        String   @unique @db.VarChar(50)
+  studentId     String   @db.VarChar(20)
+  sessionId     Int
+  month         Int
+  year          Int
+  billDate      DateTime @db.Date
+  dueDate       DateTime @db.Date
+  totalAmount   Decimal  @db.Decimal(10, 2)
+  previousDues  Decimal  @default(0) @db.Decimal(10, 2)
+  lateFee       Decimal  @default(0) @db.Decimal(10, 2)
+  discount      Decimal  @default(0) @db.Decimal(10, 2)
+  netAmount     Decimal  @db.Decimal(10, 2)
+  paidAmount    Decimal  @default(0) @db.Decimal(10, 2)
+  status        BillStatus @default(PENDING)
+  sentDate      DateTime?
+  paidDate      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student       StudentDetails  @relation(fields: [studentId], references: [studentId])
+  session       AcademicSession @relation(fields: [sessionId], references: [id])
+  billItems     DemandBillItem[]
+
+  @@unique([studentId, sessionId, month, year])
+  @@index([studentId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([billDate])
+  @@map("demand_bills")
+}
+
+model DemandBillItem {
+  id          Int      @id @default(autoincrement())
+  billId      Int
+  feeTypeId   Int
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?  @db.VarChar(200)
+  createdAt   DateTime @default(now())
+
+  bill        DemandBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  feeType     FeeType    @relation(fields: [feeTypeId], references: [id])
+
+  @@index([billId])
+  @@index([feeTypeId])
+  @@map("demand_bill_items")
+}
+
+enum BillStatus {
+  PENDING
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
 }
 
 // Academic Session Management
@@ -84,6 +166,8 @@ model AcademicSession {
   students      StudentDetails[]
   feeStructures FeeStructure[]
   discounts     StudentFeeDiscount[]
+  feeTransactions FeeTransaction[]
+  demandBills   DemandBill[]
 
   @@index([isActive])
   @@index([startDate, endDate])
@@ -102,6 +186,8 @@ model FeeType {
 
   structureItems FeeStructureItem[]
   discounts      StudentFeeDiscount[]
+  paymentDetails FeePaymentDetail[]
+  billItems      DemandBillItem[]
 
   @@index([isActive])
   @@map("fee_types")
