@@ -53,6 +53,10 @@ export class CollectFeeDto {
     @IsDateString()
     @IsOptional()
     date?: string;
+
+    @IsString()
+    @IsOptional()
+    billNo?: string;  // Bill number this payment is against
 }
 
 export class FeeStatementDto {

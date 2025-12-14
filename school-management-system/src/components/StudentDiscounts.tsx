@@ -173,7 +173,7 @@ export default function StudentDiscounts({ studentId }: StudentDiscountsProps) {
                         <TableBody>
                             {discounts.map((discount: any) => (
                                 <TableRow key={discount.id}>
-                                    <TableCell>{discount.feeType?.name}</TableCell>
+                                    <TableCell>{discount.feeTypeName || discount.feeType?.name}</TableCell>
                                     <TableCell>
                                         <Chip
                                             label={discount.discountType}

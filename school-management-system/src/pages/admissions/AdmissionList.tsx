@@ -37,6 +37,8 @@ import {
   RadioGroup,
   FormControlLabel,
   FormLabel,
+  Alert,
+  TableSortLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -57,12 +59,21 @@ export default function AdmissionList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
+  const [expandedBills, setExpandedBills] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState('active');
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [orderBy, setOrderBy] = useState<string>('');
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleRequestSort = (property: string) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
 
   // Export State
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -91,9 +102,31 @@ export default function AdmissionList() {
     enabled: !!classFilter,
   });
 
-  const handleViewStudent = (student: any) => {
-    setSelectedStudent(student);
+  // Fetch fee status for selected student
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const { data: feeStatus, isLoading: loadingFees } = useQuery({
+    queryKey: ['student-fee-status', selectedStudent?.studentId, selectedSession?.id],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_URL}/fees/dashboard/${selectedStudent?.studentId}/session/${selectedSession?.id}`
+      );
+      return response.json();
+    },
+    enabled: !!selectedStudent && !!selectedSession && tabValue === 2,
+  });
+
+  const handleViewStudent = async (student: any) => {
+    setSelectedStudent(student); // Show basic info immediately
     setOpenDialog(true);
+    setTabValue(0);
+
+    // Fetch full details including history
+    try {
+      const response = await admissionService.getStudent(student.id);
+      setSelectedStudent(response.data);
+    } catch (error) {
+      console.error("Failed to fetch full student details:", error);
+    }
   };
 
   const handleCloseDialog = () => {
@@ -109,7 +142,7 @@ export default function AdmissionList() {
 
   // Try to fetch from API, fallback to IndexedDB if offline
   const { data: response = { data: [], meta: { total: 0 } }, isLoading, refetch } = useQuery({
-    queryKey: ['students', searchTerm, classFilter, sectionFilter, statusFilter, selectedSession?.id, page, rowsPerPage],
+    queryKey: ['students', searchTerm, classFilter, sectionFilter, statusFilter, selectedSession?.id, page, rowsPerPage, orderBy, order],
     queryFn: async () => {
       if (navigator.onLine) {
         const response = await admissionService.getStudents({
@@ -119,7 +152,10 @@ export default function AdmissionList() {
           status: statusFilter,
           sessionId: selectedSession?.id,
           page: page + 1, // API is 1-indexed
-          limit: rowsPerPage
+
+          limit: rowsPerPage,
+          sortBy: orderBy,
+          order: order,
         });
         return response.data;
       } else {
@@ -378,12 +414,60 @@ export default function AdmissionList() {
             <TableHead>
               <TableRow sx={{ bgcolor: 'grey.50' }}>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Photo</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>Student ID</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>Date of Birth</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Class</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>Father's Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>Phone</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>
+                  <TableSortLabel
+                    active={orderBy === 'studentId'}
+                    direction={orderBy === 'studentId' ? order : 'asc'}
+                    onClick={() => handleRequestSort('studentId')}
+                  >
+                    Student ID
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  <TableSortLabel
+                    active={orderBy === 'name'}
+                    direction={orderBy === 'name' ? order : 'asc'}
+                    onClick={() => handleRequestSort('name')}
+                  >
+                    Name
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>
+                  <TableSortLabel
+                    active={orderBy === 'dob'}
+                    direction={orderBy === 'dob' ? order : 'asc'}
+                    onClick={() => handleRequestSort('dob')}
+                  >
+                    Date of Birth
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  <TableSortLabel
+                    active={orderBy === 'className'}
+                    direction={orderBy === 'className' ? order : 'asc'}
+                    onClick={() => handleRequestSort('className')}
+                  >
+                    Class
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>
+                  <TableSortLabel
+                    active={orderBy === 'fatherName'}
+                    direction={orderBy === 'fatherName' ? order : 'asc'}
+                    onClick={() => handleRequestSort('fatherName')}
+                  >
+                    Father's Name
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', md: 'table-cell' } }}>
+                  <TableSortLabel
+                    active={orderBy === 'phone'}
+                    direction={orderBy === 'phone' ? order : 'asc'}
+                    onClick={() => handleRequestSort('phone')}
+                  >
+                    Phone
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Status</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
                   Actions
@@ -512,7 +596,7 @@ export default function AdmissionList() {
       </Card>
 
       {/* Student Details Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="lg" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Student Details</Typography>
           <Chip
@@ -546,46 +630,355 @@ export default function AdmissionList() {
 
               {tabValue === 0 && (
                 <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  {/* Basic Info */}
+                  <Grid size={{ xs: 12 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Basic Information</Typography></Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="subtitle2" color="text.secondary">Date of Birth</Typography>
-                    <Typography variant="body1" gutterBottom>{new Date(selectedStudent.dob).toLocaleDateString()}</Typography>
+                    <Typography variant="body1">{new Date(selectedStudent.dob).toLocaleDateString()}</Typography>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="subtitle2" color="text.secondary">Gender</Typography>
-                    <Typography variant="body1" gutterBottom sx={{ textTransform: 'capitalize' }}>{selectedStudent.gender}</Typography>
+                    <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{selectedStudent.gender}</Typography>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Father's Name</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedStudent.fatherName}</Typography>
+
+
+                  {/* Government IDs */}
+                  <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Government Identification</Typography></Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Typography variant="subtitle2" color="text.secondary">Student Aadhar</Typography>
+                    <Typography variant="body1">{selectedStudent.aadharCardNo || '-'}</Typography>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Mother's Name</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedStudent.motherName}</Typography>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Typography variant="subtitle2" color="text.secondary">APAAR ID</Typography>
+                    <Typography variant="body1">{selectedStudent.apaarId || '-'}</Typography>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+
+                  {/* Contact Info */}
+                  <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Contact Details</Typography></Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedStudent.phone}</Typography>
+                    <Typography variant="body1">{selectedStudent.phone}</Typography>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="subtitle2" color="text.secondary">Email</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedStudent.email || 'N/A'}</Typography>
+                    <Typography variant="body1">{selectedStudent.email || '-'}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Typography variant="subtitle2" color="text.secondary">WhatsApp</Typography>
+                    <Typography variant="body1">{selectedStudent.whatsAppNo || '-'}</Typography>
                   </Grid>
                   <Grid size={{ xs: 12 }}>
                     <Typography variant="subtitle2" color="text.secondary">Address</Typography>
-                    <Typography variant="body1" gutterBottom>{selectedStudent.address}</Typography>
+                    <Typography variant="body1">{selectedStudent.address}</Typography>
                   </Grid>
+
+                  {/* Parents Details */}
+                  <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Parents Details</Typography></Grid>
+
+                  {/* Father */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Card variant="outlined" sx={{ p: 1 }}>
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Father</Typography>
+                      <Stack spacing={1}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">Name</Typography>
+                          <Typography variant="body2">{selectedStudent.fatherName}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">Occupation</Typography>
+                          <Typography variant="body2">{selectedStudent.fatherOccupation || '-'}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">Aadhar</Typography>
+                          <Typography variant="body2">{selectedStudent.fatherAadharNo || '-'}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">PAN</Typography>
+                          <Typography variant="body2">{selectedStudent.fatherPanNo || '-'}</Typography>
+                        </Box>
+                      </Stack>
+                    </Card>
+                  </Grid>
+
+                  {/* Mother */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Card variant="outlined" sx={{ p: 1 }}>
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Mother</Typography>
+                      <Stack spacing={1}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">Name</Typography>
+                          <Typography variant="body2">{selectedStudent.motherName}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">Occupation</Typography>
+                          <Typography variant="body2">{selectedStudent.motherOccupation || '-'}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">Aadhar</Typography>
+                          <Typography variant="body2">{selectedStudent.motherAadharNo || '-'}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">PAN</Typography>
+                          <Typography variant="body2">{selectedStudent.motherPanNo || '-'}</Typography>
+                        </Box>
+                      </Stack>
+                    </Card>
+                  </Grid>
+
+                  {/* Guardian Details (Conditional) */}
+                  {selectedStudent.guardianName && (
+                    <>
+                      <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Guardian Information</Typography></Grid>
+                      <Grid size={{ xs: 12 }}>
+                        <Card variant="outlined" sx={{ p: 2 }}>
+                          <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                              <Typography variant="caption" color="text.secondary">Relation</Typography>
+                              <Typography variant="body2">{selectedStudent.guardianRelation || '-'}</Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                              <Typography variant="caption" color="text.secondary">Name</Typography>
+                              <Typography variant="body2">{selectedStudent.guardianName}</Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                              <Typography variant="caption" color="text.secondary">Phone</Typography>
+                              <Typography variant="body2">{selectedStudent.guardianPhone || '-'}</Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                              <Typography variant="caption" color="text.secondary">Occupation</Typography>
+                              <Typography variant="body2">{selectedStudent.guardianOccupation || '-'}</Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                              <Typography variant="caption" color="text.secondary">Aadhar</Typography>
+                              <Typography variant="body2">{selectedStudent.guardianAadharNo || '-'}</Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                              <Typography variant="caption" color="text.secondary">Email</Typography>
+                              <Typography variant="body2">{selectedStudent.guardianEmail || '-'}</Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                              <Typography variant="caption" color="text.secondary">Address</Typography>
+                              <Typography variant="body2">{selectedStudent.guardianAddress || '-'}</Typography>
+                            </Grid>
+                          </Grid>
+                        </Card>
+                      </Grid>
+                    </>
+                  )}
                 </Grid>
               )}
 
               {tabValue === 1 && (
-                <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                  <Typography>Academic records will be displayed here.</Typography>
+                <Box sx={{ p: 2 }}>
+                  {selectedStudent.academicHistory && selectedStudent.academicHistory.length > 0 ? (
+                    <TableContainer component={Card} variant="outlined">
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: 'grey.50' }}>
+                            <TableCell fontWeight="bold">Session</TableCell>
+                            <TableCell fontWeight="bold">Class</TableCell>
+                            <TableCell fontWeight="bold">Section</TableCell>
+                            <TableCell fontWeight="bold">Status</TableCell>
+                            <TableCell fontWeight="bold">Result</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {selectedStudent.academicHistory.map((history: any) => (
+                            <TableRow key={history.id}>
+                              <TableCell>{history.session?.name || '-'}</TableCell>
+                              <TableCell>{history.className}</TableCell>
+                              <TableCell>{history.section}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={history.status}
+                                  size="small"
+                                  color={history.status === 'promoted' ? 'success' : 'default'}
+                                  sx={{ textTransform: 'capitalize' }}
+                                />
+                              </TableCell>
+                              <TableCell>{history.finalResult || '-'}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  ) : (
+                    <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
+                      <Typography>No academic history found.</Typography>
+                    </Box>
+                  )}
                 </Box>
               )}
 
               {tabValue === 2 && (
-                <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                  <Typography>Fee payment history will be displayed here.</Typography>
+                <Box>
+                  {/* Collect Fee Button */}
+                  <Button
+                    component={Link}
+                    to={`/fees/collection-enhanced?studentId=${selectedStudent.studentId}`}
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    sx={{ mb: 3 }}
+                  >
+                    Collect Fee
+                  </Button>
+
+                  {/* Fee Status Display */}
+                  {loadingFees ? (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography color="text.secondary">Loading fee status...</Typography>
+                    </Box>
+                  ) : !feeStatus || !feeStatus.pendingBills || feeStatus.pendingBills.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                      <Typography>No demand bills generated yet.</Typography>
+                    </Box>
+                  ) : (
+                    <Box>
+                      {/* Summary Cards */}
+                      <Grid container spacing={2} sx={{ mb: 3 }}>
+                        <Grid size={{ xs: 6 }}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <Typography variant="caption" color="text.secondary">Pending Bills</Typography>
+                              <Typography variant="h6" color="error.main">
+                                ₹{feeStatus.pendingBills.reduce((sum: number, bill: any) => sum + bill.balance, 0).toLocaleString()}
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <Typography variant="caption" color="text.secondary">Total Paid</Typography>
+                              <Typography variant="h6" color="success.main">
+                                ₹{feeStatus.pendingBills.reduce((sum: number, bill: any) => sum + bill.paid, 0).toLocaleString()}
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </Grid>
+
+                      {/* Explanation Alert */}
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        <Typography variant="caption">
+                          <strong>Note:</strong> Pending Bills shows the total balance of all generated demand bills below. Generate more bills for other months to see them here.
+                        </Typography>
+                      </Alert>
+
+                      {/* Month-wise Bills Table */}
+                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                        Monthly Demand Bills
+                      </Typography>
+                      <TableContainer component={Box} sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: 'grey.50' }}>
+                              <TableCell sx={{ fontWeight: 600 }}>Month/Year</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Bill No</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Amount</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Discount</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Paid</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
+                              <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
+                              <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {feeStatus.pendingBills.map((bill: any) => {
+                              const isExpanded = expandedBills.includes(bill.billNo);
+                              const totalDiscount = bill.items?.reduce((sum: number, item: any) => sum + (item.discount || 0), 0);
+                              return (
+                                <>
+                                  <TableRow key={bill.billNo} hover>
+                                    <TableCell>
+                                      <Stack direction="row" alignItems="center" spacing={1}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => {
+                                            setExpandedBills(prev =>
+                                              isExpanded
+                                                ? prev.filter(b => b !== bill.billNo)
+                                                : [...prev, bill.billNo]
+                                            );
+                                          }}
+                                        >
+                                          {isExpanded ? '▼' : '▶'}
+                                        </IconButton>
+                                        <Typography variant="body2">{bill.month}/{bill.year}</Typography>
+                                      </Stack>
+                                    </TableCell>
+                                    <TableCell>{bill.billNo}</TableCell>
+                                    <TableCell align="right">₹{bill.amount.toLocaleString()}</TableCell>
+                                    <TableCell align="right" sx={{ color: totalDiscount > 0 ? 'error.main' : 'text.primary' }}>
+                                      {totalDiscount > 0 ? `₹${totalDiscount.toLocaleString()}` : '-'}
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ color: 'success.main' }}>
+                                      ₹{bill.paid.toLocaleString()}
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                      ₹{bill.balance.toLocaleString()}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      <Chip
+                                        label={bill.status}
+                                        size="small"
+                                        color={
+                                          bill.status === 'PAID' || bill.status === 'paid' ? 'success' :
+                                            bill.status === 'PENDING' || bill.status === 'pending' ? 'warning' : 'error'
+                                        }
+                                      />
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      {bill.balance > 0 && (
+                                        <Button
+                                          component={Link}
+                                          to={`/fees/collection-enhanced?studentId=${selectedStudent.studentId}&billNo=${bill.billNo}`}
+                                          size="small"
+                                          variant="outlined"
+                                        >
+                                          Pay
+                                        </Button>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                  {isExpanded && bill.items && (
+                                    <TableRow>
+                                      <TableCell colSpan={7} sx={{ bgcolor: 'grey.50', py: 2 }}>
+                                        <Typography variant="caption" fontWeight={600} sx={{ mb: 1, display: 'block' }}>
+                                          Bill Breakdown:
+                                        </Typography>
+                                        <Table size="small">
+                                          <TableHead>
+                                            <TableRow>
+                                              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Fee Type</TableCell>
+                                              <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Discount</TableCell>
+                                              <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Amount</TableCell>
+                                            </TableRow>
+                                          </TableHead>
+                                          <TableBody>
+                                            {bill.items.map((item: any, idx: number) => {
+                                              return (
+                                                <TableRow key={idx}>
+                                                  <TableCell sx={{ fontSize: '0.75rem' }}>{item.feeType}</TableCell>
+                                                  <TableCell align="right" sx={{ fontSize: '0.75rem' }}>{item.discount > 0 ? `₹${item.discount.toLocaleString()}` : '-'}</TableCell>
+                                                  <TableCell align="right" sx={{ fontSize: '0.75rem' }}>₹{item.amount.toLocaleString()}</TableCell>
+                                                </TableRow>
+                                              );
+                                            })}
+                                          </TableBody>
+                                        </Table>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
                 </Box>
               )}
             </Box>

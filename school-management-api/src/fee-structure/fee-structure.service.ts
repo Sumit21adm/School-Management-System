@@ -55,6 +55,7 @@ export class FeeStructureService {
                 feeTypeName: item.feeType.name,
                 amount: Number(item.amount),
                 isOptional: item.isOptional,
+                frequency: item.frequency,
             })),
             totalAmount,
         };
@@ -77,6 +78,7 @@ export class FeeStructureService {
                         feeTypeId: item.feeTypeId,
                         amount: new Decimal(item.amount),
                         isOptional: item.isOptional ?? false,
+                        frequency: item.frequency,
                     })),
                 },
             },

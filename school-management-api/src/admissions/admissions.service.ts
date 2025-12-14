@@ -12,11 +12,11 @@ export class AdmissionsService {
         });
     }
 
-    async findAll(params: { search?: string; className?: string; section?: string; status?: string; sessionId?: number; page?: number; limit?: number }) {
-        const { search, className, section, status = 'active', sessionId, page = 1, limit = 10 } = params;
+    async findAll(params: { search?: string; className?: string; section?: string; status?: string; sessionId?: number; page?: number; limit?: number; sortBy?: string; order?: 'asc' | 'desc' }) {
+        const { search, className, section, status, sessionId, page = 1, limit = 10, sortBy, order = 'asc' } = params;
         const skip = (page - 1) * limit;
 
-        const where: Prisma.StudentDetailsWhereInput = {
+        const where: any = {
             AND: [
                 className ? { className } : {},
                 section ? { section } : {},
@@ -27,16 +27,23 @@ export class AdmissionsService {
                         { studentId: { contains: search } },
                     ]
                 } : {},
-                { status } // Filter by status (default 'active')
+                status ? { status } : {} // Only filter by status if explicitly provided
             ]
         };
+
+        let orderBy: any = { createdAt: 'desc' };
+        if (sortBy) {
+            // Handle nested fields if necessary, or just top-level
+            // Assuming simple top-level fields for now
+            orderBy = { [sortBy]: order };
+        }
 
         const [data, total] = await Promise.all([
             this.prisma.studentDetails.findMany({
                 where,
                 skip,
                 take: +limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy,
                 include: {
                     session: true, // Include session data
                 }
@@ -59,6 +66,15 @@ export class AdmissionsService {
             where: { id },
             include: {
                 feeTransactions: true,
+                academicHistory: {
+                    include: {
+                        session: true
+                    },
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
+                },
+                session: true
             },
         });
     }

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, User, School, Phone, Upload } from 'lucide-react';
+import { Save, User, School, Phone, Upload, FileText, Users as UsersIcon } from 'lucide-react';
 import {
   Box,
   Button,
@@ -20,7 +20,10 @@ import {
   Stack,
   FormHelperText,
   Divider,
-  Avatar
+  Avatar,
+  RadioGroup,
+  FormControlLabel,
+  Radio
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -59,6 +62,26 @@ const admissionSchema = z.object({
       message: 'Student must be between 3 and 25 years old'
     }),
   gender: z.enum(['male', 'female', 'other']),
+  category: z.string().min(1, 'Category is required'),
+  religion: z.string().optional(),
+  apaarId: z.string().optional(), // 12 digit appar id often? Let's leave optional text for now
+
+  // Parent Docs
+  fatherAadharNo: z.string().optional().refine((val) => !val || val === '' || /^[0-9]{12}$/.test(val), { message: 'Must be 12 digits' }),
+  fatherPanNo: z.string().optional().refine((val) => !val || val === '' || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(val), { message: 'Invalid PAN format' }),
+  motherAadharNo: z.string().optional().refine((val) => !val || val === '' || /^[0-9]{12}$/.test(val), { message: 'Must be 12 digits' }),
+  motherPanNo: z.string().optional().refine((val) => !val || val === '' || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(val), { message: 'Invalid PAN format' }),
+
+  // Guardian
+  guardianRelation: z.string().optional(),
+  guardianName: z.string().optional(),
+  guardianOccupation: z.string().optional(),
+  guardianPhone: z.string().optional().refine((val) => !val || val === '' || /^[0-9]{10,15}$/.test(val), { message: 'Invalid phone' }),
+  guardianEmail: z.string().optional().refine((val) => !val || val === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), { message: 'Invalid email' }),
+  guardianAadharNo: z.string().optional().refine((val) => !val || val === '' || /^[0-9]{12}$/.test(val), { message: 'Must be 12 digits' }),
+  guardianPanNo: z.string().optional().refine((val) => !val || val === '' || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(val), { message: 'Invalid PAN format' }),
+  guardianAddress: z.string().optional(),
+
   aadharCardNo: z.string()
     .optional()
     .refine((val) => !val || val === '' || /^[0-9]{12}$/.test(val), {
@@ -113,10 +136,27 @@ export default function AdmissionForm() {
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
   const [tempPhotoUrl, setTempPhotoUrl] = useState<string | null>(null);
 
-  const { control, handleSubmit, watch, reset, formState: { errors } } = useForm<AdmissionFormData>({
+  const { control, handleSubmit, watch, reset,
+    formState: { errors },
+  } = useForm<AdmissionFormData>({
     resolver: zodResolver(admissionSchema),
     defaultValues: {
       gender: 'male',
+      category: '',
+      religion: '',
+      apaarId: '',
+      fatherAadharNo: '',
+      fatherPanNo: '',
+      motherAadharNo: '',
+      motherPanNo: '',
+      guardianRelation: 'Father',
+      guardianName: '',
+      guardianOccupation: '',
+      guardianPhone: '',
+      guardianEmail: '',
+      guardianAadharNo: '',
+      guardianPanNo: '',
+      guardianAddress: '',
       admissionDate: new Date().toISOString().split('T')[0],
       email: '',
       section: 'A',
@@ -128,6 +168,9 @@ export default function AdmissionForm() {
       subjects: '',
     },
   });
+
+  // Watch guardian relation to conditionally show fields
+  const guardianRelation = watch('guardianRelation');
 
   // Fetch student data if editing
   useEffect(() => {
@@ -150,6 +193,21 @@ export default function AdmissionForm() {
             whatsAppNo: student.whatsAppNo || '',
             email: student.email || '',
             subjects: student.subjects || '',
+            category: student.category || 'NA',
+            religion: student.religion || '',
+            apaarId: student.apaarId || '',
+            fatherAadharNo: student.fatherAadharNo || '',
+            fatherPanNo: student.fatherPanNo || '',
+            motherAadharNo: student.motherAadharNo || '',
+            motherPanNo: student.motherPanNo || '',
+            guardianRelation: student.guardianRelation || 'Father',
+            guardianName: student.guardianName || '',
+            guardianOccupation: student.guardianOccupation || '',
+            guardianPhone: student.guardianPhone || '',
+            guardianEmail: student.guardianEmail || '',
+            guardianAadharNo: student.guardianAadharNo || '',
+            guardianPanNo: student.guardianPanNo || '',
+            guardianAddress: student.guardianAddress || '',
           };
 
           // Set photo preview if exists
@@ -429,24 +487,119 @@ export default function AdmissionForm() {
                         )}
                       />
                     </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <Controller
-                        name="aadharCardNo"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Aadhar Card No"
-                            fullWidth
-                            placeholder="e.g. 123456789012 (12 digits)"
-                            error={!!errors.aadharCardNo}
-                            helperText={errors.aadharCardNo?.message}
-                            InputLabelProps={{ shrink: true }}
-                          />
-                        )}
-                      />
-                    </Grid>
                   </Grid>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Religion & Category Section */}
+              <SectionHeader icon={UsersIcon} title="Religion & Category" />
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="religion"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth error={!!errors.religion}>
+                        <InputLabel id="religion-label" shrink>Religion</InputLabel>
+                        <Select
+                          {...field}
+                          labelId="religion-label"
+                          label="Religion"
+                          displayEmpty
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return <Typography color="text.secondary">Select Religion</Typography>;
+                            }
+                            return selected as string;
+                          }}
+                        >
+                          <MenuItem value="" disabled>Select Religion</MenuItem>
+                          <MenuItem value="Hindu">Hindu</MenuItem>
+                          <MenuItem value="Muslim">Muslim</MenuItem>
+                          <MenuItem value="Christian">Christian</MenuItem>
+                          <MenuItem value="Sikh">Sikh</MenuItem>
+                          <MenuItem value="Buddhist">Buddhist</MenuItem>
+                          <MenuItem value="Jain">Jain</MenuItem>
+                          <MenuItem value="Other">Other</MenuItem>
+                        </Select>
+                        {errors.religion && <FormHelperText>{errors.religion.message}</FormHelperText>}
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="category"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth error={!!errors.category}>
+                        <InputLabel id="category-label" shrink>Category *</InputLabel>
+                        <Select
+                          {...field}
+                          labelId="category-label"
+                          label="Category *"
+                          displayEmpty
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return <Typography color="text.secondary">Select Category</Typography>;
+                            }
+                            return selected as string;
+                          }}
+                        >
+                          <MenuItem value="" disabled>Select Category</MenuItem>
+                          <MenuItem value="General">General</MenuItem>
+                          <MenuItem value="OBC">OBC</MenuItem>
+                          <MenuItem value="SC/ST">SC/ST</MenuItem>
+                          <MenuItem value="Others">Others</MenuItem>
+                          <MenuItem value="Don't want to disclose">Don't want to disclose</MenuItem>
+                        </Select>
+                        {errors.category && <FormHelperText>{errors.category.message}</FormHelperText>}
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Government Identification Section */}
+              <SectionHeader icon={FileText} title="Government Identification" />
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="aadharCardNo"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Student Aadhar Card No"
+                        fullWidth
+                        placeholder="12 digits"
+                        error={!!errors.aadharCardNo}
+                        helperText={errors.aadharCardNo?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="apaarId"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="APAAR ID"
+                        fullWidth
+                        placeholder="e.g. 123456789012"
+                        error={!!errors.apaarId}
+                        helperText={errors.apaarId?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
                 </Grid>
               </Grid>
 
@@ -455,6 +608,10 @@ export default function AdmissionForm() {
               {/* Parents Details Section */}
               <SectionHeader icon={User} title="Parents Details" />
               <Grid container spacing={3} sx={{ mb: 4 }}>
+                {/* Father */}
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, color: 'text.secondary' }}>Father's Details</Typography>
+                </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
                     name="fatherName"
@@ -477,16 +634,75 @@ export default function AdmissionForm() {
                     name="fatherOccupation"
                     control={control}
                     render={({ field }) => (
+                      <FormControl fullWidth error={!!errors.fatherOccupation}>
+                        <InputLabel id="father-occupation-label" shrink>Occupation</InputLabel>
+                        <Select
+                          {...field}
+                          labelId="father-occupation-label"
+                          label="Occupation"
+                          displayEmpty
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return <Typography color="text.secondary">Select Occupation</Typography>;
+                            }
+                            return selected as string;
+                          }}
+                        >
+                          <MenuItem value="" disabled>Select Occupation</MenuItem>
+                          <MenuItem value="State Govt">State Govt</MenuItem>
+                          <MenuItem value="Central Govt">Central Govt</MenuItem>
+                          <MenuItem value="Defence/ Army Personnel">Defence/ Army Personnel</MenuItem>
+                          <MenuItem value="Farming">Farming</MenuItem>
+                          <MenuItem value="Businessman">Businessman</MenuItem>
+                          <MenuItem value="Private Job">Private Job</MenuItem>
+                          <MenuItem value="House Maker">House Maker</MenuItem>
+                          <MenuItem value="Engineer">Engineer</MenuItem>
+                          <MenuItem value="Doctor">Doctor</MenuItem>
+                          <MenuItem value="Other">Other</MenuItem>
+                        </Select>
+                        {errors.fatherOccupation && <FormHelperText>{errors.fatherOccupation.message}</FormHelperText>}
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="fatherAadharNo"
+                    control={control}
+                    render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Father's Occupation"
+                        label="Aadhar No"
                         fullWidth
-                        error={!!errors.fatherOccupation}
-                        helperText={errors.fatherOccupation?.message}
+                        placeholder="12 digits"
+                        error={!!errors.fatherAadharNo}
+                        helperText={errors.fatherAadharNo?.message}
                         InputLabelProps={{ shrink: true }}
                       />
                     )}
                   />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="fatherPanNo"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="PAN No"
+                        fullWidth
+                        placeholder="e.g. ABCDE1234F"
+                        error={!!errors.fatherPanNo}
+                        helperText={errors.fatherPanNo?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                </Grid>
+
+                {/* Mother */}
+                <Grid size={{ xs: 12 }} sx={{ mt: 1 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, color: 'text.secondary' }}>Mother's Details</Typography>
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
@@ -510,17 +726,237 @@ export default function AdmissionForm() {
                     name="motherOccupation"
                     control={control}
                     render={({ field }) => (
+                      <FormControl fullWidth error={!!errors.motherOccupation}>
+                        <InputLabel id="mother-occupation-label" shrink>Occupation</InputLabel>
+                        <Select
+                          {...field}
+                          labelId="mother-occupation-label"
+                          label="Occupation"
+                          displayEmpty
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return <Typography color="text.secondary">Select Occupation</Typography>;
+                            }
+                            return selected as string;
+                          }}
+                        >
+                          <MenuItem value="" disabled>Select Occupation</MenuItem>
+                          <MenuItem value="State Govt">State Govt</MenuItem>
+                          <MenuItem value="Central Govt">Central Govt</MenuItem>
+                          <MenuItem value="Defence/ Army Personnel">Defence/ Army Personnel</MenuItem>
+                          <MenuItem value="Farming">Farming</MenuItem>
+                          <MenuItem value="Businessman">Businessman</MenuItem>
+                          <MenuItem value="Private Job">Private Job</MenuItem>
+                          <MenuItem value="House Maker">House Maker</MenuItem>
+                          <MenuItem value="Engineer">Engineer</MenuItem>
+                          <MenuItem value="Doctor">Doctor</MenuItem>
+                          <MenuItem value="Other">Other</MenuItem>
+                        </Select>
+                        {errors.motherOccupation && <FormHelperText>{errors.motherOccupation.message}</FormHelperText>}
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="motherAadharNo"
+                    control={control}
+                    render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Mother's Occupation"
+                        label="Aadhar No"
                         fullWidth
-                        error={!!errors.motherOccupation}
-                        helperText={errors.motherOccupation?.message}
+                        placeholder="12 digits"
+                        error={!!errors.motherAadharNo}
+                        helperText={errors.motherAadharNo?.message}
                         InputLabelProps={{ shrink: true }}
                       />
                     )}
                   />
                 </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Controller
+                    name="motherPanNo"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="PAN No"
+                        fullWidth
+                        placeholder="e.g. ABCDE1234F"
+                        error={!!errors.motherPanNo}
+                        helperText={errors.motherPanNo?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Guardian Information Section */}
+              <SectionHeader icon={UsersIcon} title="Guardian Information" />
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControl component="fieldset">
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>First Contact Person / Guardian</Typography>
+                    <Controller
+                      name="guardianRelation"
+                      control={control}
+                      render={({ field }) => (
+                        <RadioGroup row {...field}>
+                          <FormControlLabel value="Father" control={<Radio />} label="Father" />
+                          <FormControlLabel value="Mother" control={<Radio />} label="Mother" />
+                          <FormControlLabel value="Other" control={<Radio />} label="Other" />
+                        </RadioGroup>
+                      )}
+                    />
+                  </FormControl>
+                </Grid>
+
+                {guardianRelation === 'Other' && (
+                  <>
+                    <Grid size={{ xs: 12 }}><Divider sx={{ borderStyle: 'dashed' }} /></Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="guardianName"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Guardian Name"
+                            fullWidth
+                            error={!!errors.guardianName}
+                            helperText={errors.guardianName?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="guardianPhone"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Guardian Phone"
+                            fullWidth
+                            placeholder="Digits only"
+                            error={!!errors.guardianPhone}
+                            helperText={errors.guardianPhone?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="guardianOccupation"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth error={!!errors.guardianOccupation}>
+                            <InputLabel id="guardian-occupation-label" shrink>Guardian Occupation</InputLabel>
+                            <Select
+                              {...field}
+                              labelId="guardian-occupation-label"
+                              label="Guardian Occupation"
+                              displayEmpty
+                              renderValue={(selected) => {
+                                if (!selected) {
+                                  return <Typography color="text.secondary">Select Occupation</Typography>;
+                                }
+                                return selected as string;
+                              }}
+                            >
+                              <MenuItem value="" disabled>Select Occupation</MenuItem>
+                              <MenuItem value="State Govt">State Govt</MenuItem>
+                              <MenuItem value="Central Govt">Central Govt</MenuItem>
+                              <MenuItem value="Defence/ Army Personnel">Defence/ Army Personnel</MenuItem>
+                              <MenuItem value="Farming">Farming</MenuItem>
+                              <MenuItem value="Businessman">Businessman</MenuItem>
+                              <MenuItem value="Private Job">Private Job</MenuItem>
+                              <MenuItem value="House Maker">House Maker</MenuItem>
+                              <MenuItem value="Engineer">Engineer</MenuItem>
+                              <MenuItem value="Doctor">Doctor</MenuItem>
+                              <MenuItem value="Other">Other</MenuItem>
+                            </Select>
+                            {errors.guardianOccupation && <FormHelperText>{errors.guardianOccupation.message}</FormHelperText>}
+                          </FormControl>
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="guardianEmail"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Guardian Email"
+                            fullWidth
+                            error={!!errors.guardianEmail}
+                            helperText={errors.guardianEmail?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="guardianAadharNo"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Guardian Aadhar No"
+                            fullWidth
+                            placeholder="12 digits"
+                            error={!!errors.guardianAadharNo}
+                            helperText={errors.guardianAadharNo?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Controller
+                        name="guardianPanNo"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Guardian PAN No"
+                            fullWidth
+                            placeholder="e.g. ABCDE1234F"
+                            error={!!errors.guardianPanNo}
+                            helperText={errors.guardianPanNo?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Controller
+                        name="guardianAddress"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Guardian Address"
+                            multiline
+                            rows={3}
+                            fullWidth
+                            error={!!errors.guardianAddress}
+                            helperText={errors.guardianAddress?.message}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                  </>
+                )}
               </Grid>
 
               <Divider sx={{ my: 4 }} />
@@ -722,7 +1158,7 @@ export default function AdmissionForm() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       Manage special fee discounts for this student (scholarships, sibling discounts, etc.)
                     </Typography>
-                    <StudentDiscounts studentId={id} />
+                    <StudentDiscounts studentId={watch('studentId')} />
                   </>
                 ) : (
                   <Alert severity="info" sx={{ mt: 2 }}>
@@ -754,7 +1190,6 @@ export default function AdmissionForm() {
             </form>
           </Paper>
 
-
           {/* Crop Dialog */}
           <Dialog
             open={isCropDialogOpen}
@@ -775,24 +1210,27 @@ export default function AdmissionForm() {
                   onZoomChange={setZoom}
                 />
               </Box>
-              <Box sx={{ px: 2 }}>
-                <Typography gutterBottom>Zoom</Typography>
+              <Box sx={{ px: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Typography variant="body2">Zoom</Typography>
                 <Slider
                   value={zoom}
                   min={1}
                   max={3}
                   step={0.1}
-                  onChange={(_e, zoom) => setZoom(zoom as number)}
+                  aria-labelledby="Zoom"
+                  onChange={(_, zoom) => setZoom(Number(zoom))}
                 />
               </Box>
             </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
+            <DialogActions>
               <Button onClick={handleCropCancel}>Cancel</Button>
-              <Button onClick={handleCropSave} variant="contained">Save Photo</Button>
+              <Button onClick={handleCropSave} variant="contained">
+                Save
+              </Button>
             </DialogActions>
           </Dialog>
         </Paper>
       </LocalizationProvider>
-    </Box >
+    </Box>
   );
 }

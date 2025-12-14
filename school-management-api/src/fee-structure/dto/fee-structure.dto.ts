@@ -12,6 +12,10 @@ export class FeeStructureItemDto {
     @IsOptional()
     @IsBoolean()
     isOptional?: boolean;
+
+    @IsOptional()
+    @IsString()
+    frequency?: string;
 }
 
 export class UpsertFeeStructureDto {

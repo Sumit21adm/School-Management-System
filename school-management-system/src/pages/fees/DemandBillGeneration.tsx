@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
+import { useSession } from '../../contexts/SessionContext';
 import {
   Box,
   Button,
@@ -24,6 +26,8 @@ import {
   Radio,
   FormLabel,
   Chip,
+  Checkbox,
+  FormGroup,
   Table,
   TableBody,
   TableCell,
@@ -65,23 +69,41 @@ const MONTHS = [
 ];
 
 const CLASSES = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
-const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
+
+// Define which sections each class has
+const CLASS_SECTIONS: Record<string, string[]> = {
+  '1': ['A', 'B'],
+  '2': ['A', 'B'],
+  '3': ['A', 'B', 'C'],
+  '4': ['A', 'B', 'C'],
+  '5': ['A', 'B', 'C'],
+  '6': ['A', 'B', 'C', 'D'],
+  '7': ['A', 'B', 'C', 'D'],
+  '8': ['A', 'B', 'C', 'D'],
+  '9': ['A', 'B', 'C'],
+  '10': ['A', 'B', 'C'],
+  '11': ['A', 'B'],
+  '12': ['A', 'B'],
+};
 
 export default function DemandBillGeneration() {
+  const { selectedSession } = useSession();
   const [generationResult, setGenerationResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [selectedFeeTypes, setSelectedFeeTypes] = useState<number[]>([]);
+  const [autoCalculateLateFees, setAutoCalculateLateFees] = useState(true);
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-  const { control, handleSubmit, watch, formState: { errors } } = useForm<DemandBillFormData>({
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<DemandBillFormData>({
     resolver: zodResolver(demandBillSchema),
     defaultValues: {
       generationType: 'single',
       studentId: '',
       className: '',
       section: '',
-      sessionId: 1,
+      sessionId: selectedSession?.id || 1,
       month: currentMonth,
       year: currentYear,
       dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -90,6 +112,55 @@ export default function DemandBillGeneration() {
 
   const generationType = watch('generationType');
 
+  const location = useLocation();
+
+  // Fetch fee types - include location in key to force refetch on navigation
+  const { data: feeTypesData } = useQuery({
+    queryKey: ['fee-types', location.pathname],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/fee-types`);
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
+  });
+
+  const feeTypes = feeTypesData?.feeTypes || [];
+
+  const queryClient = useQueryClient();
+
+  // Fetch bill generation history
+  const { data: billHistory, isLoading: loadingHistory } = useQuery({
+    queryKey: ['bill-generation-history', selectedSession?.id],
+    queryFn: async () => {
+      if (!selectedSession?.id) return [];
+      const response = await axios.get(`${API_URL}/fees/demand-bills/history/${selectedSession.id}`);
+      return response.data;
+    },
+    enabled: !!selectedSession?.id,
+  });
+
+  // Use ref to track if we've initialized Tuition Fee selection
+  const hasInitializedRef = useRef(false);
+
+  // Reset initialization flag when component unmounts
+  useEffect(() => {
+    return () => {
+      hasInitializedRef.current = false;
+    };
+  }, []);
+
+  // Pre-select Tuition Fee when fee types load
+  useEffect(() => {
+    if (feeTypes.length > 0 && !hasInitializedRef.current) {
+      const tuitionFee = feeTypes.find((ft: any) => ft.name === 'Tuition Fee');
+      if (tuitionFee) {
+        setSelectedFeeTypes([tuitionFee.id]);
+        hasInitializedRef.current = true;
+      }
+    }
+  }, [feeTypes]);
+
   const generateBillsMutation = useMutation({
     mutationFn: async (data: DemandBillFormData) => {
       const payload: any = {
@@ -97,6 +168,8 @@ export default function DemandBillGeneration() {
         month: data.month,
         year: data.year,
         dueDate: data.dueDate,
+        selectedFeeTypeIds: selectedFeeTypes,
+        autoCalculateLateFees,
       };
 
       if (data.generationType === 'single' && data.studentId) {
@@ -112,6 +185,8 @@ export default function DemandBillGeneration() {
     onSuccess: (data) => {
       setGenerationResult(data);
       setError('');
+      // Refresh the history
+      queryClient.invalidateQueries({ queryKey: ['bill-generation-history', selectedSession?.id] });
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || 'Failed to generate bills');
@@ -120,8 +195,24 @@ export default function DemandBillGeneration() {
   });
 
   const onSubmit = (data: DemandBillFormData) => {
+    // Validate that at least one fee type is selected
+    console.log('Submitting with selectedFeeTypes:', selectedFeeTypes);
+
+    if (selectedFeeTypes.length === 0) {
+      setError('Please select at least one fee type');
+      return;
+    }
+
+    setError(''); // Clear any previous errors
     generateBillsMutation.mutate(data);
   };
+
+  // Auto-update sessionId when selected session changes
+  useEffect(() => {
+    if (selectedSession) {
+      setValue('sessionId', selectedSession.id);
+    }
+  }, [selectedSession, setValue]);
 
   return (
     <Box>
@@ -129,14 +220,16 @@ export default function DemandBillGeneration() {
         Demand Bill Generation
       </Typography>
 
-      <Grid container spacing={3}>
-        {/* Generation Form */}
-        <Grid item xs={12} lg={7}>
+      <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+        {/* Left Side - Generation Form + Result + History */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
             <form onSubmit={handleSubmit(onSubmit)}>
               {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
+                  <Typography variant="body2" fontWeight={600}>
+                    Error: {error}
+                  </Typography>
                 </Alert>
               )}
 
@@ -162,27 +255,9 @@ export default function DemandBillGeneration() {
                 />
 
                 {/* Conditional Fields */}
-                {generationType === 'single' && (
-                  <Controller
-                    name="studentId"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Student ID"
-                        fullWidth
-                        required
-                        error={!!errors.studentId}
-                        helperText={errors.studentId?.message}
-                        placeholder="Enter student ID"
-                      />
-                    )}
-                  />
-                )}
-
                 {generationType === 'class' && (
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
+                  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <Box sx={{ flex: 1 }}>
                       <Controller
                         name="className"
                         control={control}
@@ -200,48 +275,69 @@ export default function DemandBillGeneration() {
                           </FormControl>
                         )}
                       />
-                    </Grid>
-                    <Grid item xs={6}>
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
                       <Controller
                         name="section"
                         control={control}
+                        render={({ field }) => {
+                          const selectedClass = watch('className');
+                          const availableSections = selectedClass ? CLASS_SECTIONS[selectedClass] || [] : [];
+
+                          return (
+                            <FormControl fullWidth disabled={!selectedClass}>
+                              <InputLabel>Section (Optional)</InputLabel>
+                              <Select {...field} label="Section (Optional)">
+                                <MenuItem value="">All Sections</MenuItem>
+                                {availableSections.map((sec) => (
+                                  <MenuItem key={sec} value={sec}>
+                                    Section {sec}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          );
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Session, Period and Student ID (all in one row) */}
+                <Grid container spacing={2}>
+                  {generationType === 'single' && (
+                    <Grid item xs={12} md={3}>
+                      <Controller
+                        name="studentId"
+                        control={control}
                         render={({ field }) => (
-                          <FormControl fullWidth>
-                            <InputLabel>Section (Optional)</InputLabel>
-                            <Select {...field} label="Section (Optional)">
-                              <MenuItem value="">All Sections</MenuItem>
-                              {SECTIONS.map((sec) => (
-                                <MenuItem key={sec} value={sec}>
-                                  Section {sec}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
+                          <TextField
+                            {...field}
+                            label="Student ID"
+                            fullWidth
+                            required
+                            error={!!errors.studentId}
+                            helperText={errors.studentId?.message}
+                            placeholder="Enter ID"
+                          />
                         )}
                       />
                     </Grid>
-                  </Grid>
-                )}
-
-                {/* Session and Period */}
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
+                  )}
+                  <Grid item xs={12} md={generationType === 'single' ? 3 : 4}>
+                    <TextField
+                      label={selectedSession ? `Academic Session (ID: ${selectedSession.id})` : 'Academic Session'}
+                      fullWidth
+                      value={selectedSession?.name || 'No session selected'}
+                      InputProps={{ readOnly: true }}
+                    />
                     <Controller
                       name="sessionId"
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Session ID"
-                          type="number"
-                          fullWidth
-                          required
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        />
-                      )}
+                      render={({ field }) => <input type="hidden" {...field} />}
                     />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={generationType === 'single' ? 3 : 4}>
                     <Controller
                       name="month"
                       control={control}
@@ -259,7 +355,7 @@ export default function DemandBillGeneration() {
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={generationType === 'single' ? 3 : 4}>
                     <Controller
                       name="year"
                       control={control}
@@ -284,16 +380,113 @@ export default function DemandBillGeneration() {
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label="Due Date"
+                      label="Due Date (Payment Deadline)"
                       type="date"
                       fullWidth
                       required
                       InputLabelProps={{ shrink: true }}
                       error={!!errors.dueDate}
-                      helperText={errors.dueDate?.message || 'Payment deadline for this bill'}
+                      helperText={errors.dueDate?.message}
                     />
                   )}
                 />
+
+                {/* Fee Types Selection */}
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                    Select Fee Types to Include
+                  </Typography>
+                  <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setSelectedFeeTypes(feeTypes.map((ft: any) => ft.id))}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        // Keep Tuition Fee selected even on deselect all
+                        const tuitionFee = feeTypes.find((ft: any) => ft.name === 'Tuition Fee');
+                        setSelectedFeeTypes(tuitionFee ? [tuitionFee.id] : []);
+                      }}
+                    >
+                      Deselect All
+                    </Button>
+                  </Box>
+                  <FormGroup>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                          xs: '1fr',
+                          sm: 'repeat(2, 1fr)',
+                          md: 'repeat(3, 1fr)'
+                        },
+                        gap: 2,
+                        mb: 2
+                      }}
+                    >
+                      {feeTypes
+                        .filter((feeType: any) => {
+                          // Exclude Late Fee (auto-added) and Caution Money (refundable)
+                          const oneTimeFees = ['Late Fee', 'Caution Money'];
+                          return !oneTimeFees.includes(feeType.name);
+                        })
+                        .map((feeType: any) => {
+                          const isTuitionFee = feeType.name === 'Tuition Fee';
+                          return (
+                            <FormControlLabel
+                              key={feeType.id}
+                              control={
+                                <Checkbox
+                                  checked={selectedFeeTypes.includes(feeType.id)}
+                                  // disabled={isTuitionFee} // Allow editing tuition fee
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedFeeTypes([...selectedFeeTypes, feeType.id]);
+                                    } else {
+                                      setSelectedFeeTypes(selectedFeeTypes.filter(id => id !== feeType.id));
+                                    }
+                                  }}
+                                />
+                              }
+                              label={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  {feeType.name}
+                                  {feeType.frequency && (
+                                    <Chip
+                                      size="small"
+                                      label={feeType.frequency}
+                                      sx={{ height: 20 }}
+                                      color={
+                                        feeType.frequency === 'Monthly' ? 'primary' :
+                                          feeType.frequency === 'Yearly' ? 'secondary' :
+                                            feeType.frequency === 'Refundable' ? 'success' :
+                                              'default'
+                                      }
+                                    />
+                                  )}
+                                </Box>
+                              }
+                            />
+                          );
+                        })}
+                    </Box>
+                  </FormGroup>
+                  <FormControlLabel
+                    sx={{ mt: 2 }}
+                    control={
+                      <Checkbox
+                        checked={autoCalculateLateFees}
+                        onChange={(e) => setAutoCalculateLateFees(e.target.checked)}
+                      />
+                    }
+                    label="Automatically add Late Fees for students with overdue payments"
+                  />
+                </Box>
 
                 <Button
                   type="submit"
@@ -391,6 +584,9 @@ export default function DemandBillGeneration() {
                           <TableCell align="center" sx={{ fontWeight: 600 }}>
                             Status
                           </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>
+                            Actions
+                          </TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -414,6 +610,25 @@ export default function DemandBillGeneration() {
                                 size="small"
                               />
                             </TableCell>
+                            <TableCell align="center">
+                              {result.status === 'success' && result.billNo && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => {
+                                    // Navigate to bill view page with bill number
+                                    window.open(`/fees/bill/${result.billNo}`, '_blank');
+                                  }}
+                                >
+                                  View Bill
+                                </Button>
+                              )}
+                              {result.status === 'failed' && result.error && (
+                                <Typography variant="caption" color="error">
+                                  {result.error}
+                                </Typography>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -432,11 +647,108 @@ export default function DemandBillGeneration() {
               </Stack>
             </Paper>
           )}
-        </Grid>
 
-        {/* Sidebar - Info */}
-        <Grid item xs={12} lg={5}>
+          {/* Bill Generation History */}
+          <Paper elevation={2} sx={{ p: 4, borderRadius: 3, mt: 3 }}>
+            <Typography variant="h6" fontWeight={600} gutterBottom>
+              📜 Bill Generation History
+            </Typography>
+            {loadingHistory ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : billHistory && billHistory.length > 0 ? (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'grey.100' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Bill Type</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Month/Year</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Class(es)</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 600 }}>Students</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Total Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {billHistory.map((batch: any, index: number) => (
+                      <TableRow key={index} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={500}>
+                            {new Date(batch.timestamp).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(batch.timestamp).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={batch.billType}
+                            size="small"
+                            color={
+                              batch.billType === 'Single Student' ? 'default' :
+                                batch.billType === 'Entire Section' ? 'primary' :
+                                  batch.billType === 'Entire Class' ? 'secondary' : 'info'
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {MONTHS[batch.month - 1]} {batch.year}
+                        </TableCell>
+                        <TableCell>
+                          {batch.classes.map((cls: string) => `Class ${cls}`).join(', ')}
+                          {batch.sections.length > 0 && (
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              Section(s): {batch.sections.join(', ')}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip label={batch.studentCount} size="small" variant="outlined" />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography fontWeight={600} color="success.main">
+                            ₹{batch.totalAmount.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Alert severity="info">
+                No bills generated yet for this session. Generate demand bills above to see history here.
+              </Alert>
+            )}
+          </Paper>
+        </Box>
+
+        {/* Right Sidebar - Quick Tips & Info */}
+        <Box sx={{ width: { xs: '100%', sm: 400 }, flexShrink: 0 }}>
           <Stack spacing={3}>
+            {/* Quick Tips - Same style as Fee Collection */}
+            <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'primary.main', color: 'white' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight={600} gutterBottom>
+                  💡 Quick Tips
+                </Typography>
+                <Stack spacing={1}>
+                  <Typography variant="body2">• Select fee types applicable for the billing period</Typography>
+                  <Typography variant="body2">• Bills are generated once per student per month</Typography>
+                  <Typography variant="body2">• Previous dues are automatically added</Typography>
+                  <Typography variant="body2">• Late fees are auto-calculated if enabled</Typography>
+                </Stack>
+              </CardContent>
+            </Card>
+
             <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'info.light' }}>
               <CardContent sx={{ p: 3 }}>
                 <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -446,11 +758,14 @@ export default function DemandBillGeneration() {
                   Demand bills are monthly fee invoices generated for students. They include:
                 </Typography>
                 <Stack spacing={1}>
-                  <Typography variant="body2">✓ Current month's fee structure</Typography>
+                  <Typography variant="body2">✓ Selected fee types for the month</Typography>
                   <Typography variant="body2">✓ Previous month's outstanding dues</Typography>
                   <Typography variant="body2">✓ Applicable discounts</Typography>
-                  <Typography variant="body2">✓ Late fees (if any)</Typography>
+                  <Typography variant="body2">✓ Late fees (auto-calculated if enabled)</Typography>
                   <Typography variant="body2">✓ Due date for payment</Typography>
+                  <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic', color: 'text.secondary' }}>
+                    Bills are generated for the selected Academic Session shown in the top-right corner.
+                  </Typography>
                 </Stack>
               </CardContent>
             </Card>
@@ -463,27 +778,29 @@ export default function DemandBillGeneration() {
                 <Stack spacing={2} sx={{ mt: 2 }}>
                   <Box>
                     <Typography variant="subtitle2" fontWeight={600}>
-                      Single Student
+                      Monthly Demand Bills
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Generate bill for one student by entering their ID
+                    <Typography variant="body2" paragraph>
+                      Monthly demand bills can be generated for individual students, entire
+                      classes, or all students at once. Each bill includes:
                     </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Entire Class
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Generate bills for all students in a specific class and section
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      All Students
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Generate bills for all active students in the session
-                    </Typography>
+                    <Box component="ul" sx={{ pl: 3, mt: 0 }}>
+                      <li>
+                        <Typography variant="body2">Selected fee types for the month</Typography>
+                      </li>
+                      <li>
+                        <Typography variant="body2">
+                          Late fees (auto-added from fee structure if enabled and student has
+                          outstanding dues)
+                        </Typography>
+                      </li>
+                      <li>
+                        <Typography variant="body2">Any applicable discounts</Typography>
+                      </li>
+                      <li>
+                        <Typography variant="body2">Due date for payment</Typography>
+                      </li>
+                    </Box>
                   </Box>
                 </Stack>
               </CardContent>
@@ -509,8 +826,8 @@ export default function DemandBillGeneration() {
               </CardContent>
             </Card>
           </Stack>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 }

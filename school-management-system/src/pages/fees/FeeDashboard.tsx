@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSession } from '../../contexts/SessionContext';
 import {
   Box,
   Card,
@@ -24,6 +25,8 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  Autocomplete,
+  CircularProgress,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -35,41 +38,90 @@ import {
   Download,
 } from 'lucide-react';
 import axios from 'axios';
+import { admissionService } from '../../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+interface Student {
+  id: number;
+  studentId: string;
+  name: string;
+  className: string;
+  section: string;
+  fatherName?: string;
+  motherName?: string;
+}
+
 export default function FeeDashboard() {
+  const { selectedSession } = useSession();
   const [studentId, setStudentId] = useState('');
-  const [sessionId, setSessionId] = useState(1);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [searchTriggered, setSearchTriggered] = useState(false);
   const [showFeeBook, setShowFeeBook] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   const { data: dashboard, isLoading, error } = useQuery({
-    queryKey: ['fee-dashboard', studentId, sessionId],
+    queryKey: ['fee-dashboard', studentId, selectedSession?.id],
     queryFn: async () => {
       const response = await axios.get(
-        `${API_URL}/fees/dashboard/${studentId}/session/${sessionId}`
+        `${API_URL}/fees/dashboard/${studentId}/session/${selectedSession?.id}`
       );
       return response.data;
     },
-    enabled: searchTriggered && !!studentId,
+    enabled: searchTriggered && !!studentId && !!selectedSession,
   });
 
   const { data: feeBook } = useQuery({
-    queryKey: ['fee-book', studentId, sessionId],
+    queryKey: ['fee-book', studentId, selectedSession?.id],
     queryFn: async () => {
       const response = await axios.get(
-        `${API_URL}/fees/fee-book/${studentId}/session/${sessionId}`
+        `${API_URL}/fees/fee-book/${studentId}/session/${selectedSession?.id}`
       );
       return response.data;
     },
-    enabled: showFeeBook && !!studentId,
+    enabled: showFeeBook && !!studentId && !!selectedSession,
   });
+
+  // Fetch students for search (minimum 3 characters)
+  const { data: studentsData, isLoading: loadingStudents } = useQuery({
+    queryKey: ['students-search', studentSearchTerm],
+    queryFn: async () => {
+      if (!studentSearchTerm || studentSearchTerm.length < 3) return { students: [] };
+      const response = await admissionService.getStudents({
+        search: studentSearchTerm,
+        limit: 20,
+      });
+      return response.data;
+    },
+    enabled: studentSearchTerm.length >= 3,
+    staleTime: 30000, // 30 seconds
+  });
+
+  const studentOptions: Student[] = studentsData?.data || [];
+
+  // Show/hide search results
+  useEffect(() => {
+    // Don't show results if the search term matches the currently selected student ID
+    if (studentSearchTerm.length >= 3 && studentSearchTerm !== studentId) {
+      setShowSearchResults(true);
+    } else {
+      setShowSearchResults(false);
+    }
+  }, [studentSearchTerm, studentOptions, loadingStudents, studentId]);
 
   const handleSearch = () => {
     if (studentId) {
       setSearchTriggered(true);
+      setShowSearchResults(false);
+      // setStudentSearchTerm(''); // Keep the search term visible
     }
+  };
+
+  const handleSelectStudent = (student: Student) => {
+    setStudentId(student.studentId);
+    setSearchTriggered(true);
+    setStudentSearchTerm(student.studentId); // Autofill ID
+    setShowSearchResults(false); // Hide search results
   };
 
   const getStatusColor = (balance: number) => {
@@ -92,38 +144,84 @@ export default function FeeDashboard() {
 
       {/* Search Section */}
       <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 3 }}>
-        <Grid container spacing={3} alignItems="flex-end">
-          <Grid item xs={12} md={5}>
+        <Grid container spacing={3} alignItems="center">
+          <Grid item xs={12} md={8}>
             <TextField
-              label="Student ID"
+              label="Search Student"
               fullWidth
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              placeholder="Enter student ID"
+              value={studentSearchTerm}
+              onChange={(e) => setStudentSearchTerm(e.target.value)}
+              placeholder="Enter student name or ID (min 3 characters)"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Session ID"
-              type="number"
-              fullWidth
-              value={sessionId}
-              onChange={(e) => setSessionId(parseInt(e.target.value))}
+              InputProps={{
+                endAdornment: loadingStudents && studentSearchTerm.length >= 3 ? (
+                  <CircularProgress size={20} />
+                ) : null,
+              }}
             />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Button
-              variant="contained"
-              size="large"
+            <TextField
+              label="Academic Session"
               fullWidth
-              onClick={handleSearch}
-              disabled={!studentId}
-            >
-              View Dashboard
-            </Button>
+              value={selectedSession?.name || 'No session selected'}
+              InputProps={{ readOnly: true }}
+            />
           </Grid>
         </Grid>
+
+        {/* Search Results Table - Displayed below the search section */}
+        {showSearchResults && (
+          <Box sx={{ mt: 2 }}>
+            <Paper
+              elevation={3}
+              sx={{
+                maxHeight: 400,
+                overflow: 'auto',
+              }}
+            >
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'primary.main' }}>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Student ID</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Name</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Class</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Father Name</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Mother Name</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {studentOptions.map((student) => (
+                    <TableRow
+                      key={student.id}
+                      hover
+                      onClick={() => handleSelectStudent(student)}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <TableCell>{student.studentId}</TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>{student.name}</TableCell>
+                      <TableCell>
+                        {student.className}-{student.section}
+                      </TableCell>
+                      <TableCell>{student.fatherName || '-'}</TableCell>
+                      <TableCell>{student.motherName || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {studentOptions.length === 0 && !loadingStudents && (
+                <Box p={2} textAlign="center">
+                  <Typography variant="body2" color="text.secondary">
+                    No students found
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </Box>
+        )}
       </Paper>
 
       {error && (
@@ -175,9 +273,9 @@ export default function FeeDashboard() {
           </Card>
 
           {/* Summary Cards */}
-          <Grid container spacing={3} mb={4}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'primary.main', color: 'white' }}>
+          <Grid container spacing={3} mb={4} sx={{ width: '100%' }}>
+            <Grid item xs={12} sm={6} md>
+              <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'primary.main', color: 'white', minHeight: 140, height: '100%' }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="body2" sx={{ opacity: 0.9 }} gutterBottom>
                     Total Fee
@@ -188,8 +286,8 @@ export default function FeeDashboard() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'success.main', color: 'white' }}>
+            <Grid item xs={12} sm={6} md>
+              <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'success.main', color: 'white', minHeight: 140, height: '100%' }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="body2" sx={{ opacity: 0.9 }} gutterBottom>
                     Total Paid
@@ -206,8 +304,8 @@ export default function FeeDashboard() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'warning.main', color: 'white' }}>
+            <Grid item xs={12} sm={6} md>
+              <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'warning.main', color: 'white', minHeight: 140, height: '100%' }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="body2" sx={{ opacity: 0.9 }} gutterBottom>
                     Discount
@@ -218,13 +316,15 @@ export default function FeeDashboard() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md>
               <Card
                 elevation={2}
                 sx={{
                   borderRadius: 3,
                   bgcolor: dashboard.summary.totalDues > 0 ? 'error.main' : 'info.main',
                   color: 'white',
+                  minHeight: 140,
+                  height: '100%'
                 }}
               >
                 <CardContent sx={{ p: 3 }}>
@@ -436,7 +536,15 @@ export default function FeeDashboard() {
                             ₹{bill.balance.toLocaleString()}
                           </TableCell>
                           <TableCell align="center">
-                            <Chip label={bill.status} color="warning" size="small" />
+                            <Chip
+                              label={bill.status}
+                              color={
+                                bill.status === 'PAID' ? 'success' :
+                                  bill.status === 'PARTIALLY_PAID' ? 'warning' :
+                                    bill.status === 'PENDING' ? 'warning' : 'error'
+                              }
+                              size="small"
+                            />
                           </TableCell>
                         </TableRow>
                       ))}

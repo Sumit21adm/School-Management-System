@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from '../../contexts/SessionContext';
 import {
   Box,
   Button,
@@ -49,20 +51,24 @@ const feeCollectionSchema = z.object({
   remarks: z.string().optional(),
   collectedBy: z.string().optional(),
   date: z.string().optional(),
+  billNo: z.string().optional(),  // Bill number this payment is against
 });
 
 type FeeCollectionFormData = z.infer<typeof feeCollectionSchema>;
 
 export default function EnhancedFeeCollection() {
+  const { selectedSession } = useSession();
+  const [searchParams] = useSearchParams();
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const queryClient = useQueryClient();
 
   const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FeeCollectionFormData>({
     resolver: zodResolver(feeCollectionSchema),
     defaultValues: {
       studentId: '',
-      sessionId: 1,
+      sessionId: selectedSession?.id || 1,
       feeDetails: [{ feeTypeId: 0, amount: 0, discountAmount: 0 }],
       paymentMode: 'cash',
       receiptNo: '',
@@ -71,6 +77,14 @@ export default function EnhancedFeeCollection() {
       date: new Date().toISOString().split('T')[0],
     },
   });
+
+  // Auto-populate student ID from URL parameters
+  useEffect(() => {
+    const urlStudentId = searchParams.get('studentId');
+    if (urlStudentId) {
+      setValue('studentId', urlStudentId);
+    }
+  }, [searchParams, setValue]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -88,6 +102,8 @@ export default function EnhancedFeeCollection() {
       const response = await axios.get(`${API_URL}/fee-types`);
       return response.data.feeTypes;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
   });
 
   // Fetch student dashboard for fee structure
@@ -108,15 +124,154 @@ export default function EnhancedFeeCollection() {
     }
   }, [dashboard]);
 
+  // Auto-populate fee items from bill number if provided
+  useEffect(() => {
+    const billNo = searchParams.get('billNo');
+    if (billNo && dashboard?.pendingBills && feeTypes) {
+      const bill = dashboard.pendingBills.find((b: any) => b.billNo === billNo);
+      if (bill && bill.items && bill.items.length > 0 && bill.balance > 0) {
+        // Use waterfall allocation to determine which items are still unpaid
+        let paidPool = bill.paid;
+        const unpaidItems: any[] = [];
+
+        bill.items.forEach((item: any) => {
+          const itemNet = item.amount - (item.discount || 0);
+
+          // Allocate paid amount to this item
+          let allocatedPay = 0;
+          if (paidPool >= itemNet) {
+            allocatedPay = itemNet;
+            paidPool -= itemNet;
+          } else {
+            allocatedPay = paidPool;
+            paidPool = 0;
+          }
+
+          const itemDue = itemNet - allocatedPay;
+
+          if (itemDue > 0) {
+            const feeType = feeTypes.find((ft: any) => ft.name === item.feeType);
+            if (feeType) {
+              // If fully unpaid, show original gross/discount. If partial, just balance.
+              if (itemDue === itemNet) {
+                unpaidItems.push({
+                  feeTypeId: feeType.id,
+                  amount: item.amount,
+                  discountAmount: item.discount || 0,
+                });
+              } else {
+                unpaidItems.push({
+                  feeTypeId: feeType.id,
+                  amount: itemDue,
+                  discountAmount: 0,
+                });
+              }
+            }
+          }
+        });
+
+        if (unpaidItems.length > 0) {
+          setValue('feeDetails', unpaidItems);
+          setValue('remarks', `Payment for Bill: ${billNo}`);
+          setValue('billNo', billNo);
+        }
+      }
+    }
+  }, [searchParams, dashboard, feeTypes, setValue]);
+
+  // Auto-fill ALL outstanding dues when navigating with studentId but no billNo
+  useEffect(() => {
+    const billNo = searchParams.get('billNo');
+    const studentIdParam = searchParams.get('studentId');
+
+    // Only auto-fill if we have studentId in URL, no billNo, and dashboard is loaded
+    if (studentIdParam && !billNo && dashboard?.pendingBills && feeTypes && dashboard.pendingBills.length > 0) {
+      const allUnpaidItems: any[] = [];
+      const billNumbers: string[] = [];
+
+      // Process ALL pending bills
+      dashboard.pendingBills.forEach((bill: any) => {
+        if (bill.balance > 0 && bill.items && bill.items.length > 0) {
+          billNumbers.push(bill.billNo);
+
+          // Use waterfall allocation for each bill
+          let paidPool = bill.paid;
+
+          bill.items.forEach((item: any) => {
+            const itemNet = item.amount - (item.discount || 0);
+
+            // Allocate paid amount to this item
+            let allocatedPay = 0;
+            if (paidPool >= itemNet) {
+              allocatedPay = itemNet;
+              paidPool -= itemNet;
+            } else {
+              allocatedPay = paidPool;
+              paidPool = 0;
+            }
+
+            const itemDue = itemNet - allocatedPay;
+
+            if (itemDue > 0) {
+              const feeType = feeTypes.find((ft: any) => ft.name === item.feeType);
+              if (feeType) {
+                // Check if we already have this fee type from another bill
+                const existingItem = allUnpaidItems.find(ui => ui.feeTypeId === feeType.id);
+                if (existingItem) {
+                  // Add to existing amount
+                  existingItem.amount += itemDue === itemNet ? item.amount : itemDue;
+                  if (itemDue === itemNet) {
+                    existingItem.discountAmount += item.discount || 0;
+                  }
+                } else {
+                  // Add new item
+                  if (itemDue === itemNet) {
+                    allUnpaidItems.push({
+                      feeTypeId: feeType.id,
+                      amount: item.amount,
+                      discountAmount: item.discount || 0,
+                    });
+                  } else {
+                    allUnpaidItems.push({
+                      feeTypeId: feeType.id,
+                      amount: itemDue,
+                      discountAmount: 0,
+                    });
+                  }
+                }
+              }
+            }
+          });
+        }
+      });
+
+      if (allUnpaidItems.length > 0) {
+        setValue('feeDetails', allUnpaidItems);
+        setValue('remarks', `Payment for Bills: ${billNumbers.join(', ')}`);
+        // Don't set billNo when multiple bills - let backend handle via remarks
+      }
+    }
+  }, [searchParams, dashboard, feeTypes, setValue]);
+
+  // Auto-update sessionId when selected session changes
+  useEffect(() => {
+    if (selectedSession) {
+      setValue('sessionId', selectedSession.id);
+    }
+  }, [selectedSession, setValue]);
+
   // Collect fee mutation
   const collectFeeMutation = useMutation({
     mutationFn: async (data: FeeCollectionFormData) => {
       const response = await axios.post(`${API_URL}/fees/collect`, data);
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setSuccess(`Fee collected successfully! Receipt No: ${data.receiptNo}`);
       setError('');
+      // Invalidate student dashboard query to refresh data
+      queryClient.invalidateQueries({ queryKey: ['student-dashboard', variables.studentId, variables.sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['student-fee-status', variables.studentId, variables.sessionId] });
       reset();
       setStudentInfo(null);
       // Print receipt logic can be added here
@@ -137,16 +292,60 @@ export default function EnhancedFeeCollection() {
   }, 0);
 
   const fillFeeStructure = () => {
-    if (dashboard?.feeHeads) {
-      const unpaidFees = dashboard.feeHeads.filter((head: any) => head.balance > 0);
-      setValue(
-        'feeDetails',
-        unpaidFees.map((head: any) => ({
-          feeTypeId: head.feeTypeId,
-          amount: head.balance,
-          discountAmount: 0,
-        }))
-      );
+    // Strategy: Use pendingBills to ensure Bill-First principle.
+    // Only allow collecting fees that have a corresponding pending bill.
+
+    if (dashboard?.pendingBills) {
+      // Find the first bill with a positive balance
+      const unpaidBill = dashboard.pendingBills.find((bill: any) => bill.balance > 0);
+
+      if (unpaidBill) {
+        // Calculate unpaid items from this bill
+        let billPaidPool = unpaidBill.paid;
+        const unpaidItems: any[] = [];
+
+        unpaidBill.items.forEach((item: any) => {
+          const itemNet = item.amount - (item.discount || 0);
+
+          // Allocate paid amount to this item
+          let allocatedPay = 0;
+          if (billPaidPool >= itemNet) {
+            allocatedPay = itemNet;
+            billPaidPool -= itemNet;
+          } else {
+            allocatedPay = billPaidPool;
+            billPaidPool = 0;
+          }
+
+          const itemDue = itemNet - allocatedPay;
+
+          if (itemDue > 0) {
+            const feeTypeObj = feeTypes?.find((ft: any) => ft.name === item.feeType);
+            if (feeTypeObj) {
+              // If fully unpaid, show original gross/discount. If partial, just balance.
+              if (itemDue === itemNet) {
+                unpaidItems.push({
+                  feeTypeId: feeTypeObj.id,
+                  amount: item.amount,
+                  discountAmount: item.discount || 0,
+                });
+              } else {
+                unpaidItems.push({
+                  feeTypeId: feeTypeObj.id,
+                  amount: itemDue,
+                  discountAmount: 0,
+                });
+              }
+            }
+          }
+        });
+
+        if (unpaidItems.length > 0) {
+          setValue('feeDetails', unpaidItems);
+          setValue('remarks', `Payment for Bill: ${unpaidBill.billNo}`);
+          setValue('billNo', unpaidBill.billNo);
+        }
+      }
     }
   };
 
@@ -156,9 +355,9 @@ export default function EnhancedFeeCollection() {
         Fee Collection
       </Typography>
 
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
         {/* Main Collection Form */}
-        <Grid item xs={12} lg={8}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
             <form onSubmit={handleSubmit(onSubmit)}>
               {error && (
@@ -180,46 +379,65 @@ export default function EnhancedFeeCollection() {
                     <Controller
                       name="studentId"
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Student ID"
-                          fullWidth
-                          required
-                          error={!!errors.studentId}
-                          helperText={errors.studentId?.message}
-                          placeholder="Enter student ID"
-                          InputProps={{
-                            endAdornment: loadingStudent && (
-                              <InputAdornment position="end">
-                                <CircularProgress size={20} />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
+                      render={({ field }) => {
+                        const inputProps = useMemo(() => ({
+                          endAdornment: loadingStudent && (
+                            <InputAdornment position="end">
+                              <CircularProgress size={20} />
+                            </InputAdornment>
+                          ),
+                        }), [loadingStudent]);
+
+                        return (
+                          <TextField
+                            {...field}
+                            label="Student ID"
+                            fullWidth
+                            required
+                            error={!!errors.studentId}
+                            helperText={errors.studentId?.message}
+                            placeholder="Enter student ID"
+                            InputProps={inputProps}
+                          />
+                        );
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} md={4}>
+                    <TextField
+                      label="Academic Session"
+                      fullWidth
+                      value={selectedSession?.name || 'No session selected'}
+                      InputProps={{ readOnly: true }}
+                      helperText={selectedSession ? `Session ID: ${selectedSession.id}` : 'Select a session from the top-right dropdown'}
+                    />
                     <Controller
                       name="sessionId"
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Session ID"
-                          type="number"
-                          fullWidth
-                          required
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        />
-                      )}
+                      render={({ field }) => <input type="hidden" {...field} />}
                     />
                   </Grid>
                 </Grid>
 
                 {studentInfo && (
-                  <Alert severity="info" sx={{ mb: 2 }}>
+                  <Alert
+                    severity={dashboard?.pendingBills?.length === 0 ? "warning" : "info"}
+                    sx={{ mb: 2 }}
+                    action={
+                      dashboard?.pendingBills?.length === 0 && (
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          component={Link}
+                          to="/fees/demand-bills"
+                          sx={{ fontWeight: 600 }}
+                        >
+                          Create Demand Bill
+                        </Button>
+                      )
+                    }
+                  >
                     <Typography variant="subtitle2" fontWeight={600}>
                       {studentInfo.name}
                     </Typography>
@@ -227,18 +445,24 @@ export default function EnhancedFeeCollection() {
                       Class: {studentInfo.className}-{studentInfo.section} | Father: {studentInfo.fatherName}
                     </Typography>
                     {dashboard && (
-                      <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                      <Typography variant="body2" color={dashboard.pendingBills?.length === 0 ? "text.secondary" : "error"} sx={{ mt: 1 }}>
                         Outstanding Dues: ₹{dashboard.summary.totalDues.toLocaleString()}
                       </Typography>
                     )}
-                    <Button
-                      size="small"
-                      onClick={fillFeeStructure}
-                      sx={{ mt: 1 }}
-                      disabled={!dashboard?.feeHeads}
-                    >
-                      Auto-Fill Outstanding Dues
-                    </Button>
+                    {dashboard?.pendingBills?.length === 0 ? (
+                      <Typography variant="body2" fontWeight={600} sx={{ mt: 1 }}>
+                        No demand bill found, create demand bill first.
+                      </Typography>
+                    ) : (
+                      <Button
+                        size="small"
+                        onClick={fillFeeStructure}
+                        sx={{ mt: 1 }}
+                        disabled={!dashboard?.feeHeads}
+                      >
+                        Auto-Fill Outstanding Dues
+                      </Button>
+                    )}
                   </Alert>
                 )}
 
@@ -289,9 +513,32 @@ export default function EnhancedFeeCollection() {
                                   control={control}
                                   render={({ field }) => (
                                     <FormControl fullWidth size="small" error={!!errors.feeDetails?.[index]?.feeTypeId}>
-                                      <Select {...field} displayEmpty>
+                                      <Select
+                                        {...field}
+                                        displayEmpty
+                                        onChange={(e) => {
+                                          const selectedTypeId = Number(e.target.value);
+                                          field.onChange(selectedTypeId);
+
+                                          // Auto-populate amount and discount from dashboard
+                                          if (dashboard?.feeHeads) {
+                                            const feeHead = dashboard.feeHeads.find((h: any) => h.feeTypeId === selectedTypeId);
+                                            if (feeHead && feeHead.balance > 0) {
+                                              // Use logic similar to auto-fill:
+                                              // If no paid amount, show Gross & Discount. Otherwise show Balance & 0 Discount.
+                                              if (feeHead.paid === 0) {
+                                                setValue(`feeDetails.${index}.amount`, feeHead.grossAmount);
+                                                setValue(`feeDetails.${index}.discountAmount`, feeHead.discount);
+                                              } else {
+                                                setValue(`feeDetails.${index}.amount`, feeHead.balance);
+                                                setValue(`feeDetails.${index}.discountAmount`, 0);
+                                              }
+                                            }
+                                          }
+                                        }}
+                                      >
                                         <MenuItem value={0}>Select Fee Type</MenuItem>
-                                        {feeTypes?.map((type: any) => (
+                                        {(feeTypes || []).map((type: any) => (
                                           <MenuItem key={type.id} value={type.id}>
                                             {type.name}
                                           </MenuItem>
@@ -470,10 +717,10 @@ export default function EnhancedFeeCollection() {
               </Stack>
             </form>
           </Paper>
-        </Grid>
+        </Box>
 
         {/* Sidebar - Student Fee Status */}
-        <Grid item xs={12} lg={4}>
+        <Box sx={{ width: { xs: '100%', sm: 400 }, flexShrink: 0 }}>
           <Stack spacing={3}>
             {dashboard && (
               <>
@@ -555,8 +802,8 @@ export default function EnhancedFeeCollection() {
               </CardContent>
             </Card>
           </Stack>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Param, Body, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Put, Post, Param, Body, ParseIntPipe, Header } from '@nestjs/common';
 import { FeeStructureService } from './fee-structure.service';
 import { UpsertFeeStructureDto, CopyFeeStructureDto } from './dto/fee-structure.dto';
 
@@ -7,6 +7,7 @@ export class FeeStructureController {
     constructor(private readonly feeStructureService: FeeStructureService) { }
 
     @Get(':sessionId/:className')
+    @Header('Cache-Control', 'no-store')
     getStructure(
         @Param('sessionId', ParseIntPipe) sessionId: number,
         @Param('className') className: string,

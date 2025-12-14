@@ -114,6 +114,8 @@ export class AdmissionsController {
         @Query('sessionId') sessionId?: string,
         @Query('page') page?: string,
         @Query('limit') limit?: string,
+        @Query('sortBy') sortBy?: string,
+        @Query('order') order?: 'asc' | 'desc',
     ) {
         return this.admissionsService.findAll({
             search,
@@ -123,6 +125,8 @@ export class AdmissionsController {
             sessionId: sessionId ? parseInt(sessionId) : undefined,
             page: page ? parseInt(page) : undefined,
             limit: limit ? parseInt(limit) : undefined,
+            sortBy,
+            order,
         });
     }
 

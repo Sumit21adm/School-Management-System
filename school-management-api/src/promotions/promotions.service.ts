@@ -57,7 +57,27 @@ export class PromotionsService {
                         },
                     });
                 } else {
-                    // Promote to next class
+                    // 1. Fetch current student details
+                    const student = await this.prisma.studentDetails.findUnique({
+                        where: { id: studentId },
+                    });
+
+                    if (!student) {
+                        throw new Error(`Student not found: ${studentId}`);
+                    }
+
+                    // 2. Save current details to history
+                    await this.prisma.studentAcademicHistory.create({
+                        data: {
+                            studentId: student.studentId, // Use the string ID for history
+                            sessionId: student.sessionId!,
+                            className: student.className,
+                            section: student.section,
+                            status: 'promoted',
+                        }
+                    });
+
+                    // 3. Promote to next class
                     await this.prisma.studentDetails.update({
                         where: { id: studentId },
                         data: {

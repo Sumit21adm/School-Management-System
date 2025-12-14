@@ -34,6 +34,25 @@ model StudentDetails {
   motherOccupation String?   @db.VarChar(100)
   subjects         String?   @db.VarChar(255)
   whatsAppNo       String?   @db.VarChar(15)
+  category         String    @default("NA") @db.VarChar(50) // General, OBC, SC/ST, Others, NA
+  religion         String?   @db.VarChar(50)
+  apaarId          String?   @db.VarChar(20)
+
+  // Parent Documents
+  fatherAadharNo   String?   @db.VarChar(12)
+  fatherPanNo      String?   @db.VarChar(10)
+  motherAadharNo   String?   @db.VarChar(12)
+  motherPanNo      String?   @db.VarChar(10)
+
+  // Guardian Details
+  guardianRelation String?   @db.VarChar(20) // 'Father', 'Mother', 'Other'
+  guardianName     String?   @db.VarChar(100)
+  guardianOccupation String? @db.VarChar(100)
+  guardianPhone    String?   @db.VarChar(15)
+  guardianEmail    String?   @db.VarChar(100)
+  guardianAadharNo String?   @db.VarChar(12)
+  guardianPanNo    String?   @db.VarChar(10)
+  guardianAddress  String?   @db.Text
   
   // Session relation
   sessionId        Int?
@@ -42,6 +61,7 @@ model StudentDetails {
   feeTransactions  FeeTransaction[]
   discounts        StudentFeeDiscount[]
   demandBills      DemandBill[]
+  academicHistory  StudentAcademicHistory[]
 
   @@index([className])
   @@index([section])
@@ -168,6 +188,7 @@ model AcademicSession {
   discounts     StudentFeeDiscount[]
   feeTransactions FeeTransaction[]
   demandBills   DemandBill[]
+  academicHistory StudentAcademicHistory[]
 
   @@index([isActive])
   @@index([startDate, endDate])
@@ -181,6 +202,8 @@ model FeeType {
   description String?  @db.VarChar(200)
   isActive    Boolean  @default(true)
   isDefault   Boolean  @default(false)
+  isRecurring Boolean  @default(false)
+  frequency   String?  @db.VarChar(20) // 'Monthly', 'Yearly', 'Refundable', 'One-time'
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -215,6 +238,7 @@ model FeeStructureItem {
   feeTypeId   Int
   amount      Decimal  @db.Decimal(10, 2)
   isOptional  Boolean  @default(false)
+  frequency   String?  @db.VarChar(20) // 'Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'One-time', 'Refundable'
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -303,4 +327,25 @@ model User {
   updatedAt   DateTime @updatedAt
 
   @@map("users")
+}
+
+// Student Academic History
+model StudentAcademicHistory {
+  id          Int      @id @default(autoincrement())
+  studentId   String   @db.VarChar(20)
+  sessionId   Int
+  className   String   @db.VarChar(20)
+  section     String   @db.VarChar(5)
+  rollNo      String?  @db.VarChar(20)
+  status      String   @db.VarChar(20) // 'passed', 'promoted', 'detained'
+  finalResult String?  @db.VarChar(50) // '85%', 'Grade A'
+  createdAt   DateTime @default(now())
+
+  student StudentDetails  @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, sessionId])
+  @@index([studentId])
+  @@index([sessionId])
+  @@map("student_academic_history")
 }

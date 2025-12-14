@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Container,
     Paper,
@@ -16,18 +16,51 @@ import {
     TextField,
     Button,
     Alert,
-    CircularProgress,
+    IconButton,
+    InputLabel,
+    Chip,
 } from '@mui/material';
-import { Save as SaveIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Check as CheckIcon, CloudDone as CloudDoneIcon, Sync as SyncIcon } from '@mui/icons-material';
 import { useSession } from '../../contexts/SessionContext';
 import { feeTypeService, feeStructureService } from '../../lib/api';
 
 const CLASSES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const FREQUENCIES = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'One-time', 'Refundable', 'Not Set'];
+
+interface FeeItem {
+    feeTypeId: number;
+    feeTypeName: string;
+    amount: number;
+    frequency?: string;
+}
 
 export default function FeeStructure() {
     const { selectedSession } = useSession();
     const [selectedClass, setSelectedClass] = useState('1');
+    const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
+    const [selectedFeeType, setSelectedFeeType] = useState<number | ''>('');
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+    const [unsavedIds, setUnsavedIds] = useState<Set<number>>(new Set());
     const queryClient = useQueryClient();
+
+    // Check if there are unsaved changes
+    const hasUnsavedChanges = unsavedIds.size > 0;
+
+    // Helper function to get frequency color
+    const getFrequencyColor = (frequency: string | undefined) => {
+        switch (frequency) {
+            case 'Monthly': return 'primary';
+            case 'Quarterly': return 'info';
+            case 'Half-Yearly': return 'success';
+            case 'Yearly': return 'secondary';
+            case 'One-time': return 'warning';
+            case 'Refundable': return 'error';
+            case 'Not Set': return 'default';
+            default: return 'default';
+        }
+    };
 
     // Fetch fee types
     const { data: feeTypesData } = useQuery({
@@ -36,56 +69,181 @@ export default function FeeStructure() {
     });
 
     // Fetch fee structure
-    const { data: structureData, isLoading } = useQuery({
+    const { data: structureData } = useQuery({
         queryKey: ['feeStructure', selectedSession?.id, selectedClass],
         queryFn: () => feeStructureService.getStructure(selectedSession!.id, selectedClass),
         enabled: !!selectedSession,
     });
 
-    const [amounts, setAmounts] = useState<Record<number, number>>({});
-
-    // Initialize amounts when structure loads
-    useState(() => {
-        if (structureData?.items) {
-            const newAmounts: Record<number, number> = {};
-            structureData.items.forEach((item: any) => {
-                newAmounts[item.feeTypeId] = item.amount;
+    // Initialize fee items when structure loads
+    useEffect(() => {
+        if (structureData?.items && feeTypesData?.feeTypes) {
+            const items: FeeItem[] = structureData.items.map((item: any) => {
+                const feeType = feeTypesData.feeTypes.find((ft: any) => ft.id === item.feeTypeId);
+                return {
+                    feeTypeId: item.feeTypeId,
+                    feeTypeName: feeType?.name || 'Unknown',
+                    amount: item.amount,
+                    frequency: item.frequency || feeType?.frequency,
+                };
             });
-            setAmounts(newAmounts);
+            setFeeItems(items);
+            // Mark all loaded items as saved (they came from database)
+            setSavedIds(new Set(items.map(i => i.feeTypeId)));
+            setUnsavedIds(new Set());
+        } else {
+            setFeeItems([]);
+            setSavedIds(new Set());
         }
-    });
+    }, [structureData, feeTypesData]);
 
-    // Save mutation
-    const saveMutation = useMutation({
-        mutationFn: (data: any) =>
-            feeStructureService.upsertStructure(selectedSession!.id, selectedClass, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['feeStructure'] });
-            alert('Fee structure saved successfully!');
-        },
-    });
+    const handleAddFeeType = () => {
+        if (!selectedFeeType || !feeTypesData) return;
 
-    const handleSave = () => {
-        const items = Object.entries(amounts)
-            .filter(([, amount]) => amount > 0)
-            .map(([feeTypeId, amount]) => ({
-                feeTypeId: parseInt(feeTypeId),
-                amount,
-                isOptional: false,
-            }));
+        const feeType = feeTypesData.feeTypes.find((ft: any) => ft.id === selectedFeeType);
+        if (!feeType) return;
 
-        if (items.length === 0) {
-            alert('Please add at least one fee type');
+        // Check if already added
+        if (feeItems.some(item => item.feeTypeId === selectedFeeType)) {
+            alert('This fee type is already added');
             return;
         }
 
-        saveMutation.mutate({
-            description: `Class ${selectedClass} fee structure`,
-            items,
-        });
+        setFeeItems([
+            ...feeItems,
+            {
+                feeTypeId: feeType.id,
+                feeTypeName: feeType.name,
+                amount: 0,
+                frequency: feeType.frequency,
+            },
+        ]);
+        // Mark as unsaved
+        setUnsavedIds(prev => new Set(prev).add(feeType.id));
+        setSelectedFeeType('');
     };
 
-    const totalAmount = Object.values(amounts).reduce((sum, amt) => sum + (amt || 0), 0);
+    const handleRemoveFeeType = (feeTypeId: number) => {
+        setFeeItems(feeItems.filter(item => item.feeTypeId !== feeTypeId));
+    };
+
+    const handleAmountChange = (feeTypeId: number, amount: number) => {
+        setFeeItems(
+            feeItems.map(item =>
+                item.feeTypeId === feeTypeId ? { ...item, amount } : item
+            )
+        );
+        // Mark as unsaved
+        setUnsavedIds(prev => new Set(prev).add(feeTypeId));
+        setSavedIds(prev => { const newSet = new Set(prev); newSet.delete(feeTypeId); return newSet; });
+    };
+
+    const handleFrequencyChange = (feeTypeId: number, frequency: string) => {
+        console.log(`Frequency Change: FeeType ${feeTypeId} -> ${frequency}`);
+        setFeeItems(
+            feeItems.map(item =>
+                item.feeTypeId === feeTypeId ? { ...item, frequency } : item
+            )
+        );
+        // Mark as unsaved
+        setUnsavedIds(prev => new Set(prev).add(feeTypeId));
+        setSavedIds(prev => { const newSet = new Set(prev); newSet.delete(feeTypeId); return newSet; });
+    };
+
+    // Save function - called when edit is done
+    // Use Ref to access latest feeItems in callbacks
+    const feeItemsRef = useRef(feeItems);
+    feeItemsRef.current = feeItems;
+
+    const performSave = async (feeTypeId: number) => {
+        if (!selectedSession || feeItemsRef.current.length === 0) return;
+
+        const saveItems = feeItemsRef.current
+            .filter(item => item.amount > 0)
+            .map(item => ({
+                feeTypeId: item.feeTypeId,
+                amount: item.amount,
+                isOptional: false,
+                frequency: item.frequency || null,
+            }));
+
+        const payloadString = JSON.stringify(saveItems, null, 2);
+        console.log('Performing Save with Payload:', payloadString);
+
+        if (saveItems.length === 0) return;
+
+        setIsSaving(true);
+        try {
+            await feeStructureService.upsertStructure(selectedSession.id, selectedClass, {
+                description: `Class ${selectedClass} fee structure`,
+                items: saveItems,
+            });
+            // Mark this item as saved
+            setSavedIds(prev => new Set(prev).add(feeTypeId));
+            setUnsavedIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(feeTypeId);
+                return newSet;
+            });
+            queryClient.invalidateQueries({ queryKey: ['feeStructure'] });
+        } catch (error) {
+            console.error('Save failed:', error);
+            alert('Save failed. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Handle edit toggle - save when done editing
+    const handleEditToggle = async (feeTypeId: number) => {
+        const isCurrentlyEditing = editingId === feeTypeId;
+
+        if (isCurrentlyEditing) {
+            // Done editing - save this item
+            await performSave(feeTypeId);
+            setEditingId(null);
+        } else {
+            // Start editing
+            setEditingId(feeTypeId);
+        }
+    };
+
+    // Warn before leaving with unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [hasUnsavedChanges]);
+
+    // Calculate total annual fee based on frequency
+    const getAnnualMultiplier = (frequency: string | undefined): number => {
+        switch (frequency) {
+            case 'Monthly': return 12;
+            case 'Quarterly': return 4;
+            case 'Half-Yearly': return 2;
+            case 'Yearly': return 1;
+            case 'One-time': return 1;
+            case 'Refundable': return 1;
+            default: return 1;
+        }
+    };
+
+    const totalAmount = feeItems.reduce((sum, item) => {
+        const multiplier = getAnnualMultiplier(item.frequency);
+        return sum + ((item.amount || 0) * multiplier);
+    }, 0);
+
+    // Get available fee types (not already added)
+    const availableFeeTypes = feeTypesData?.feeTypes.filter(
+        (ft: any) => !feeItems.some(item => item.feeTypeId === ft.id)
+    ) || [];
 
     if (!selectedSession) {
         return (
@@ -102,7 +260,7 @@ export default function FeeStructure() {
                     Fee Structure Management
                 </Typography>
 
-                <Box sx={{ display: 'flex', gap: 2, my: 3 }}>
+                <Box sx={{ display: 'flex', gap: 2, my: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                     <FormControl size="small" sx={{ minWidth: 200 }}>
                         <Typography variant="caption" sx={{ mb: 0.5 }}>
                             Session
@@ -130,63 +288,174 @@ export default function FeeStructure() {
                             ))}
                         </Select>
                     </FormControl>
+
+                    <FormControl size="small" sx={{ minWidth: 250 }}>
+                        <InputLabel>Select Fee Type to Add</InputLabel>
+                        <Select
+                            value={selectedFeeType}
+                            onChange={(e) => setSelectedFeeType(e.target.value as number)}
+                            label="Select Fee Type to Add"
+                        >
+                            {availableFeeTypes.map((ft: any) => (
+                                <MenuItem key={ft.id} value={ft.id}>
+                                    {ft.name} {ft.frequency && `(${ft.frequency})`}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleAddFeeType}
+                        disabled={!selectedFeeType}
+                        sx={{ height: 40 }}
+                    >
+                        Add Fee Type
+                    </Button>
+
+                    {/* Spacer to push total to right */}
+                    <Box sx={{ flex: 1 }} />
+
+                    {/* Auto-save status */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mr: 2 }}>
+                        {isSaving && (
+                            <>
+                                <SyncIcon sx={{ fontSize: 18, color: 'text.secondary', animation: 'spin 1s linear infinite', '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } } }} />
+                                <Typography variant="caption" color="text.secondary">Saving...</Typography>
+                            </>
+                        )}
+                    </Box>
                 </Box>
 
-                {isLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                        <CircularProgress />
-                    </Box>
+                {feeItems.length === 0 ? (
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                        No fee types added yet. Select a fee type from the dropdown above to add it to this class structure.
+                    </Alert>
                 ) : (
                     <>
                         <Table>
                             <TableHead>
-                                <TableRow>
-                                    <TableCell><strong>Fee Type</strong></TableCell>
-                                    <TableCell align="right"><strong>Amount (₹)</strong></TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {feeTypesData?.feeTypes.map((feeType: any) => (
-                                    <TableRow key={feeType.id}>
-                                        <TableCell>{feeType.name}</TableCell>
-                                        <TableCell align="right">
-                                            <TextField
-                                                type="number"
-                                                size="small"
-                                                value={amounts[feeType.id] || ''}
-                                                onChange={(e) =>
-                                                    setAmounts({
-                                                        ...amounts,
-                                                        [feeType.id]: parseFloat(e.target.value) || 0,
-                                                    })
-                                                }
-                                                sx={{ width: 150 }}
-                                                inputProps={{ min: 0, step: 100 }}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                <TableRow>
-                                    <TableCell><strong>Total Annual Fee</strong></TableCell>
+                                {/* Total Annual Fee row above header */}
+                                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                    <TableCell colSpan={2}>
+                                        <Typography variant="subtitle2" fontWeight="bold">Total Annual Fee</Typography>
+                                    </TableCell>
                                     <TableCell align="right">
-                                        <Typography variant="h6" color="primary">
+                                        <Typography variant="h6" color="primary" fontWeight="bold">
                                             ₹{totalAmount.toLocaleString()}
                                         </Typography>
                                     </TableCell>
+                                    <TableCell />
                                 </TableRow>
+                                <TableRow sx={{ bgcolor: 'grey.200' }}>
+                                    <TableCell><strong>Fee Type</strong></TableCell>
+                                    <TableCell><strong>Frequency</strong></TableCell>
+                                    <TableCell align="right"><strong>Amount (₹)</strong></TableCell>
+                                    <TableCell align="center"><strong>Action</strong></TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {feeItems.map((item) => {
+                                    const isEditing = editingId === item.feeTypeId;
+                                    return (
+                                        <TableRow key={item.feeTypeId}>
+                                            <TableCell>{item.feeTypeName}</TableCell>
+                                            <TableCell>
+                                                {isEditing ? (
+                                                    <Select
+                                                        size="small"
+                                                        value={item.frequency || ''}
+                                                        onChange={(e) => handleFrequencyChange(item.feeTypeId, e.target.value)}
+                                                        displayEmpty
+                                                        sx={{ minWidth: 140 }}
+                                                    >
+                                                        <MenuItem value="" disabled>
+                                                            Select Frequency
+                                                        </MenuItem>
+                                                        {FREQUENCIES.map((freq) => (
+                                                            <MenuItem key={freq} value={freq}>
+                                                                {freq}
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                ) : (
+                                                    item.frequency ? (
+                                                        <Chip
+                                                            label={item.frequency}
+                                                            size="small"
+                                                            color={getFrequencyColor(item.frequency)}
+                                                        />
+                                                    ) : (
+                                                        <Chip label="Not Set" size="small" variant="outlined" />
+                                                    )
+                                                )}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                {isEditing ? (
+                                                    <TextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={item.amount || ''}
+                                                        onChange={(e) =>
+                                                            handleAmountChange(
+                                                                item.feeTypeId,
+                                                                parseFloat(e.target.value) || 0
+                                                            )
+                                                        }
+                                                        sx={{ width: 120 }}
+                                                        inputProps={{ min: 0, step: 100 }}
+                                                        placeholder="Amount"
+                                                    />
+                                                ) : (
+                                                    <Typography>₹{item.amount?.toLocaleString() || 0}</Typography>
+                                                )}
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    <IconButton
+                                                        color={isEditing ? 'success' : 'primary'}
+                                                        onClick={() => handleEditToggle(item.feeTypeId)}
+                                                        size="small"
+                                                        title={isEditing ? 'Save' : 'Edit'}
+                                                        disabled={isSaving}
+                                                    >
+                                                        {isSaving && isEditing ? <SyncIcon sx={{ animation: 'spin 1s linear infinite', '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } } }} /> : isEditing ? <CheckIcon /> : <EditIcon />}
+                                                    </IconButton>
+                                                    <IconButton
+                                                        color="error"
+                                                        onClick={() => handleRemoveFeeType(item.feeTypeId)}
+                                                        size="small"
+                                                        title="Delete"
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                    {/* Saved indicator - shows green when saved, faded when unsaved/editing */}
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: 28,
+                                                            height: 28,
+                                                        }}
+                                                        title={isEditing || unsavedIds.has(item.feeTypeId) ? "Unsaved" : "Saved"}
+                                                    >
+                                                        <CloudDoneIcon
+                                                            sx={{
+                                                                fontSize: 22,
+                                                                color: (isEditing || unsavedIds.has(item.feeTypeId)) ? 'grey.400' : 'success.main',
+                                                                opacity: (isEditing || unsavedIds.has(item.feeTypeId)) ? 0.5 : 1,
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
                             </TableBody>
                         </Table>
-
-                        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button
-                                variant="contained"
-                                startIcon={<SaveIcon />}
-                                onClick={handleSave}
-                                disabled={saveMutation.isPending}
-                            >
-                                {saveMutation.isPending ? 'Saving...' : 'Save Fee Structure'}
-                            </Button>
-                        </Box>
                     </>
                 )}
             </Paper>

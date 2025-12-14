@@ -22,6 +22,11 @@ export class FeesController {
         return this.feesService.generateDemandBills(dto);
     }
 
+    @Get('demand-bills/history/:sessionId')
+    async getBillGenerationHistory(@Param('sessionId', ParseIntPipe) sessionId: number) {
+        return this.feesService.getBillGenerationHistory(sessionId);
+    }
+
     @Get('dashboard/:studentId/session/:sessionId')
     async getStudentDashboard(
         @Param('studentId') studentId: string,

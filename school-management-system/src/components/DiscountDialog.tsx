@@ -26,6 +26,7 @@ interface DiscountDialogProps {
     onClose: () => void;
     onSave: (data: DiscountFormData) => void;
     editData?: DiscountFormData | null;
+    studentId?: string;
 }
 
 export interface DiscountFormData {
@@ -42,6 +43,7 @@ export default function DiscountDialog({
     onClose,
     onSave,
     editData,
+    studentId,
 }: DiscountDialogProps) {
     const [formData, setFormData] = useState<DiscountFormData>({
         feeTypeId: 0,
@@ -64,14 +66,21 @@ export default function DiscountDialog({
         queryFn: () => sessionService.getActive(),
     });
 
+    // Fetch all sessions
+    const { data: sessions } = useQuery({
+        queryKey: ['allSessions'],
+        queryFn: () => sessionService.getAll(),
+    });
+
+    // Set default session and load edit data
     // Set default session and load edit data
     useEffect(() => {
         if (editData) {
             setFormData(editData);
-        } else if (activeSessionData?.session) {
+        } else if (activeSessionData?.id) {
             setFormData((prev) => ({
                 ...prev,
-                sessionId: activeSessionData.session.id,
+                sessionId: activeSessionData.id,
             }));
         }
     }, [editData, activeSessionData]);
@@ -95,7 +104,20 @@ export default function DiscountDialog({
             return;
         }
 
-        onSave(formData);
+        // Merge studentId if available from props
+        const finalSessionId = formData.sessionId || activeSessionData?.id;
+
+        if (!finalSessionId) {
+            setError('Active session not found. Please refresh the page.');
+            return;
+        }
+
+        const payload = {
+            ...formData,
+            ...(studentId ? { studentId } : {}),
+            sessionId: finalSessionId,
+        };
+        onSave(payload);
     };
 
     const handleClose = () => {
@@ -105,10 +127,24 @@ export default function DiscountDialog({
             discountType: 'PERCENTAGE',
             discountValue: 0,
             reason: '',
-            sessionId: activeSessionData?.session?.id || 0,
+            sessionId: activeSessionData?.id || 0,
         });
         onClose();
     };
+
+    // ... (inside render) ...
+
+    {
+        sessions?.sessions?.map((session: any) => (
+            <MenuItem key={session.id} value={session.id}>
+                {session.name} {session.isActive ? '(Active)' : ''}
+            </MenuItem>
+        )) || (
+                <MenuItem value={activeSessionData?.id}>
+                    {activeSessionData?.name || 'Loading...'}
+                </MenuItem>
+            )
+    }
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -194,12 +230,31 @@ export default function DiscountDialog({
                         onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                         fullWidth
                         placeholder="e.g., Sibling discount, Merit scholarship, etc."
+                        InputLabelProps={{ shrink: true }}
                     />
 
                     {/* Session Display */}
-                    <Alert severity="info">
-                        Session: {activeSessionData?.session?.name || 'Loading...'}
-                    </Alert>
+                    {/* Session Selector */}
+                    <FormControl fullWidth required>
+                        <InputLabel>Academic Session</InputLabel>
+                        <Select
+                            value={formData.sessionId}
+                            onChange={(e) =>
+                                setFormData({ ...formData, sessionId: Number(e.target.value) })
+                            }
+                            label="Academic Session"
+                        >
+                            {sessions?.sessions?.map((session: any) => (
+                                <MenuItem key={session.id} value={session.id}>
+                                    {session.name} {session.isActive ? '(Active)' : ''}
+                                </MenuItem>
+                            )) || (
+                                    <MenuItem value={activeSessionData?.id}>
+                                        {activeSessionData?.name || 'Loading...'}
+                                    </MenuItem>
+                                )}
+                        </Select>
+                    </FormControl>
                 </Box>
             </DialogContent>
             <DialogActions>

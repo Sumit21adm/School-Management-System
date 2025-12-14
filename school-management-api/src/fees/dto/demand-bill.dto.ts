@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsArray, IsDateString, Min, Max } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsArray, IsDateString, Min, Max, IsBoolean } from 'class-validator';
 
 export enum BillStatus {
     PENDING = 'PENDING',
@@ -40,6 +40,15 @@ export class GenerateDemandBillDto {
     @IsOptional()
     @IsArray()
     studentIds?: string[];
+
+    @IsOptional()
+    @IsArray()
+    @IsNumber({}, { each: true })
+    selectedFeeTypeIds?: number[];
+
+    @IsOptional()
+    @IsBoolean()
+    autoCalculateLateFees?: boolean;
 }
 
 export class UpdateBillStatusDto {
