@@ -175,7 +175,13 @@ Before generating bills, ensure:
    - Select Session
    - Select Class
    - Add fee items with amounts
+   - **Select Frequency:** Monthly (default), Yearly, One-time, etc.
    - Save
+
+3. **Demand Bill Options (Updated)**
+   - "Tuition Fee" checkbox is now editable (default checked).
+   - "Dress Fee" and "Advance Payment" added to selectable options.
+   - Previous dues are automatically calculated.
 
 3. **Add Student Discounts (Optional)**
    - Go to Students > Select Student
@@ -254,10 +260,9 @@ npx prisma generate
 6. **Collection Summary** - Total collections per date range
 
 ## 🎯 Next Features to Add
-
-1. **PDF Generation** - Receipt and bill templates
-2. **Email Integration** - Send bills via email
-3. **SMS Notifications** - Payment reminders
+1. **PDF Generation** - Receipt and bill templates (UI ready, backend pending)
+2. **Email Integration** - Send bills via email (UI ready, service pending)
+3. **SMS Notifications** - Payment reminders (UI ready, service pending)
 4. **Late Fee Automation** - Auto-calculate overdue charges
 5. **Payment Gateway** - Online payment integration
 6. **Analytics Dashboard** - Collection trends and insights

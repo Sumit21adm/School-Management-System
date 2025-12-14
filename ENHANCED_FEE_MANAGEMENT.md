@@ -11,6 +11,7 @@ Complete fee management solution with student-wise statements, demand bill gener
 - **DemandBill**: Monthly bill generation with previous dues tracking
 - **DemandBillItem**: Individual fee items within bills
 - **BillStatus Enum**: PENDING, SENT, PARTIALLY_PAID, PAID, OVERDUE, CANCELLED
+- **FeeStructureItem**: Added `frequency` column (Monthly, Yearly, One-time, etc.)
 
 ### 2. **Backend APIs** (`/fees`)
 
@@ -115,8 +116,8 @@ Complete fee management solution with student-wise statements, demand bill gener
 - Discount application
 - Due date setting
 - Generation summary report
-- Bulk PDF download
-- Email/SMS sending (future)
+- Bulk PDF download (Coming Soon)
+- Email/SMS sending (Coming Soon)
 
 **Usage**:
 ```tsx

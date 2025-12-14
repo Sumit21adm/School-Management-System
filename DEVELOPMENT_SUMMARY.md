@@ -106,32 +106,24 @@ npm run dev
 ## 📋 Features Matching Legacy System
 
 ### ✅ Admissions
-- Student registration with all fields from legacy
-- Class/Section assignment
-- Parent details (father, mother names)
-- Contact information
-- Address management
+- **Enhanced Student Details**: Religion, Category, Guardian Details, Govt IDs (APAAR, Aadhar, etc.)
+- **Academic History**: Previous school records tracking
 - Photo upload capability
-- Search and filter students
-- Active/Inactive status
+- Search, filter, and sort students
+- Admission Dashboard with Pending Fees analysis
 
 ### ✅ Fee Management
-- All fee types from legacy:
-  - Tuition Fee
-  - Computer Fine Arts
-  - Smart Class
-  - Generator
-  - Activity
-  - Conveyance
-  - Development
-  - Laboratory
-  - Library
-  - Hostel Fee
-  - Others
-- Payment modes: Cash, Cheque, Online
-- Receipt generation
-- Dues tracking
-- Date-range reports
+- **Enhanced Fee Structure**: Customizable frequency (Monthly/Yearly/One-time)
+- **Fee Collection**: Multi-head collection, individual discounts, payment syncing
+- **Demand Bills**:
+  - Monthly bill generation (Single/Class/All)
+  - Editable Tuition Fee selection
+  - Previous dues automatic calculation
+- **Reports**:
+  - Student Fee Book (Yearly statement)
+  - Transaction History
+  - Fee Default Dashboard
+  - Dynamic status tracking (Green/Orange indicators)
 - Transaction history
 
 ### ✅ Exams

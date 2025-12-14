@@ -99,12 +99,12 @@ Password: admin123
 4. Export to Excel
 
 ### All Modules Work:
-- ✅ Admissions
-- ✅ Fees
-- ✅ Exams
-- ✅ Transport
-- ✅ Hostel
-- ✅ Inventory
+- ✅ **Admissions:** Enhanced form with Religion, Guardian details, Govt IDs, and Academic History.
+- ✅ **Fees:** Multi-head collection, Monthly/Yearly frequency support, Demand Bills with editable tuition fee.
+- ✅ **Exams:** Class-wise scheduling and marks entry.
+- ✅ **Transport:** Route and vehicle management.
+- ✅ **Hostel:** Room allocation.
+- ✅ **Inventory:** Stock tracking.
 
 ---
 
