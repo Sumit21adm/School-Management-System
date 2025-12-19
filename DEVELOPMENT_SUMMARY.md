@@ -117,14 +117,18 @@ npm run dev
 - **Fee Collection**: Multi-head collection, individual discounts, payment syncing
 - **Demand Bills**:
   - Monthly bill generation (Single/Class/All)
+  - **Batch PDF Generation**: Download all bills in one click (custom filename with Period/Class info)
   - Editable Tuition Fee selection
   - Previous dues automatic calculation
 - **Reports**:
   - Student Fee Book (Yearly statement)
   - Transaction History
-  - Fee Default Dashboard
+  - Fee Default Dashboard (Merged into Student Details Modal for better UX)
   - Dynamic status tracking (Green/Orange indicators)
-- Transaction history
+- **Receipt Printing**:
+  - Print individual receipts immediately after payment
+  - Print historical receipts from transaction list
+  - A6 optimized PDF format
 
 ### ✅ Exams
 - Exam creation

@@ -6,11 +6,16 @@ node_modules/
 # Testing
 coverage/
 *.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Production
 dist/
 build/
 .next/
+out/
 
 # Environment
 .env
@@ -23,17 +28,28 @@ build/
 *.swp
 *.swo
 *~
+*.sublime-workspace
+*.sublime-project
 
 # OS
 .DS_Store
 Thumbs.db
+.AppleDouble
+.LSOverride
 
 # Turbo
 .turbo/
 
-# Prisma
+# Generated
 apps/api/generated/
+generated/
+
+# Uploads
+uploads/
+**/uploads/
 
 # Misc
 *.tsbuildinfo
 .cache/
+tmp/
+

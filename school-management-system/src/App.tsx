@@ -10,11 +10,12 @@ import AdmissionList from './pages/admissions/AdmissionList';
 import AdmissionForm from './pages/admissions/AdmissionForm';
 import FeeCollection from './pages/fees/FeeCollection';
 import FeeReports from './pages/fees/FeeReports';
-import FeeDashboard from './pages/fees/FeeDashboard';
+
 import EnhancedFeeCollection from './pages/fees/EnhancedFeeCollection';
 import DemandBillGeneration from './pages/fees/DemandBillGeneration';
 import FeeStructure from './pages/settings/FeeStructure';
 import SessionsManagement from './pages/settings/SessionsManagement';
+import PrintSettings from './pages/settings/PrintSettings';
 import StudentDiscountsPage from './pages/students/StudentDiscountsPage';
 import StudentPromotions from './pages/promotions/StudentPromotions';
 import { processSyncQueue } from './lib/db';
@@ -73,12 +74,13 @@ function App() {
             <Route path="/fees/collection" element={<FeeCollection />} />
             <Route path="/fees/collection-enhanced" element={<EnhancedFeeCollection />} />
             <Route path="/fees/reports" element={<FeeReports />} />
-            <Route path="/fees/dashboard" element={<FeeDashboard />} />
+
             <Route path="/fees/demand-bills" element={<DemandBillGeneration />} />
 
             {/* Settings Routes */}
             <Route path="/settings/fee-structure" element={<FeeStructure />} />
             <Route path="/settings/sessions" element={<SessionsManagement />} />
+            <Route path="/settings/print" element={<PrintSettings />} />
             <Route path="/promotions" element={<StudentPromotions />} />
 
             {/* Student Routes */}

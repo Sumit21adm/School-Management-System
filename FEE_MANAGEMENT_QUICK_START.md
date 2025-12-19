@@ -36,7 +36,7 @@ npm run dev
 ### 3. Access the New Features
 
 **Frontend URLs:**
-- Fee Dashboard: http://localhost:5173/fees/dashboard
+- **Fee Dashboard (Integrated):** `Admissions > Student Details (Eye Icon) > Fee Status`
 - Enhanced Fee Collection: http://localhost:5173/fees/collection-enhanced
 - Demand Bill Generation: http://localhost:5173/fees/demand-bills
 
@@ -61,10 +61,10 @@ npm run dev
 
 ### Example 2: View Student Fee Dashboard
 
-1. Navigate to **Fee Dashboard**
-2. Enter Student ID
-3. Select Session ID
-4. Click "View Dashboard"
+1. Navigate to **Admissions Page**
+2. Find Student in list
+3. Click **Eye Icon (View Details)**
+4. Select **"Fee Status"** tab
 
 **You'll see:**
 - Total Fee, Paid Amount, Discounts, Outstanding Dues

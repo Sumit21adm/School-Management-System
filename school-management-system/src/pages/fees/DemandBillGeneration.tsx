@@ -35,8 +35,9 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import { FileText, Download, Send } from 'lucide-react';
+import { FileText, Download, Send, Printer } from 'lucide-react';
 import axios from 'axios';
+import { feeService } from '../../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -668,6 +669,7 @@ export default function DemandBillGeneration() {
                       <TableCell sx={{ fontWeight: 600 }}>Class(es)</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 600 }}>Students</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600 }}>Total Amount</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 600 }}>Print</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -717,6 +719,39 @@ export default function DemandBillGeneration() {
                           <Typography fontWeight={600} color="success.main">
                             ₹{batch.totalAmount.toLocaleString()}
                           </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          {batch.bills && batch.bills.length === 1 ? (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Printer size={14} />}
+                              onClick={() => feeService.openDemandBillPdf(batch.bills[0].billNo)}
+                            >
+                              Print
+                            </Button>
+                          ) : batch.bills && batch.bills.length > 1 ? (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Printer size={14} />}
+                              onClick={() => {
+                                // Generate single PDF with all bills combined
+                                const billNumbers = batch.bills.map((bill: any) => bill.billNo);
+                                const period = `${MONTHS[batch.month - 1]}${batch.year}`;
+                                const classInfo = batch.classes.map((c: string) => `Class${c}`).join('_');
+                                feeService.openBatchDemandBillPdf(billNumbers, {
+                                  period,
+                                  billType: batch.billType,
+                                  classInfo
+                                });
+                              }}
+                            >
+                              Print All ({batch.bills.length})
+                            </Button>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">-</Typography>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

@@ -13,6 +13,7 @@ import { FeeTypesModule } from './fee-types/fee-types.module';
 import { FeeStructureModule } from './fee-structure/fee-structure.module';
 import { DiscountsModule } from './discounts/discounts.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { PrintSettingsModule } from './print-settings/print-settings.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PromotionsModule } from './promotions/promotions.module';
     FeeStructureModule,
     DiscountsModule,
     PromotionsModule,
+    PrintSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

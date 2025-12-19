@@ -59,8 +59,11 @@ Complete fee management solution with student-wise statements, demand bill gener
 
 ### 3. **Frontend Components**
 
-#### FeeDashboard.tsx
-**Location**: `/fees/dashboard`
+#### Fee Dashboard (Integrated)
+**Location**: `Admissions > Student Details > Fee Status Tab`
+**Note**: Standalone `FeeDashboard.tsx` has been deprecated and removed.
+
+**Features**:
 
 **Features**:
 - Real-time student fee status
@@ -74,7 +77,9 @@ Complete fee management solution with student-wise statements, demand bill gener
 **Usage**:
 ```tsx
 // Navigate to dashboard
-<Link to="/fees/dashboard">Fee Dashboard</Link>
+// 1. Go to Admissions list
+// 2. Click "Eye" icon on a student
+// 3. Select "Fee Status" tab
 
 // Search by student ID and session
 - Enter student ID
@@ -116,7 +121,8 @@ Complete fee management solution with student-wise statements, demand bill gener
 - Discount application
 - Due date setting
 - Generation summary report
-- Bulk PDF download (Coming Soon)
+- Generation summary report
+- **Batch PDF Download**: Print all bills with one click (Custom Filename)
 - Email/SMS sending (Coming Soon)
 
 **Usage**:
@@ -279,17 +285,16 @@ import DemandBillGeneration from './pages/fees/DemandBillGeneration';
 - [x] Demand bill generation (bulk)
 - [x] Fee dashboard display
 - [x] Yearly fee book generation
-- [ ] PDF generation
-- [ ] Receipt printing
+- [x] Yearly fee book generation
+- [x] PDF generation (Demand Bills & Batch)
+- [x] Receipt printing (Individual & History)
 - [ ] Email/SMS notifications
 - [ ] Integration testing with existing modules
 
 ## 🐛 Known Issues & Limitations
 
-1. PDF generation not yet implemented (planned for Phase 4)
-2. Email/SMS sending requires external service integration
-3. Late fee calculation is manual (can be automated)
-4. Receipt printing requires browser print dialog
+1. Email/SMS sending requires external service integration
+2. Late fee calculation is manual (can be automated)
 
 ## 📞 Support
 

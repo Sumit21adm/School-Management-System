@@ -74,38 +74,63 @@ export class FeesService {
         });
 
         // Update demand bill if payment is against a specific bill
-        // Priority: 1) dto.billNo, 2) Parse from remarks (legacy)
+        // Priority: 1) dto.billNo, 2) Parse from remarks (legacy), 3) Auto-link to oldest pending bill
         let targetBillNo = dto.billNo;
 
         if (!targetBillNo && dto.remarks && dto.remarks.includes('Payment for Bill:')) {
-            const billNoMatch = dto.remarks.match(/BILL\\d+/);
+            const billNoMatch = dto.remarks.match(/BILL\d+/);
             if (billNoMatch) {
                 targetBillNo = billNoMatch[0];
+            }
+        }
+
+        // Auto-link: If no specific bill, find oldest pending bill for this student
+        if (!targetBillNo) {
+            const oldestPendingBill = await this.prisma.demandBill.findFirst({
+                where: {
+                    studentId: dto.studentId,
+                    sessionId: dto.sessionId,
+                    status: { in: ['PENDING', 'SENT', 'PARTIALLY_PAID', 'OVERDUE'] },
+                },
+                orderBy: [
+                    { year: 'asc' },
+                    { month: 'asc' },
+                ],
+            });
+            if (oldestPendingBill) {
+                targetBillNo = oldestPendingBill.billNo;
             }
         }
 
         if (targetBillNo) {
             const demandBill = await this.prisma.demandBill.findUnique({
                 where: { billNo: targetBillNo },
+                include: { billItems: true },
             });
 
             if (demandBill) {
+                // Calculate dynamic net amount from items (consistent with PDF and dashboard)
+                const billGross = demandBill.billItems.reduce((sum, item) => sum + Number(item.amount), 0);
+                const billDiscount = Number(demandBill.discount) || 0;
+                const previousDues = Number(demandBill.previousDues) || 0;
+                const dynamicNetAmount = billGross + previousDues - billDiscount;
+
                 const newPaidAmount = Number(demandBill.paidAmount) + totalAmount;
-                const netAmount = Number(demandBill.netAmount);
                 let newStatus = demandBill.status;
 
-                // Determine new status
-                if (newPaidAmount >= netAmount) {
+                // Determine new status based on dynamic net amount
+                if (newPaidAmount >= dynamicNetAmount) {
                     newStatus = 'PAID';
                 } else if (newPaidAmount > 0) {
                     newStatus = 'PARTIALLY_PAID';
                 }
 
-                // Update demand bill
+                // Update demand bill with new paid amount and sync netAmount
                 await this.prisma.demandBill.update({
                     where: { billNo: targetBillNo },
                     data: {
                         paidAmount: new Decimal(newPaidAmount),
+                        netAmount: new Decimal(dynamicNetAmount), // Sync netAmount
                         status: newStatus,
                         paidDate: newStatus === 'PAID' ? new Date() : null,
                     },
@@ -485,6 +510,7 @@ export class FeesService {
                 const billItems: Array<{
                     feeTypeId: number;
                     amount: Decimal;
+                    discountAmount: Decimal;
                 }> = [];
 
                 // Filter fee structure items by selected fee types (if provided)
@@ -496,21 +522,24 @@ export class FeesService {
                     const amount = Number(item.amount);
                     totalAmount += amount;
 
+                    let itemDiscount = 0;
                     const discount = discounts.find(d => d.feeTypeId === item.feeTypeId);
                     if (discount) {
-                        const discountAmount = discount.discountType === 'PERCENTAGE'
+                        itemDiscount = discount.discountType === 'PERCENTAGE'
                             ? (amount * Number(discount.discountValue)) / 100
                             : Number(discount.discountValue);
-                        totalDiscount += discountAmount;
+                        totalDiscount += itemDiscount;
                     }
 
                     billItems.push({
                         feeTypeId: item.feeTypeId,
                         amount: new Decimal(amount),
+                        discountAmount: new Decimal(itemDiscount),
                     });
                 }
 
                 // Auto-calculate and add late fees if enabled and student has previous dues
+                // BUT only if late fee wasn't already charged in a previous bill for this session
                 if (dto.autoCalculateLateFees !== false && previousDues > 0) {
                     // Get late fee from fee structure for this class
                     const lateFeeItem = feeStructure.feeItems.find(
@@ -518,14 +547,28 @@ export class FeesService {
                     );
 
                     if (lateFeeItem) {
-                        // Use late fee amount from fee structure
-                        const lateFeeAmount = Number(lateFeeItem.amount);
-
-                        billItems.push({
-                            feeTypeId: lateFeeItem.feeTypeId,
-                            amount: new Decimal(lateFeeAmount),
+                        // Check if late fee was already added in any previous bill for this session
+                        const existingLateFee = await this.prisma.demandBillItem.findFirst({
+                            where: {
+                                feeTypeId: lateFeeItem.feeTypeId,
+                                bill: {
+                                    studentId: student.studentId,
+                                    sessionId: dto.sessionId,
+                                },
+                            },
                         });
-                        totalAmount += lateFeeAmount;
+
+                        // Only add late fee if not already charged in this session
+                        if (!existingLateFee) {
+                            const lateFeeAmount = Number(lateFeeItem.amount);
+
+                            billItems.push({
+                                feeTypeId: lateFeeItem.feeTypeId,
+                                amount: new Decimal(lateFeeAmount),
+                                discountAmount: new Decimal(0),
+                            });
+                            totalAmount += lateFeeAmount;
+                        }
                     }
                 }
 
@@ -789,6 +832,21 @@ export class FeesService {
         }
         if (query.sessionId) {
             whereClause.sessionId = parseInt(query.sessionId);
+        }
+
+        // Student filters
+        if (query.studentName || query.className || query.section) {
+            whereClause.student = whereClause.student || {};
+
+            if (query.studentName) {
+                whereClause.student.name = { contains: query.studentName };
+            }
+            if (query.className) {
+                whereClause.student.className = query.className;
+            }
+            if (query.section) {
+                whereClause.student.section = query.section;
+            }
         }
 
         const transactions = await this.prisma.feeTransaction.findMany({

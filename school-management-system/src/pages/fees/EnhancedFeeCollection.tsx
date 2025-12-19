@@ -31,8 +31,9 @@ import {
   TableRow,
   Divider,
 } from '@mui/material';
-import { Plus, Trash2, IndianRupee, Receipt, Search } from 'lucide-react';
+import { Plus, Trash2, IndianRupee, Clock, Printer } from 'lucide-react';
 import axios from 'axios';
+import { feeService } from '../../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -104,6 +105,19 @@ export default function EnhancedFeeCollection() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnMount: true, // Always refetch when component mounts
+  });
+
+  // Fetch recent transactions (last 10)
+  const { data: recentTransactions } = useQuery({
+    queryKey: ['recent-transactions'],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/fees/transactions`, {
+        params: { limit: 10, sortBy: 'date', sortOrder: 'desc' }
+      });
+      return response.data.transactions || response.data;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnMount: true,
   });
 
   // Fetch student dashboard for fee structure
@@ -785,6 +799,70 @@ export default function EnhancedFeeCollection() {
                 </Card>
               </>
             )}
+
+            {/* Recent Transactions */}
+            <Card elevation={2} sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                  <Clock size={18} />
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    Recent Collections
+                  </Typography>
+                </Stack>
+                {recentTransactions && recentTransactions.length > 0 ? (
+                  <Stack spacing={1.5} sx={{ maxHeight: 280, overflowY: 'auto' }}>
+                    {recentTransactions.slice(0, 10).map((txn: any, idx: number) => (
+                      <Box
+                        key={txn.receiptNo || idx}
+                        sx={{
+                          p: 1.5,
+                          bgcolor: 'grey.50',
+                          borderRadius: 2,
+                          borderLeft: '3px solid',
+                          borderLeftColor: 'success.main',
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>
+                              {txn.receiptNo}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {txn.student?.name || txn.studentId} • {txn.student?.className || ''}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="body2" fontWeight={700} color="success.main">
+                              ₹{Number(txn.amount).toLocaleString()}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(txn.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            onClick={() => feeService.openReceiptPdf(txn.receiptNo)}
+                            sx={{
+                              ml: 1,
+                              bgcolor: 'primary.light',
+                              color: 'primary.main',
+                              '&:hover': { bgcolor: 'primary.main', color: 'white' }
+                            }}
+                            title="Print Receipt"
+                          >
+                            <Printer size={14} />
+                          </IconButton>
+                        </Stack>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                    No recent transactions
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
 
             <Card elevation={0} sx={{ borderRadius: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
               <CardContent sx={{ p: 3 }}>

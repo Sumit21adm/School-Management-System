@@ -27,6 +27,7 @@ import {
   Settings,
   Receipt,
   TrendingUp,
+  Print,
 } from '@mui/icons-material';
 import SessionSelector from './SessionSelector';
 
@@ -41,12 +42,13 @@ const menuItems = [
   { path: '/', label: 'Dashboard', icon: DashboardIcon },
   { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
   { path: '/promotions', label: 'Promotions', icon: TrendingUp },
-  { path: '/fees/dashboard', label: 'Fee Dashboard', icon: Receipt },
+
   { path: '/fees/collection-enhanced', label: 'Fee Collection', icon: MoneyIcon },
   { path: '/fees/demand-bills', label: 'Demand Bills', icon: Receipt },
-  { path: '/fees/reports', label: 'Fee Reports', icon: Receipt },
+  { path: '/fees/reports', label: 'Fee Receipt', icon: Receipt },
   { path: '/settings/sessions', label: 'Sessions', icon: Settings },
   { path: '/settings/fee-structure', label: 'Fee Structure', icon: Settings },
+  { path: '/settings/print', label: 'Print Settings', icon: Print },
 ];
 
 export default function Layout({ children, onLogout }: LayoutProps) {

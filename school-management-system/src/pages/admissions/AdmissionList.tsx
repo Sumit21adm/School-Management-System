@@ -39,6 +39,10 @@ import {
   FormLabel,
   Alert,
   TableSortLabel,
+  CircularProgress,
+  LinearProgress,
+  Divider,
+  Paper,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -50,7 +54,16 @@ import {
   CloudUpload as UploadIcon,
   FileDownload as FileDownloadIcon,
 } from '@mui/icons-material';
-import { admissionService } from '../../lib/api';
+import {
+  TrendingUp,
+  TrendingDown,
+  Receipt,
+  AlertCircle,
+  FileText,
+  Download,
+  Printer,
+} from 'lucide-react';
+import { admissionService, feeService } from '../../lib/api';
 import { db } from '../../lib/db';
 import { useSession } from '../../contexts/SessionContext';
 
@@ -63,6 +76,7 @@ export default function AdmissionList() {
   const [statusFilter, setStatusFilter] = useState('active');
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [showFeeBook, setShowFeeBook] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -114,6 +128,29 @@ export default function AdmissionList() {
     },
     enabled: !!selectedStudent && !!selectedSession && tabValue === 2,
   });
+
+  const { data: feeBook } = useQuery({
+    queryKey: ['fee-book', selectedStudent?.studentId, selectedSession?.id],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_URL}/fees/fee-book/${selectedStudent?.studentId}/session/${selectedSession?.id}`
+      );
+      return response.json();
+    },
+    enabled: showFeeBook && !!selectedStudent?.studentId && !!selectedSession,
+  });
+
+  const getStatusColor = (balance: number) => {
+    if (balance === 0) return 'success';
+    if (balance < 0) return 'info';
+    return 'error';
+  };
+
+  const getStatusLabel = (balance: number) => {
+    if (balance === 0) return 'Paid';
+    if (balance < 0) return 'Advance';
+    return 'Pending';
+  };
 
   const handleViewStudent = async (student: any) => {
     setSelectedStudent(student); // Show basic info immediately
@@ -775,11 +812,11 @@ export default function AdmissionList() {
                       <Table size="small">
                         <TableHead>
                           <TableRow sx={{ bgcolor: 'grey.50' }}>
-                            <TableCell fontWeight="bold">Session</TableCell>
-                            <TableCell fontWeight="bold">Class</TableCell>
-                            <TableCell fontWeight="bold">Section</TableCell>
-                            <TableCell fontWeight="bold">Status</TableCell>
-                            <TableCell fontWeight="bold">Result</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Session</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Class</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Section</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Result</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -812,172 +849,371 @@ export default function AdmissionList() {
 
               {tabValue === 2 && (
                 <Box>
-                  {/* Collect Fee Button */}
-                  <Button
-                    component={Link}
-                    to={`/fees/collection-enhanced?studentId=${selectedStudent.studentId}`}
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    sx={{ mb: 3 }}
-                  >
-                    Collect Fee
-                  </Button>
+                  {/* Header Actions */}
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
+                    <Button
+                      component={Link}
+                      to={`/fees/collection-enhanced?studentId=${selectedStudent.studentId}`}
+                      variant="contained"
+                      color="primary"
+                      startIcon={<Receipt size={18} />}
+                    >
+                      Collect Fee
+                    </Button>
+                    <Stack direction="row" spacing={2}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<FileText size={18} />}
+                        onClick={() => setShowFeeBook(true)}
+                      >
+                        View Fee Book
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<Download size={18} />}
+                      >
+                        Download Statement
+                      </Button>
+                    </Stack>
+                  </Stack>
 
-                  {/* Fee Status Display */}
                   {loadingFees ? (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <CircularProgress size={40} sx={{ mb: 2 }} />
                       <Typography color="text.secondary">Loading fee status...</Typography>
                     </Box>
-                  ) : !feeStatus || !feeStatus.pendingBills || feeStatus.pendingBills.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                      <Typography>No demand bills generated yet.</Typography>
+                  ) : !feeStatus ? (
+                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography color="text.secondary">No fee data available.</Typography>
                     </Box>
                   ) : (
-                    <Box>
+                    <>
                       {/* Summary Cards */}
-                      <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid size={{ xs: 6 }}>
-                          <Card variant="outlined">
-                            <CardContent>
-                              <Typography variant="caption" color="text.secondary">Pending Bills</Typography>
-                              <Typography variant="h6" color="error.main">
-                                ₹{feeStatus.pendingBills.reduce((sum: number, bill: any) => sum + bill.balance, 0).toLocaleString()}
-                              </Typography>
+                      <Grid container spacing={3} mb={4}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'primary.main', color: 'white', minHeight: 140, height: '100%' }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Typography variant="body2" sx={{ opacity: 0.9 }} gutterBottom>Total Fee</Typography>
+                              <Typography variant="h4" fontWeight={700}>₹{feeStatus.summary.totalGross.toLocaleString()}</Typography>
                             </CardContent>
                           </Card>
                         </Grid>
-                        <Grid size={{ xs: 6 }}>
-                          <Card variant="outlined">
-                            <CardContent>
-                              <Typography variant="caption" color="text.secondary">Total Paid</Typography>
-                              <Typography variant="h6" color="success.main">
-                                ₹{feeStatus.pendingBills.reduce((sum: number, bill: any) => sum + bill.paid, 0).toLocaleString()}
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'success.main', color: 'white', minHeight: 140, height: '100%' }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Typography variant="body2" sx={{ opacity: 0.9 }} gutterBottom>Total Paid</Typography>
+                              <Typography variant="h4" fontWeight={700}>₹{feeStatus.summary.totalPaid.toLocaleString()}</Typography>
+                              <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 1 }}>
+                                <TrendingUp size={16} />
+                                <Typography variant="caption">
+                                  {((feeStatus.summary.totalPaid / feeStatus.summary.totalNet) * 100).toFixed(1)}%
+                                </Typography>
+                              </Stack>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'warning.main', color: 'white', minHeight: 140, height: '100%' }}>
+                            <CardContent sx={{ p: 3 }}>
+                              <Typography variant="body2" sx={{ opacity: 0.9 }} gutterBottom>Discount</Typography>
+                              <Typography variant="h4" fontWeight={700}>₹{feeStatus.summary.totalDiscount.toLocaleString()}</Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Card
+                            elevation={2}
+                            sx={{
+                              borderRadius: 3,
+                              bgcolor: feeStatus.summary.totalDues > 0 ? 'error.main' : 'info.main',
+                              color: 'white',
+                              minHeight: 140,
+                              height: '100%'
+                            }}
+                          >
+                            <CardContent sx={{ p: 3 }}>
+                              <Typography variant="body2" sx={{ opacity: 0.9 }} gutterBottom>
+                                {feeStatus.summary.totalDues > 0 ? 'Pending Dues' : 'Advance'}
                               </Typography>
+                              <Typography variant="h4" fontWeight={700}>
+                                ₹{Math.abs(feeStatus.summary.totalDues).toLocaleString()}
+                              </Typography>
+                              <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 1 }}>
+                                {feeStatus.summary.totalDues > 0 ? (
+                                  <>
+                                    <AlertCircle size={16} />
+                                    <Typography variant="caption">Payment Required</Typography>
+                                  </>
+                                ) : (
+                                  <>
+                                    <TrendingDown size={16} />
+                                    <Typography variant="caption">No Dues</Typography>
+                                  </>
+                                )}
+                              </Stack>
                             </CardContent>
                           </Card>
                         </Grid>
                       </Grid>
 
-                      {/* Explanation Alert */}
-                      <Alert severity="info" sx={{ mb: 2 }}>
-                        <Typography variant="caption">
-                          <strong>Note:</strong> Pending Bills shows the total balance of all generated demand bills below. Generate more bills for other months to see them here.
-                        </Typography>
-                      </Alert>
-
-                      {/* Month-wise Bills Table */}
-                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                        Monthly Demand Bills
-                      </Typography>
-                      <TableContainer component={Box} sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow sx={{ bgcolor: 'grey.50' }}>
-                              <TableCell sx={{ fontWeight: 600 }}>Month/Year</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>Bill No</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Amount</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Discount</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Paid</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
-                              <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
-                              <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {feeStatus.pendingBills.map((bill: any) => {
-                              const isExpanded = expandedBills.includes(bill.billNo);
-                              const totalDiscount = bill.items?.reduce((sum: number, item: any) => sum + (item.discount || 0), 0);
-                              return (
-                                <>
-                                  <TableRow key={bill.billNo} hover>
-                                    <TableCell>
-                                      <Stack direction="row" alignItems="center" spacing={1}>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => {
-                                            setExpandedBills(prev =>
-                                              isExpanded
-                                                ? prev.filter(b => b !== bill.billNo)
-                                                : [...prev, bill.billNo]
-                                            );
-                                          }}
-                                        >
-                                          {isExpanded ? '▼' : '▶'}
-                                        </IconButton>
-                                        <Typography variant="body2">{bill.month}/{bill.year}</Typography>
-                                      </Stack>
-                                    </TableCell>
-                                    <TableCell>{bill.billNo}</TableCell>
-                                    <TableCell align="right">₹{bill.amount.toLocaleString()}</TableCell>
-                                    <TableCell align="right" sx={{ color: totalDiscount > 0 ? 'error.main' : 'text.primary' }}>
-                                      {totalDiscount > 0 ? `₹${totalDiscount.toLocaleString()}` : '-'}
-                                    </TableCell>
+                      {/* Fee Heads Breakdown */}
+                      <Card elevation={2} sx={{ mb: 4, borderRadius: 3 }}>
+                        <CardContent sx={{ p: 3 }}>
+                          <Typography variant="h6" fontWeight={600} gutterBottom>Fee Head Breakdown</Typography>
+                          <TableContainer>
+                            <Table>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ fontWeight: 600 }}>Fee Type</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Gross Amount</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Discount</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Net Amount</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Paid</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {feeStatus.feeHeads.map((head: any) => (
+                                  <TableRow key={head.feeTypeId} hover>
+                                    <TableCell>{head.feeType}</TableCell>
+                                    <TableCell align="right">₹{head.grossAmount.toLocaleString()}</TableCell>
                                     <TableCell align="right" sx={{ color: 'success.main' }}>
-                                      ₹{bill.paid.toLocaleString()}
+                                      {head.discount > 0 ? `-₹${head.discount.toLocaleString()}` : '-'}
                                     </TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                      ₹{bill.balance.toLocaleString()}
-                                    </TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 600 }}>₹{head.netAmount.toLocaleString()}</TableCell>
+                                    <TableCell align="right" sx={{ color: 'primary.main' }}>₹{head.paid.toLocaleString()}</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 600 }}>₹{Math.abs(head.balance).toLocaleString()}</TableCell>
                                     <TableCell align="center">
                                       <Chip
-                                        label={bill.status}
+                                        label={getStatusLabel(head.balance)}
+                                        color={getStatusColor(head.balance)}
                                         size="small"
-                                        color={
-                                          bill.status === 'PAID' || bill.status === 'paid' ? 'success' :
-                                            bill.status === 'PENDING' || bill.status === 'pending' ? 'warning' : 'error'
-                                        }
                                       />
                                     </TableCell>
-                                    <TableCell align="center">
-                                      {bill.balance > 0 && (
-                                        <Button
-                                          component={Link}
-                                          to={`/fees/collection-enhanced?studentId=${selectedStudent.studentId}&billNo=${bill.billNo}`}
-                                          size="small"
-                                          variant="outlined"
-                                        >
-                                          Pay
-                                        </Button>
-                                      )}
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                          {/* Progress Bar */}
+                          <Box sx={{ mt: 3 }}>
+                            <Stack direction="row" justifyContent="space-between" mb={1}>
+                              <Typography variant="body2" color="text.secondary">Payment Progress</Typography>
+                              <Typography variant="body2" fontWeight={600}>
+                                {((feeStatus.summary.totalPaid / feeStatus.summary.totalNet) * 100).toFixed(1)}%
+                              </Typography>
+                            </Stack>
+                            <LinearProgress
+                              variant="determinate"
+                              value={(feeStatus.summary.totalPaid / feeStatus.summary.totalNet) * 100}
+                              sx={{ height: 8, borderRadius: 4 }}
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
+
+                      {/* Recent Transactions */}
+                      <Card elevation={2} sx={{ borderRadius: 3, mb: 4 }}>
+                        <CardContent sx={{ p: 3 }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                            <Typography variant="h6" fontWeight={600}>Recent Transactions</Typography>
+                            <Chip
+                              icon={<Receipt size={16} />}
+                              label={`${feeStatus.recentTransactions.length} Transactions`}
+                              size="small"
+                            />
+                          </Stack>
+                          <TableContainer>
+                            <Table>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ fontWeight: 600 }}>Receipt No</TableCell>
+                                  <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                                  <TableCell sx={{ fontWeight: 600 }}>Details</TableCell>
+                                  <TableCell sx={{ fontWeight: 600 }}>Mode</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Amount</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {feeStatus.recentTransactions.length === 0 ? (
+                                  <TableRow>
+                                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                                      No transactions found
                                     </TableCell>
                                   </TableRow>
-                                  {isExpanded && bill.items && (
-                                    <TableRow>
-                                      <TableCell colSpan={7} sx={{ bgcolor: 'grey.50', py: 2 }}>
-                                        <Typography variant="caption" fontWeight={600} sx={{ mb: 1, display: 'block' }}>
-                                          Bill Breakdown:
-                                        </Typography>
-                                        <Table size="small">
-                                          <TableHead>
-                                            <TableRow>
-                                              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Fee Type</TableCell>
-                                              <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Discount</TableCell>
-                                              <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Amount</TableCell>
-                                            </TableRow>
-                                          </TableHead>
-                                          <TableBody>
-                                            {bill.items.map((item: any, idx: number) => {
-                                              return (
-                                                <TableRow key={idx}>
-                                                  <TableCell sx={{ fontSize: '0.75rem' }}>{item.feeType}</TableCell>
-                                                  <TableCell align="right" sx={{ fontSize: '0.75rem' }}>{item.discount > 0 ? `₹${item.discount.toLocaleString()}` : '-'}</TableCell>
-                                                  <TableCell align="right" sx={{ fontSize: '0.75rem' }}>₹{item.amount.toLocaleString()}</TableCell>
-                                                </TableRow>
-                                              );
-                                            })}
-                                          </TableBody>
-                                        </Table>
+                                ) : (
+                                  feeStatus.recentTransactions.map((txn: any, index: number) => (
+                                    <TableRow key={index} hover>
+                                      <TableCell sx={{ fontWeight: 500 }}>{txn.receiptNo}</TableCell>
+                                      <TableCell>{new Date(txn.date).toLocaleDateString()}</TableCell>
+                                      <TableCell>
+                                        <Stack spacing={0.5}>
+                                          {txn.details.map((detail: any, idx: number) => (
+                                            <Typography key={idx} variant="body2" color="text.secondary">
+                                              {detail.feeType}: ₹{detail.amount.toLocaleString()}
+                                            </Typography>
+                                          ))}
+                                        </Stack>
+                                      </TableCell>
+                                      <TableCell sx={{ textTransform: 'capitalize' }}>{txn.paymentMode}</TableCell>
+                                      <TableCell align="right" sx={{ fontWeight: 600, color: 'success.main' }}>
+                                        ₹{txn.amount.toLocaleString()}
+                                      </TableCell>
+                                      <TableCell align="center">
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          startIcon={<Printer size={16} />}
+                                          onClick={() => feeService.openReceiptPdf(txn.receiptNo)}
+                                        >
+                                          Print
+                                        </Button>
                                       </TableCell>
                                     </TableRow>
-                                  )}
-                                </>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
+                                  ))
+                                )}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </CardContent>
+                      </Card>
+
+                      {/* Pending Bills - Keep existing logic which is quite good via 'pendingBills' from API */}
+                      {(!feeStatus.pendingBills || feeStatus.pendingBills.length === 0) ? (
+                        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                          <Typography>No demand bills generated yet.</Typography>
+                        </Box>
+                      ) : (
+                        <Box>
+                          <Alert severity="info" sx={{ mb: 2 }}>
+                            <Typography variant="caption">
+                              <strong>Note:</strong> Pending Bills shows the total balance of all generated demand bills.
+                            </Typography>
+                          </Alert>
+                          <Typography variant="subtitle2" fontWeight={600} gutterBottom>Monthly Demand Bills</Typography>
+                          <TableContainer component={Box} sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                  <TableCell sx={{ fontWeight: 600 }}>Month/Year</TableCell>
+                                  <TableCell sx={{ fontWeight: 600 }}>Bill No</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Amount</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Discount</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Paid</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {feeStatus.pendingBills.map((bill: any) => {
+                                  const isExpanded = expandedBills.includes(bill.billNo);
+                                  const totalDiscount = bill.items?.reduce((sum: number, item: any) => sum + (item.discount || 0), 0);
+                                  return (
+                                    <>
+                                      <TableRow key={bill.billNo} hover>
+                                        <TableCell>
+                                          <Stack direction="row" alignItems="center" spacing={1}>
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => {
+                                                setExpandedBills(prev =>
+                                                  isExpanded
+                                                    ? prev.filter(b => b !== bill.billNo)
+                                                    : [...prev, bill.billNo]
+                                                );
+                                              }}
+                                            >
+                                              {isExpanded ? '▼' : '▶'}
+                                            </IconButton>
+                                            <Typography variant="body2">{bill.month}/{bill.year}</Typography>
+                                          </Stack>
+                                        </TableCell>
+                                        <TableCell>{bill.billNo}</TableCell>
+                                        <TableCell align="right">₹{bill.amount.toLocaleString()}</TableCell>
+                                        <TableCell align="right" sx={{ color: totalDiscount > 0 ? 'error.main' : 'text.primary' }}>
+                                          {totalDiscount > 0 ? `₹${totalDiscount.toLocaleString()}` : '-'}
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ color: 'success.main' }}>
+                                          ₹{bill.paid.toLocaleString()}
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                          ₹{bill.balance.toLocaleString()}
+                                        </TableCell>
+                                        <TableCell align="center">
+                                          <Chip
+                                            label={bill.status}
+                                            size="small"
+                                            color={
+                                              bill.status === 'PAID' || bill.status === 'paid' ? 'success' :
+                                                bill.status === 'PENDING' || bill.status === 'pending' ? 'warning' : 'error'
+                                            }
+                                          />
+                                        </TableCell>
+                                        <TableCell align="center">
+                                          <Stack direction="row" spacing={1} justifyContent="center">
+                                            {bill.balance > 0 && (
+                                              <Button
+                                                component={Link}
+                                                to={`/fees/collection-enhanced?studentId=${selectedStudent.studentId}&billNo=${bill.billNo}`}
+                                                size="small"
+                                                variant="outlined"
+                                              >
+                                                Pay
+                                              </Button>
+                                            )}
+                                            <Button
+                                              size="small"
+                                              variant="outlined"
+                                              startIcon={<Printer size={16} />}
+                                              onClick={() => feeService.openDemandBillPdf(bill.billNo)}
+                                            >
+                                              Print
+                                            </Button>
+                                          </Stack>
+                                        </TableCell>
+                                      </TableRow>
+                                      {isExpanded && bill.items && (
+                                        <TableRow>
+                                          <TableCell colSpan={7} sx={{ bgcolor: 'grey.50', py: 2 }}>
+                                            <Typography variant="caption" fontWeight={600} sx={{ mb: 1, display: 'block' }}>
+                                              Bill Breakdown:
+                                            </Typography>
+                                            <Table size="small">
+                                              <TableHead>
+                                                <TableRow>
+                                                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Fee Type</TableCell>
+                                                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Discount</TableCell>
+                                                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Amount</TableCell>
+                                                </TableRow>
+                                              </TableHead>
+                                              <TableBody>
+                                                {bill.items.map((item: any, idx: number) => {
+                                                  return (
+                                                    <TableRow key={idx}>
+                                                      <TableCell sx={{ fontSize: '0.75rem' }}>{item.feeType}</TableCell>
+                                                      <TableCell align="right" sx={{ fontSize: '0.75rem' }}>{item.discount > 0 ? `₹${item.discount.toLocaleString()}` : '-'}</TableCell>
+                                                      <TableCell align="right" sx={{ fontSize: '0.75rem' }}>₹{item.amount.toLocaleString()}</TableCell>
+                                                    </TableRow>
+                                                  );
+                                                })}
+                                              </TableBody>
+                                            </Table>
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Box>
+                      )}
+                    </>
                   )}
                 </Box>
               )}
@@ -1129,6 +1365,128 @@ export default function AdmissionList() {
           </Button>
         </DialogActions>
       </Dialog >
+      <Dialog open={showFeeBook} onClose={() => setShowFeeBook(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight={600}>
+              Yearly Fee Book
+            </Typography>
+            <Button startIcon={<DownloadIcon />} variant="outlined" size="small">
+              Download PDF
+            </Button>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          {feeBook && (
+            <Box>
+              <Grid container spacing={2} mb={3}>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Student
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {feeBook.student.name} ({feeBook.student.studentId})
+                  </Typography>
+                  <Typography variant="body2">
+                    Class: {feeBook.student.className}-{feeBook.student.section}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Session
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {feeBook.session}
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                Fee Structure
+              </Typography>
+              <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Fee Type</TableCell>
+                      <TableCell align="right">Gross</TableCell>
+                      <TableCell align="right">Discount</TableCell>
+                      <TableCell align="right">Net</TableCell>
+                      <TableCell align="right">Paid</TableCell>
+                      <TableCell align="right">Balance</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {feeBook.feeStructure.map((item: any) => (
+                      <TableRow key={item.feeTypeId}>
+                        <TableCell>{item.feeType}</TableCell>
+                        <TableCell align="right">₹{item.grossAmount.toLocaleString()}</TableCell>
+                        <TableCell align="right">₹{item.discount.toLocaleString()}</TableCell>
+                        <TableCell align="right">₹{item.netAmount.toLocaleString()}</TableCell>
+                        <TableCell align="right">₹{item.paid.toLocaleString()}</TableCell>
+                        <TableCell align="right">₹{item.balance.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                Monthly Payment Details
+              </Typography>
+              <Grid container spacing={2}>
+                {feeBook.monthlyPayments.map((month: any) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={month.month}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle2" gutterBottom>
+                          {new Date(2024, month.month - 1).toLocaleDateString('en', { month: 'long' })}
+                        </Typography>
+                        <Typography variant="h6" color="success.main" fontWeight={600}>
+                          ₹{month.totalPaid.toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {month.transactions.length} transaction(s)
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Opening Balance
+                  </Typography>
+                  <Typography variant="h6" fontWeight={600}>
+                    ₹{feeBook.openingBalance.toLocaleString()}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 6 }} textAlign="right">
+                  <Typography variant="body2" color="text.secondary">
+                    Closing Balance
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    color={feeBook.closingBalance > 0 ? 'error.main' : 'success.main'}
+                  >
+                    ₹{Math.abs(feeBook.closingBalance).toLocaleString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowFeeBook(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box >
   );
 }
