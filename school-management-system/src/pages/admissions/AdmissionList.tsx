@@ -43,6 +43,7 @@ import {
   LinearProgress,
   Divider,
   Paper,
+  Snackbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -53,6 +54,7 @@ import {
   Delete as DeleteIcon,
   CloudUpload as UploadIcon,
   FileDownload as FileDownloadIcon,
+  RestoreFromTrash,
 } from '@mui/icons-material';
 import {
   TrendingUp,
@@ -268,6 +270,48 @@ export default function AdmissionList() {
     }
   };
 
+  // Snackbar State
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
+
+  // Restore State
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [studentToRestore, setStudentToRestore] = useState<any | null>(null);
+
+  const handleRestoreClick = (student: any) => {
+    setStudentToRestore(student);
+    setRestoreDialogOpen(true);
+  };
+
+  const handleRestoreConfirm = async () => {
+    if (!studentToRestore) return;
+
+    try {
+      await admissionService.restoreStudent(studentToRestore.id);
+      setSnackbar({
+        open: true,
+        message: 'Student restored successfully',
+        severity: 'success',
+      });
+      refetch();
+    } catch (error) {
+      console.error('Restore failed:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to restore student',
+        severity: 'error',
+      });
+    } finally {
+      setRestoreDialogOpen(false);
+      setStudentToRestore(null);
+    }
+  };
+
   const handleDeleteClick = (student: any) => {
     setStudentToDelete(student);
     setDeleteDialogOpen(true);
@@ -278,16 +322,23 @@ export default function AdmissionList() {
 
     try {
       await admissionService.deleteStudent(studentToDelete.id);
-      setDeleteDialogOpen(false);
-      setStudentToDelete(null);
-      // Invalidate queries to refresh the list
-      // Since we don't have direct access to queryClient here, we can rely on the user refreshing or
-      // ideally we should use useMutation with onSuccess to invalidate queries.
-      // For now, let's just reload the page or trigger a refetch if possible.
-      // A better way with useQuery is to use the refetch function returned by useQuery.
+      setSnackbar({
+        open: true,
+        message: 'Student deleted successfully',
+        severity: 'success',
+      });
+      // Refresh list immediately
       refetch();
     } catch (error) {
       console.error('Delete failed:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete student',
+        severity: 'error',
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setStudentToDelete(null);
     }
   };
 
@@ -606,6 +657,16 @@ export default function AdmissionList() {
                         >
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
+                        {statusFilter === 'archived' && (
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => handleRestoreClick(student)}
+                            title="Restore Student"
+                          >
+                            <RestoreFromTrash fontSize="small" />
+                          </IconButton>
+                        )}
                         <IconButton
                           size="small"
                           color="error"
@@ -1298,20 +1359,59 @@ export default function AdmissionList() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle sx={{ color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AlertCircle size={24} />
+          Confirm Deletion
+        </DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to delete student <strong>{studentToDelete?.name}</strong>?
-            This action cannot be undone.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action will move the student to the <strong>Archived</strong> list. They will no longer appear in the active student list.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
+          <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
+            Confirm Delete
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Success/Error Notification */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      {/* Restore Confirmation Dialog */}
+      <Dialog open={restoreDialogOpen} onClose={() => setRestoreDialogOpen(false)}>
+        <DialogTitle sx={{ color: 'success.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <RestoreFromTrash />
+          Confirm Restore
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to restore student <strong>{studentToRestore?.name}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This will move the student back to the <strong>Active</strong> list.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRestoreDialogOpen(false)} variant="outlined">Cancel</Button>
+          <Button onClick={handleRestoreConfirm} color="success" variant="contained" autoFocus>
+            Confirm Restore
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Import Dialog */}
       <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Import Students</DialogTitle>

@@ -19,6 +19,11 @@ import {
     IconButton,
     InputLabel,
     Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Snackbar,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Check as CheckIcon, CloudDone as CloudDoneIcon, Sync as SyncIcon } from '@mui/icons-material';
 import { useSession } from '../../contexts/SessionContext';
@@ -123,8 +128,71 @@ export default function FeeStructure() {
         setSelectedFeeType('');
     };
 
+    // Delete State
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<FeeItem | null>(null);
+
+    // Snackbar State
+    const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+        open: false,
+        message: '',
+        severity: 'success',
+    });
+
+    const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
+
     const handleRemoveFeeType = (feeTypeId: number) => {
-        setFeeItems(feeItems.filter(item => item.feeTypeId !== feeTypeId));
+        const item = feeItems.find(i => i.feeTypeId === feeTypeId);
+        if (item) {
+            setItemToDelete(item);
+            setDeleteDialogOpen(true);
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!itemToDelete || !selectedSession) return;
+
+        try {
+            // Filter out the item to be deleted
+            const updatedItems = feeItems.filter(item => item.feeTypeId !== itemToDelete.feeTypeId);
+
+            // Prepare payload for API
+            const saveItems = updatedItems
+                .filter(item => item.amount > 0)
+                .map(item => ({
+                    feeTypeId: item.feeTypeId,
+                    amount: item.amount,
+                    isOptional: false,
+                    frequency: item.frequency || null,
+                }));
+
+            await feeStructureService.upsertStructure(selectedSession.id, selectedClass, {
+                description: `Class ${selectedClass} fee structure`,
+                items: saveItems,
+            });
+
+            // Update local state
+            setFeeItems(updatedItems);
+
+            setSnackbar({
+                open: true,
+                message: 'Fee type removed successfully',
+                severity: 'success',
+            });
+
+            // Invalidate queries
+            queryClient.invalidateQueries({ queryKey: ['feeStructure'] });
+        } catch (error) {
+            console.error('Delete failed:', error);
+            setSnackbar({
+                open: true,
+                message: 'Failed to delete fee type',
+                severity: 'error',
+            });
+        } finally {
+            setDeleteDialogOpen(false);
+            setItemToDelete(null);
+        }
     };
 
     const handleAmountChange = (feeTypeId: number, amount: number) => {
@@ -459,6 +527,40 @@ export default function FeeStructure() {
                     </>
                 )}
             </Paper>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+                <DialogTitle sx={{ color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <DeleteIcon />
+                    Confirm Deletion
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to remove <strong>{itemToDelete?.feeTypeName}</strong> from the fee structure?
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        This action will strictly remove this fee type from the current class structure.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">Cancel</Button>
+                    <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
+                        Confirm Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Success/Error Notification */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={6000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 }

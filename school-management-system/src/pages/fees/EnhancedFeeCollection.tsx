@@ -286,6 +286,7 @@ export default function EnhancedFeeCollection() {
       // Invalidate student dashboard query to refresh data
       queryClient.invalidateQueries({ queryKey: ['student-dashboard', variables.studentId, variables.sessionId] });
       queryClient.invalidateQueries({ queryKey: ['student-fee-status', variables.studentId, variables.sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['recent-transactions'] });
       reset();
       setStudentInfo(null);
       // Print receipt logic can be added here
@@ -837,6 +838,9 @@ export default function EnhancedFeeCollection() {
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {new Date(txn.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {new Date(txn.timestamp || txn.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </Typography>
                           </Box>
                           <IconButton

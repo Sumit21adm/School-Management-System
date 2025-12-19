@@ -429,7 +429,7 @@ export default function FeeReports() {
                     </TableCell>
                     <TableCell color="text.secondary">{formatDate(transaction.date)}</TableCell>
                     <TableCell>{transaction.studentId}</TableCell>
-                    <TableCell>{transaction.student?.name || '-'}</TableCell>
+                    <TableCell>{transaction.studentName || '-'}</TableCell>
                     <TableCell>
                       <Chip
                         label={transaction.paymentMode?.toUpperCase()}

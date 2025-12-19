@@ -201,6 +201,13 @@ export class AdmissionsService {
         });
     }
 
+    async restore(id: number) {
+        return this.prisma.studentDetails.update({
+            where: { id },
+            data: { status: 'active' },
+        });
+    }
+
     async generateTemplate() {
         const ExcelJS = require('exceljs');
         const workbook = new ExcelJS.Workbook();

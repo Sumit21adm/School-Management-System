@@ -14,7 +14,7 @@ import {
   Toolbar,
   Typography,
   Divider,
-  Avatar
+  ListSubheader
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,10 +24,12 @@ import {
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
   School,
-  Settings,
   Receipt,
   TrendingUp,
   Print,
+  CalendarToday,
+  AccountBalance,
+  Description,
 } from '@mui/icons-material';
 import SessionSelector from './SessionSelector';
 
@@ -39,16 +41,35 @@ interface LayoutProps {
 const drawerWidth = 260;
 
 const menuItems = [
-  { path: '/', label: 'Dashboard', icon: DashboardIcon },
-  { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
-  { path: '/promotions', label: 'Promotions', icon: TrendingUp },
-
-  { path: '/fees/collection-enhanced', label: 'Fee Collection', icon: MoneyIcon },
-  { path: '/fees/demand-bills', label: 'Demand Bills', icon: Receipt },
-  { path: '/fees/reports', label: 'Fee Receipt', icon: Receipt },
-  { path: '/settings/sessions', label: 'Sessions', icon: Settings },
-  { path: '/settings/fee-structure', label: 'Fee Structure', icon: Settings },
-  { path: '/settings/print', label: 'Print Settings', icon: Print },
+  {
+    title: 'Main',
+    items: [
+      { path: '/', label: 'Dashboard', icon: DashboardIcon },
+    ],
+  },
+  {
+    title: 'Student Info',
+    items: [
+      { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
+      { path: '/promotions', label: 'Promotions', icon: TrendingUp },
+    ],
+  },
+  {
+    title: 'Fee Management',
+    items: [
+      { path: '/fees/collection-enhanced', label: 'Fee Collection', icon: MoneyIcon },
+      { path: '/fees/demand-bills', label: 'Demand Bills', icon: Description },
+      { path: '/fees/reports', label: 'Fee Receipt', icon: Receipt },
+      { path: '/settings/fee-structure', label: 'Fee Structure', icon: AccountBalance },
+    ],
+  },
+  {
+    title: 'Settings',
+    items: [
+      { path: '/settings/sessions', label: 'Sessions', icon: CalendarToday },
+      { path: '/settings/print', label: 'Print Settings', icon: Print },
+    ],
+  },
 ];
 
 export default function Layout({ children, onLogout }: LayoutProps) {
@@ -89,57 +110,77 @@ export default function Layout({ children, onLogout }: LayoutProps) {
 
       {/* Navigation Menu */}
       <List sx={{ px: 1.5, py: 2 }}>
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            location.pathname === item.path ||
-            (item.path !== '/' && location.pathname.startsWith(item.path));
-
-          return (
-            <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-              <ListItemButton
-                component={Link}
-                to={item.path}
-                onClick={() => setMobileOpen(false)}
-                selected={isActive}
+        {menuItems.map((section, index) => (
+          <Box key={section.title || index} sx={{ mb: 2 }}>
+            {section.title && (
+              <ListSubheader
                 sx={{
-                  borderRadius: 2,
-                  py: 1.5,
-                  px: 2,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      bgcolor: 'primary.dark',
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: 'primary.contrastText',
-                    },
-                  },
-                  '&:hover': {
-                    bgcolor: isActive ? 'primary.dark' : 'action.hover',
-                  },
+                  bgcolor: 'transparent',
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  lineHeight: '20px',
+                  mb: 1,
                 }}
               >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 40,
-                    color: isActive ? 'inherit' : 'text.secondary',
-                  }}
-                >
-                  <Icon />
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    fontWeight: isActive ? 600 : 500,
-                    fontSize: '0.95rem',
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
+                {section.title}
+              </ListSubheader>
+            )}
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                location.pathname === item.path ||
+                (item.path !== '/' && location.pathname.startsWith(item.path));
+
+              return (
+                <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                  <ListItemButton
+                    component={Link}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    selected={isActive}
+                    sx={{
+                      borderRadius: 2,
+                      py: 1.5,
+                      px: 2,
+                      '&.Mui-selected': {
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText',
+                        '&:hover': {
+                          bgcolor: 'primary.dark',
+                        },
+                        '& .MuiListItemIcon-root': {
+                          color: 'primary.contrastText',
+                        },
+                      },
+                      '&:hover': {
+                        bgcolor: isActive ? 'primary.dark' : 'action.hover',
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 40,
+                        color: isActive ? 'inherit' : 'text.secondary',
+                      }}
+                    >
+                      <Icon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? 600 : 500,
+                        fontSize: '0.95rem',
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </Box>
+        ))}
       </List>
     </Box>
   );

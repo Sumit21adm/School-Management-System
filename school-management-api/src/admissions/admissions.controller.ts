@@ -185,4 +185,9 @@ export class AdmissionsController {
     remove(@Param('id') id: string) {
         return this.admissionsService.remove(+id);
     }
+
+    @Patch(':id/restore')
+    restore(@Param('id') id: string) {
+        return this.admissionsService.restore(+id);
+    }
 }

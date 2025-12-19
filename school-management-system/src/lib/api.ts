@@ -154,6 +154,7 @@ export const admissionService = {
   }),
   getAvailableSections: (className: string) => apiClient.get(`/admissions/sections/${className}`),
   deleteStudent: (id: number) => apiClient.delete(`/admissions/${id}`),
+  restoreStudent: (id: number) => apiClient.patch(`/admissions/${id}/restore`),
 };
 
 export const promotionService = {

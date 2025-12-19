@@ -245,17 +245,14 @@ export class FeesService {
 
 
         const pendingBills = pendingBillsRaw.map(bill => {
-            // Calculate total discount for this bill based on current active discounts
+            // Use stored discount amounts from the database (historical accuracy)
             let billTotalDiscount = 0;
+
             const billItemsWithDiscount = bill.billItems.map(item => {
-                const discount = discounts.find(d => d.feeTypeId === item.feeTypeId);
-                let discountAmount = 0;
-                if (discount) {
-                    discountAmount = discount.discountType === 'PERCENTAGE'
-                        ? (Number(item.amount) * Number(discount.discountValue)) / 100
-                        : Number(discount.discountValue);
-                }
+                // Use the discount amount that was calculated at generation time
+                const discountAmount = Number(item.discountAmount);
                 billTotalDiscount += discountAmount;
+
                 return {
                     feeType: item.feeType.name,
                     amount: Number(item.amount),
@@ -305,17 +302,9 @@ export class FeesService {
 
         allBills.forEach(bill => {
             bill.billItems.forEach(item => {
-                // Consistent Logic: Use Active Discounts to calculate Fee Summary
-                // This ensures the Sidebar matches the Pending Bills table (which also uses Active Discounts).
-                // If the DB stored discount is 0/outdated, this fixes the "Missing Discount" bug.
-
-                const discountDef = discounts.find(d => d.feeTypeId === item.feeTypeId);
-                let itemDiscount = 0;
-                if (discountDef) {
-                    itemDiscount = discountDef.discountType === 'PERCENTAGE'
-                        ? (Number(item.amount) * Number(discountDef.discountValue)) / 100
-                        : Number(discountDef.discountValue);
-                }
+                // Use stored discount from DB to ensure consistency with generated bills
+                // This prevents "retroactive" application of new discounts to old bills
+                const itemDiscount = Number(item.discountAmount);
 
                 const current = feeTotals.get(item.feeTypeId) || {
                     name: item.feeType.name,
@@ -693,17 +682,14 @@ export class FeesService {
         });
 
         const pendingBillsMapped = pendingBills.map(bill => {
-            // Calculate total discount for this bill based on current active discounts
+            // Use stored discount amounts from the database (historical accuracy)
             let billTotalDiscount = 0;
+
             const billItemsWithDiscount = bill.billItems.map(item => {
-                const discount = discounts.find(d => d.feeTypeId === item.feeTypeId);
-                let discountAmount = 0;
-                if (discount) {
-                    discountAmount = discount.discountType === 'PERCENTAGE'
-                        ? (Number(item.amount) * Number(discount.discountValue)) / 100
-                        : Number(discount.discountValue);
-                }
+                // Use the discount amount that was calculated at generation time
+                const discountAmount = Number(item.discountAmount);
                 billTotalDiscount += discountAmount;
+
                 return {
                     feeType: item.feeType.name,
                     amount: Number(item.amount),
@@ -879,6 +865,7 @@ export class FeesService {
                 discount: Number(pd.discountAmount),
                 netAmount: Number(pd.netAmount),
             })),
+            timestamp: txn.createdAt,
         }));
     }
 
