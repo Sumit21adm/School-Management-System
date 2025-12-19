@@ -2,9 +2,20 @@
 
 ## 🚀 Three Ways to Run
 
-### 1️⃣ **Fastest Way** - One Command (Recommended for First Time)
+### 1️⃣ **Fresh Setup** (New Machine)
 ```bash
 cd "/Users/sumitadm21/Downloads/GitHub-Sumit21adm/Antigravity SMS"
+./setup-and-run.sh
+```
+This will:
+- ✅ Check Prerequisites
+- ✅ Create .env files
+- ✅ Install dependencies
+- ✅ Setup Database & Migrations
+- ✅ Start App
+
+### 2️⃣ **Daily Launch** (Existing Setup)
+```bash
 ./launch-school-app.sh
 ```
 This will:

@@ -191,16 +191,22 @@ School-Management-System/
 - **MySQL** 8.0 or higher
 - **npm** or **yarn**
 
-### One-Command Launch
+### One-Command Setup (First Time)
+```bash
+./setup-and-run.sh
+```
+This script automatically:
+- Checks prerequisites (Node.js)
+- **Creates .env files** with default config
+- **Installs dependencies**
+- **Runs database migrations**
+- Starts backend & frontend
+
+### Daily Launcher
 ```bash
 ./launch-school-app.sh
 ```
-
-This script automatically:
-- Starts MySQL (if not running)
-- Starts backend on port **3001**
-- Starts frontend on port **5173**
-- Handles all necessary setup
+Use this once setup is complete to quickly start services.
 
 ### Manual Setup
 
