@@ -1,5 +1,20 @@
 # School Management System
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-Proprietary-red)
+![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
+![Lines of Code](https://img.shields.io/badge/lines_of_code-~17k-blueviolet)
+![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)
+
+![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)
+![NestJS](https://img.shields.io/badge/NestJS-11.0-E0234E?logo=nestjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7.2-646CFF?logo=vite&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748?logo=prisma&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)
+
+
 A modern, offline-first School Management System built with **React, NestJS, and MySQL**. Designed for seamless operation with robust fee management, admission tracking, and comprehensive reporting.
 
 ---
