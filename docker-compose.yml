@@ -15,9 +15,12 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init-db:/docker-entrypoint-initdb.d
     networks:
       - school-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
 
   # Backend API
   api:
@@ -30,10 +33,11 @@ services:
       - "3001:3001"
     environment:
       DATABASE_URL: "mysql://school_user:school_pass@mysql:3306/school_management"
-      JWT_SECRET: "your-secret-key-change-in-production"
+      JWT_SECRET: "your-virtual-env-secret-key"
       PORT: 3001
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - school-network
     volumes:
@@ -50,7 +54,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: "http://localhost:3001/api"
+      VITE_API_URL: "http://localhost:3001"
     depends_on:
       - api
     networks:

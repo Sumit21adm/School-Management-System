@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -6,14 +6,13 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
-
+# Expose Vite port
 EXPOSE 5173
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Start in development mode with host flag to allow external access
+CMD ["npm", "run", "dev", "--", "--host"]
