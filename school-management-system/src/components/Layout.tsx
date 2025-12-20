@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   AppBar,
@@ -14,7 +14,9 @@ import {
   Toolbar,
   Typography,
   Divider,
-  ListSubheader
+  ListSubheader,
+  Avatar,
+  Skeleton,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -30,8 +32,13 @@ import {
   CalendarToday,
   AccountBalance,
   Description,
+  Sync as SyncIcon,
+  School as AlumniIcon, // Added AlumniIcon
 } from '@mui/icons-material';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { printSettingsService, dashboardService } from '../lib/api';
 import SessionSelector from './SessionSelector';
+import { formatDistanceToNow } from 'date-fns';
 
 interface LayoutProps {
   children: ReactNode;
@@ -64,6 +71,13 @@ const menuItems = [
     ],
   },
   {
+    title: 'Examination',
+    items: [
+      { path: '/exams', label: 'Exams', icon: Description },
+      { path: '/examination/configuration', label: 'Configuration', icon: Description },
+    ],
+  },
+  {
     title: 'Settings',
     items: [
       { path: '/settings/sessions', label: 'Sessions', icon: CalendarToday },
@@ -76,27 +90,83 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Fetch school branding from print settings
+  const { data: printSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ['printSettings'],
+    queryFn: printSettingsService.get,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Fetch dashboard stats for last updated indicator
+  const { dataUpdatedAt, refetch: refetchDashboard, isFetching: isDashboardFetching } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: dashboardService.getStats,
+    refetchInterval: 15000,
+    staleTime: 10000,
+  });
+
+  // Live elapsed seconds counter
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!dataUpdatedAt) return;
+
+    // Reset counter when data is updated
+    setElapsedSeconds(0);
+
+    // Update counter every second
+    const interval = setInterval(() => {
+      const seconds = Math.floor((Date.now() - dataUpdatedAt) / 1000);
+      setElapsedSeconds(seconds);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [dataUpdatedAt]);
+
+  const getElapsedText = () => {
+    if (isDashboardFetching) return 'Syncing...';
+    if (!dataUpdatedAt) return 'Click to sync';
+    if (elapsedSeconds === 0) return 'Synced now';
+    if (elapsedSeconds < 60) return `Synced ${elapsedSeconds}s ago`;
+    const minutes = Math.floor(elapsedSeconds / 60);
+    return `Synced ${minutes}m ago`;
+  };
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
   const drawer = (
     <Box>
-      {/* Drawer Header */}
+      {/* Drawer Header - matches AppBar height */}
       <Toolbar
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          px: 2.5,
-          py: 2,
+          minHeight: 64,
+          px: 2,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5 }}>
-          <School sx={{ fontSize: 28, color: 'primary.main' }} />
-          <Typography variant="h6" fontWeight={700}>
-            School ERP
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {isLoadingSettings ? (
+            <Skeleton variant="circular" width={36} height={36} />
+          ) : printSettings?.logoUrl ? (
+            <Avatar
+              src={`${import.meta.env.VITE_API_URL}${printSettings.logoUrl}`}
+              alt={printSettings?.schoolName || 'School'}
+              sx={{ width: 36, height: 36 }}
+            />
+          ) : (
+            <School sx={{ fontSize: 28, color: 'primary.main' }} />
+          )}
+          {isLoadingSettings ? (
+            <Skeleton variant="text" width={100} height={24} />
+          ) : (
+            <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }} noWrap>
+              {printSettings?.schoolName || 'School ERP'}
+            </Typography>
+          )}
         </Box>
         <IconButton
           onClick={handleDrawerToggle}
@@ -107,6 +177,45 @@ export default function Layout({ children, onLogout }: LayoutProps) {
       </Toolbar>
 
       <Divider />
+
+      {/* Last Updated Indicator */}
+      <Box
+        onClick={() => refetchDashboard()}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 0.75,
+          mx: 2,
+          my: 1.5,
+          px: 1.5,
+          py: 0.75,
+          borderRadius: 3,
+          bgcolor: isDashboardFetching ? 'action.hover' : 'grey.100',
+          color: 'text.secondary',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          border: '1px dashed',
+          borderColor: 'grey.300',
+          '&:hover': {
+            bgcolor: 'primary.50',
+            borderColor: 'primary.light',
+            color: 'primary.main',
+          },
+        }}
+      >
+        <SyncIcon sx={{
+          fontSize: 14,
+          animation: isDashboardFetching ? 'spin 1s linear infinite' : 'none',
+          '@keyframes spin': {
+            from: { transform: 'rotate(0deg)' },
+            to: { transform: 'rotate(360deg)' }
+          }
+        }} />
+        <Typography variant="caption" fontWeight={500} sx={{ fontSize: '0.7rem' }}>
+          {getElapsedText()}
+        </Typography>
+      </Box>
 
       {/* Navigation Menu */}
       <List sx={{ px: 1.5, py: 2 }}>
@@ -194,13 +303,13 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         position="fixed"
         elevation={1}
         sx={{
-          width: { sm: `calc(100 % - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth} px` },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          ml: { sm: `${drawerWidth}px` },
           bgcolor: 'background.paper',
           color: 'text.primary',
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: 64 }}>
           <IconButton
             color="inherit"
             edge="start"
@@ -210,9 +319,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
             <MenuIcon />
           </IconButton>
 
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            School Management System
-          </Typography>
+          <Box sx={{ flexGrow: 1 }} />
 
           {/* Session Selector */}
           <SessionSelector />
@@ -279,8 +386,8 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3, md: 4 },
-          width: { sm: `calc(100 % - ${drawerWidth}px)` },
+          p: { xs: 1.5, sm: 2, md: 3 },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh',
           bgcolor: 'background.default',
         }}

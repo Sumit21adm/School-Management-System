@@ -191,6 +191,8 @@ model AcademicSession {
   demandBills   DemandBill[]
   academicHistory StudentAcademicHistory[]
 
+  exams       Exam[]
+
   @@index([isActive])
   @@index([startDate, endDate])
   @@map("academic_sessions")
@@ -364,5 +366,70 @@ model PrintSettings {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+
   @@map("print_settings")
+}
+
+// Examination Management
+model ExamType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50) // e.g., "Weekly Test", "Annual Exam"
+  description String?  @db.VarChar(200)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exams       Exam[]
+  @@map("exam_types")
+}
+
+model Subject {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50) // e.g., "Mathematics", "Science"
+  code        String?  @unique @db.VarChar(20) // e.g., "MATH"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  examSchedules ExamSchedule[]
+  @@map("subjects")
+}
+
+model Exam {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100) // e.g., "Annual Examination 2024"
+  examTypeId  Int
+  sessionId   Int
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  description String?  @db.Text
+  status      String   @default("UPCOMING") @db.VarChar(20) // UPCOMING, ONGOING, COMPLETED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  examType    ExamType        @relation(fields: [examTypeId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  schedules   ExamSchedule[]
+
+  @@index([examTypeId])
+  @@index([sessionId])
+  @@map("exams")
+}
+
+model ExamSchedule {
+  id          Int      @id @default(autoincrement())
+  examId      Int
+  subjectId   Int
+  className   String   @db.VarChar(20) // Class this specific paper is for
+  date        DateTime @db.Date
+  startTime   DateTime @db.Time
+  endTime     DateTime @db.Time
+  roomNo      String?  @db.VarChar(20)
+  
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+
+  @@index([examId])
+  @@index([subjectId])
+  @@map("exam_schedules")
 }

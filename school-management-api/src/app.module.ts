@@ -14,6 +14,7 @@ import { FeeStructureModule } from './fee-structure/fee-structure.module';
 import { DiscountsModule } from './discounts/discounts.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { PrintSettingsModule } from './print-settings/print-settings.module';
+import { ExaminationModule } from './examination/examination.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PrintSettingsModule } from './print-settings/print-settings.module';
     DiscountsModule,
     PromotionsModule,
     PrintSettingsModule,
+    ExaminationModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

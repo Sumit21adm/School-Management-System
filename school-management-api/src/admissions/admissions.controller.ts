@@ -105,6 +105,11 @@ export class AdmissionsController {
         return this.admissionsService.getAvailableSections(className);
     }
 
+    @Get('dashboard-stats')
+    getDashboardStats() {
+        return this.admissionsService.getDashboardStats();
+    }
+
     @Get()
     async findAll(
         @Query('search') search?: string,

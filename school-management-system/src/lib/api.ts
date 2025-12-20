@@ -38,8 +38,10 @@ export const isOnline = () => navigator.onLine;
 
 // API Services
 export const dashboardService = {
-  getStats: async () => {
-    const { data } = await apiClient.get('/dashboard/stats');
+  getStats: async (period: 'today' | 'week' | 'month' = 'today') => {
+    const { data } = await apiClient.get('/dashboard/stats', {
+      params: { period },
+    });
     return data;
   },
 };
@@ -148,6 +150,7 @@ export const admissionService = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   exportStudents: (params: any) => apiClient.get('/admissions/export', { params, responseType: 'blob' }),
+  getDashboardStats: () => apiClient.get('/admissions/dashboard-stats'),
   downloadTemplate: () => apiClient.get('/admissions/template', { responseType: 'blob' }),
   importStudents: (data: FormData) => apiClient.post('/admissions/import', data, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -279,4 +282,27 @@ export const printSettingsService = {
     });
     return data;
   },
+};
+
+export const examinationService = {
+  // Exam Types
+  getExamTypes: () => apiClient.get('/exam-types'),
+  createExamType: (data: any) => apiClient.post('/exam-types', data),
+  updateExamType: (id: number, data: any) => apiClient.put(`/exam-types/${id}`, data),
+  deleteExamType: (id: number) => apiClient.delete(`/exam-types/${id}`),
+
+  // Subjects
+  getSubjects: () => apiClient.get('/subjects'),
+  createSubject: (data: any) => apiClient.post('/subjects', data),
+  updateSubject: (id: number, data: any) => apiClient.put(`/subjects/${id}`, data),
+  deleteSubject: (id: number) => apiClient.delete(`/subjects/${id}`),
+
+  // Exams
+  getExams: (params?: any) => apiClient.get('/exams', { params }),
+  getExam: (id: number) => apiClient.get(`/exams/${id}`),
+  createExam: (data: any) => apiClient.post('/exams', data),
+  updateExam: (id: number, data: any) => apiClient.put(`/exams/${id}`, data),
+  deleteExam: (id: number) => apiClient.delete(`/exams/${id}`),
+  addSchedule: (examId: number, data: any) => apiClient.post(`/exams/${examId}/schedule`, data),
+  deleteSchedule: (scheduleId: number) => apiClient.delete(`/exams/schedule/${scheduleId}`),
 };

@@ -21,6 +21,11 @@ import StudentPromotions from './pages/promotions/StudentPromotions';
 import { processSyncQueue } from './lib/db';
 import { SessionProvider } from './contexts/SessionContext';
 
+import ExamList from './pages/examination/ExamList';
+import ExamDetails from './pages/examination/ExamDetails';
+import ExamConfiguration from './pages/examination/ExamConfiguration';
+import AlumniList from './pages/students/AlumniList';
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem('authToken');
@@ -85,6 +90,15 @@ function App() {
 
             {/* Student Routes */}
             <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
+
+            {/* Examination Routes */}
+            <Route path="/exams" element={<ExamList />} />
+            <Route path="/exams/:id" element={<ExamDetails />} />
+            <Route path="/examination/configuration" element={<ExamConfiguration />} />
+
+
+
+
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

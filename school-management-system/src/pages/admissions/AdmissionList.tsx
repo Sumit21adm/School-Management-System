@@ -44,7 +44,9 @@ import {
   Divider,
   Paper,
   Snackbar,
+  Tooltip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -55,6 +57,7 @@ import {
   CloudUpload as UploadIcon,
   FileDownload as FileDownloadIcon,
   RestoreFromTrash,
+  School as AlumniIcon,
 } from '@mui/icons-material';
 import {
   TrendingUp,
@@ -62,6 +65,10 @@ import {
   Receipt,
   AlertCircle,
   FileText,
+  Users,
+  UserCheck,
+  UserX,
+  Cake,
   Download,
   Printer,
 } from 'lucide-react';
@@ -72,6 +79,17 @@ import { useSession } from '../../contexts/SessionContext';
 export default function AdmissionList() {
   const { selectedSession } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Dashboard Stats
+  const { data: statsData } = useQuery({
+    queryKey: ['admission-stats'],
+    queryFn: async () => {
+      const response = await admissionService.getDashboardStats();
+      return response.data;
+    }
+  });
+
+  const [birthdayDialogOpen, setBirthdayDialogOpen] = useState(false);
   const [classFilter, setClassFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
   const [expandedBills, setExpandedBills] = useState<string[]>([]);
@@ -292,7 +310,9 @@ export default function AdmissionList() {
     if (!studentToRestore) return;
 
     try {
-      await admissionService.restoreStudent(studentToRestore.id);
+      const formData = new FormData();
+      formData.append('status', 'active');
+      await admissionService.updateStudent(studentToRestore.id, formData);
       setSnackbar({
         open: true,
         message: 'Student restored successfully',
@@ -309,6 +329,41 @@ export default function AdmissionList() {
     } finally {
       setRestoreDialogOpen(false);
       setStudentToRestore(null);
+    }
+  };
+
+  // Alumni State
+  const [alumniDialogOpen, setAlumniDialogOpen] = useState(false);
+  const [studentToAlumni, setStudentToAlumni] = useState<any | null>(null);
+
+  const handleAlumniClick = (student: any) => {
+    setStudentToAlumni(student);
+    setAlumniDialogOpen(true);
+  };
+
+  const handleAlumniConfirm = async () => {
+    if (!studentToAlumni) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('status', 'alumni');
+      await admissionService.updateStudent(studentToAlumni.id, formData);
+      setSnackbar({
+        open: true,
+        message: 'Student moved to Alumni successfully',
+        severity: 'success',
+      });
+      refetch();
+    } catch (error) {
+      console.error('Move to Alumni failed:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to move student to Alumni',
+        severity: 'error',
+      });
+    } finally {
+      setAlumniDialogOpen(false);
+      setStudentToAlumni(null);
     }
   };
 
@@ -428,6 +483,139 @@ export default function AdmissionList() {
         </Stack>
       </Stack>
 
+      {/* Stats Cards */}
+      {statsData && (
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={0} variant="outlined" sx={{ borderRadius: 4, height: '100%', borderColor: 'divider' }}>
+              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: '50%',
+                      bgcolor: (theme) => alpha(theme.palette.success.main, 0.1),
+                      color: 'success.main',
+                      display: 'flex'
+                    }}
+                  >
+                    <UserCheck size={28} strokeWidth={2} />
+                  </Box>
+                  <Box>
+                    <Typography color="text.secondary" variant="body2" fontWeight={600} gutterBottom>
+                      Active Students
+                    </Typography>
+                    <Typography variant="h3" fontWeight={800} sx={{ color: 'success.main', letterSpacing: '-0.02em' }}>
+                      {statsData.stats.active}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={0} variant="outlined" sx={{ borderRadius: 4, height: '100%', borderColor: 'divider' }}>
+              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: '50%',
+                      bgcolor: (theme) => alpha(theme.palette.warning.main, 0.1),
+                      color: 'warning.main',
+                      display: 'flex'
+                    }}
+                  >
+                    <Users size={28} strokeWidth={2} />
+                  </Box>
+                  <Box>
+                    <Typography color="text.secondary" variant="body2" fontWeight={600} gutterBottom>
+                      Alumni / Passed Out
+                    </Typography>
+                    <Typography variant="h3" fontWeight={800} sx={{ color: 'warning.main', letterSpacing: '-0.02em' }}>
+                      {statsData.stats.alumni}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={0} variant="outlined" sx={{ borderRadius: 4, height: '100%', borderColor: 'divider' }}>
+              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: '50%',
+                      bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),
+                      color: 'error.main',
+                      display: 'flex'
+                    }}
+                  >
+                    <UserX size={28} strokeWidth={2} />
+                  </Box>
+                  <Box>
+                    <Typography color="text.secondary" variant="body2" fontWeight={600} gutterBottom>
+                      Archived Students
+                    </Typography>
+                    <Typography variant="h3" fontWeight={800} sx={{ color: 'error.main', letterSpacing: '-0.02em' }}>
+                      {statsData.stats.archived}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              elevation={0}
+              variant="outlined"
+              sx={{
+                borderRadius: 4,
+                height: '100%',
+                borderColor: 'divider',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.02),
+                  transform: 'translateY(-2px)'
+                }
+              }}
+              onClick={() => setBirthdayDialogOpen(true)}
+            >
+              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: '50%',
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                      color: 'primary.main',
+                      display: 'flex'
+                    }}
+                  >
+                    <Cake size={28} strokeWidth={2} />
+                  </Box>
+                  <Box>
+                    <Typography color="text.secondary" variant="body2" fontWeight={600} gutterBottom>
+                      Today's Birthdays
+                    </Typography>
+                    <Typography variant="h3" fontWeight={800} sx={{ color: 'primary.main', letterSpacing: '-0.02em' }}>
+                      {statsData.stats.birthdayCount}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
       {/* Filters */}
       <Card elevation={2} sx={{ mb: 3, borderRadius: 3 }}>
         <CardContent sx={{ p: 3 }}>
@@ -488,6 +676,7 @@ export default function AdmissionList() {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="alumni">Alumni/ Passed Out</MenuItem>
                 <MenuItem value="archived">Archived</MenuItem>
               </Select>
             </FormControl>
@@ -666,6 +855,27 @@ export default function AdmissionList() {
                           >
                             <RestoreFromTrash fontSize="small" />
                           </IconButton>
+                        )}
+                        {student.status === 'alumni' ? (
+                          <Tooltip title="Restore to Active">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => handleRestoreClick(student)}
+                            >
+                              <RestoreFromTrash fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip title="Move to Alumni">
+                            <IconButton
+                              size="small"
+                              color="warning"
+                              onClick={() => handleAlumniClick(student)}
+                            >
+                              <AlumniIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         )}
                         <IconButton
                           size="small"
@@ -1412,6 +1622,28 @@ export default function AdmissionList() {
         </DialogActions>
       </Dialog>
 
+      {/* Alumni Confirmation Dialog */}
+      <Dialog open={alumniDialogOpen} onClose={() => setAlumniDialogOpen(false)}>
+        <DialogTitle sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AlumniIcon />
+          Confirm Status Change
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to move student <strong>{studentToAlumni?.name}</strong> to Alumni?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This student will be listed under <strong>passout/alumni</strong> and removed from the active list.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAlumniDialogOpen(false)} variant="outlined">Cancel</Button>
+          <Button onClick={handleAlumniConfirm} color="warning" variant="contained" autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Import Dialog */}
       <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Import Students</DialogTitle>
@@ -1587,6 +1819,65 @@ export default function AdmissionList() {
           <Button onClick={() => setShowFeeBook(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Birthday List Dialog */}
+      <Dialog open={birthdayDialogOpen} onClose={() => setBirthdayDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Cake color="#E91E63" />
+          Today's Birthdays
+          <Chip label={statsData?.stats.birthdayCount} color="primary" size="small" />
+        </DialogTitle>
+        <DialogContent dividers>
+          {statsData?.birthdays.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography color="text.secondary">No birthdays today!</Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Class</TableCell>
+                    <TableCell>Section</TableCell>
+                    <TableCell>Age (Years)</TableCell>
+                    <TableCell align="right">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {statsData?.birthdays.map((student: any) => (
+                    <TableRow key={student.id}>
+                      <TableCell>{student.studentId}</TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>{student.name}</TableCell>
+                      <TableCell>{student.className}</TableCell>
+                      <TableCell>{student.section}</TableCell>
+                      <TableCell>
+                        <Chip label={`${student.age} Years`} size="small" color="success" variant="outlined" />
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => {
+                            setBirthdayDialogOpen(false);
+                            handleViewStudent(student);
+                          }}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBirthdayDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog >
     </Box >
   );
 }

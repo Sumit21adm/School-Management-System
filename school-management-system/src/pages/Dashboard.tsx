@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -12,6 +13,12 @@ import {
   Avatar,
   Skeleton,
   Alert,
+  Chip,
+  Stack,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -19,10 +26,14 @@ import {
   TrendingUp as TrendingUpIcon,
   PersonAdd as PersonAddIcon,
   FiberManualRecord as DotIcon,
+  Receipt as ReceiptIcon,
+  Event as EventIcon,
+  School as SchoolIcon,
+  AccessTime as TimeIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '../lib/api';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 
 interface DashboardStats {
   students: {
@@ -52,15 +63,43 @@ interface DashboardStats {
       name: string;
     };
   }>;
+  recentDemandBills: Array<{
+    id: number;
+    billNo: string;
+    totalAmount: number;
+    dueDate: string;
+    month: number;
+    year: number;
+    createdAt: string;
+    student: {
+      name: string;
+      className: string;
+      section: string;
+    };
+  }>;
+  upcomingExams: Array<{
+    id: number;
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+    examType: {
+      name: string;
+    };
+  }>;
+  lastUpdated: string;
 }
 
 export default function Dashboard() {
-  // Fetch dashboard stats with auto-refresh every 30 seconds
+  // Period state for filtering activity sections
+  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
+
+  // Fetch dashboard stats with auto-refresh every 15 seconds
   const { data, isLoading, error } = useQuery<DashboardStats>({
-    queryKey: ['dashboardStats'],
-    queryFn: dashboardService.getStats,
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
-    staleTime: 20000, // Consider data stale after 20 seconds
+    queryKey: ['dashboardStats', period],
+    queryFn: () => dashboardService.getStats(period),
+    refetchInterval: 15000, // Auto-refresh every 15 seconds
+    staleTime: 10000, // Consider data stale after 10 seconds
   });
 
   if (error) {
@@ -71,17 +110,45 @@ export default function Dashboard() {
     );
   }
 
+  // Helper to get period label
+  const getPeriodLabel = () => {
+    switch (period) {
+      case 'today': return 'today';
+      case 'week': return 'this week';
+      case 'month': return 'this month';
+    }
+  };
+
   return (
-    <Box>
-      <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
-        Dashboard
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Welcome back! Here's what's happening today.
-      </Typography>
+    <Box sx={{ width: '100%' }}>
+      {/* Dashboard Header */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+        <Box>
+          <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
+            Dashboard
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Welcome back! Here's what's happening {getPeriodLabel()}.
+          </Typography>
+        </Box>
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="period-select-label">Period</InputLabel>
+          <Select
+            labelId="period-select-label"
+            value={period}
+            label="Period"
+            onChange={(e) => setPeriod(e.target.value as 'today' | 'week' | 'month')}
+          >
+            <MenuItem value="today">Today</MenuItem>
+            <MenuItem value="week">This Week</MenuItem>
+            <MenuItem value="month">This Month</MenuItem>
+          </Select>
+        </FormControl>
+      </Stack>
+
 
       {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4, mt: 2 }}>
         <Grid item xs={12} sm={6} md={3}>
           {isLoading ? (
             <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
@@ -136,158 +203,243 @@ export default function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Recent Activity */}
-      <Card
-        elevation={2}
-        sx={{
-          borderRadius: 3,
-          transition: 'box-shadow 0.3s',
-          '&:hover': {
-            elevation: 4,
-          },
-        }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" component="h2" fontWeight={600} gutterBottom>
-            Recent Activity
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Latest admissions and fee payments
-          </Typography>
-
-          <Divider sx={{ mb: 2 }} />
-
-          {isLoading ? (
-            <Box>
-              {[1, 2, 3].map((i) => (
-                <Box key={i} sx={{ mb: 2 }}>
-                  <Skeleton variant="text" width="40%" />
-                  <Skeleton variant="text" width="80%" />
-                  <Skeleton variant="text" width="30%" />
-                </Box>
-              ))}
-            </Box>
-          ) : (
-            <List disablePadding>
-              {/* Recent Admissions */}
-              {data?.recentAdmissions.slice(0, 3).map((admission, index) => (
-                <Box key={`admission-${admission.id}`}>
-                  <ListItem
-                    disablePadding
-                    sx={{
-                      py: 2,
-                      '&:hover': {
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
-                        px: 1,
-                        mx: -1,
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <Avatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: 'primary.light',
-                        }}
-                      >
-                        <DotIcon
-                          sx={{
-                            fontSize: 16,
-                            color: 'primary.dark',
-                          }}
-                        />
-                      </Avatar>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        <Typography variant="body1" fontWeight={500}>
-                          New admission
-                        </Typography>
-                      }
-                      secondary={
-                        <>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            {admission.name} admitted to Class {admission.className}-{admission.section}
+      {/* Activity Sections - 4 columns */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5, width: '100%' }}>
+        {/* Recent Admissions */}
+        <Box sx={{ flex: '1 1 calc(25% - 15px)', minWidth: 280 }}>
+          <ActivityCard
+            title="Recent Student Admissions"
+            icon={<SchoolIcon />}
+            color="primary"
+            isLoading={isLoading}
+          >
+            {data?.recentAdmissions?.length ? (
+              <List disablePadding>
+                {data.recentAdmissions.map((admission, index) => (
+                  <Box key={`admission-${admission.id}`}>
+                    <Box sx={{ py: 1.5 }}>
+                      {/* Timestamp at top-left */}
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
+                        {format(new Date(admission.createdAt), 'MMM dd, h:mm a')}
+                      </Typography>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar sx={{ width: 28, height: 28, bgcolor: 'primary.light', fontSize: 12 }}>
+                          {admission.name.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {admission.name}
                           </Typography>
-                          <Typography variant="caption" color="text.disabled">
-                            {format(new Date(admission.createdAt), 'MMM dd, yyyy h:mm a')}
+                          <Typography variant="caption" color="text.secondary">
+                            Class {admission.className}-{admission.section}
                           </Typography>
-                        </>
-                      }
-                    />
-                  </ListItem>
-                  <Divider />
-                </Box>
-              ))}
+                        </Box>
+                      </Stack>
+                    </Box>
+                    {index < data.recentAdmissions.length - 1 && <Divider />}
+                  </Box>
+                ))}
+              </List>
+            ) : (
+              <EmptyState message="No recent admissions" />
+            )}
+          </ActivityCard>
+        </Box>
 
-              {/* Recent Fee Payments */}
-              {data?.recentFees.slice(0, 2).map((fee) => (
-                <Box key={`fee-${fee.id}`}>
-                  <ListItem
-                    disablePadding
-                    sx={{
-                      py: 2,
-                      '&:hover': {
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
-                        px: 1,
-                        mx: -1,
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <Avatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: 'success.light',
-                        }}
-                      >
-                        <DotIcon
-                          sx={{
-                            fontSize: 16,
-                            color: 'success.dark',
-                          }}
-                        />
-                      </Avatar>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        <Typography variant="body1" fontWeight={500}>
-                          Fee collected
-                        </Typography>
-                      }
-                      secondary={
-                        <>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            ₹{fee.amount.toLocaleString()} from {fee.student.name} ({fee.paymentMode})
-                          </Typography>
-                          <Typography variant="caption" color="text.disabled">
-                            {format(new Date(fee.date), 'MMM dd, yyyy')}
-                          </Typography>
-                        </>
-                      }
-                    />
-                  </ListItem>
-                  {data.recentFees.indexOf(fee) < data.recentFees.slice(0, 2).length - 1 && <Divider />}
-                </Box>
-              ))}
+        {/* Recent Fee Collections */}
+        <Box sx={{ flex: '1 1 calc(25% - 15px)', minWidth: 280 }}>
+          <ActivityCard
+            title="Recent Fee Collections"
+            icon={<MoneyIcon />}
+            color="success"
+            isLoading={isLoading}
+          >
+            {data?.recentFees?.length ? (
+              <List disablePadding>
+                {data.recentFees.map((fee, index) => (
+                  <Box key={`fee-${fee.id}`}>
+                    <Box sx={{ py: 1.5 }}>
+                      {/* Timestamp at top-left */}
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
+                        {format(new Date(fee.date), 'MMM dd, yyyy • h:mm a')}
+                      </Typography>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar sx={{ width: 28, height: 28, bgcolor: 'success.light', fontSize: 12 }}>
+                          ₹
+                        </Avatar>
+                        <Box sx={{ flex: 1 }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Typography variant="body2" fontWeight={500}>
+                              {fee.student.name}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600} color="success.main">
+                              ₹{fee.amount.toLocaleString()}
+                            </Typography>
+                          </Stack>
+                          <Chip label={fee.paymentMode} size="small" variant="outlined" sx={{ height: 18, fontSize: 9, mt: 0.5 }} />
+                        </Box>
+                      </Stack>
+                    </Box>
+                    {index < data.recentFees.length - 1 && <Divider />}
+                  </Box>
+                ))}
+              </List>
+            ) : (
+              <EmptyState message="No recent fee collections" />
+            )}
+          </ActivityCard>
+        </Box>
 
-              {(!data?.recentAdmissions?.length && !data?.recentFees?.length) && (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                  No recent activity
-                </Typography>
-              )}
-            </List>
-          )}
-        </CardContent>
-      </Card>
+        {/* Recent Demand Bills */}
+        <Box sx={{ flex: '1 1 calc(25% - 15px)', minWidth: 280 }}>
+          <ActivityCard
+            title="Recent Demand Bills"
+            icon={<ReceiptIcon />}
+            color="warning"
+            isLoading={isLoading}
+          >
+            {data?.recentDemandBills?.length ? (
+              <List disablePadding>
+                {data.recentDemandBills.map((bill, index) => (
+                  <Box key={`bill-${bill.id}`}>
+                    <Box sx={{ py: 1.5 }}>
+                      {/* Period at top-left */}
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
+                        Period: {format(new Date(bill.year, bill.month - 1), 'MMMM yyyy')}
+                      </Typography>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar sx={{ width: 28, height: 28, bgcolor: 'warning.light', fontSize: 10 }}>
+                          📄
+                        </Avatar>
+                        <Box sx={{ flex: 1 }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Typography variant="body2" fontWeight={500}>
+                              {bill.student.name}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600} color="warning.main">
+                              ₹{bill.totalAmount.toLocaleString()}
+                            </Typography>
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary">
+                            Bill #{bill.billNo}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+                    {index < data.recentDemandBills.length - 1 && <Divider />}
+                  </Box>
+                ))}
+              </List>
+            ) : (
+              <EmptyState message="No recent demand bills" />
+            )}
+          </ActivityCard>
+        </Box>
+
+        {/* Upcoming Exams */}
+        <Box sx={{ flex: '1 1 calc(25% - 15px)', minWidth: 280 }}>
+          <ActivityCard
+            title="Upcoming Exams"
+            icon={<EventIcon />}
+            color="error"
+            isLoading={isLoading}
+          >
+            {data?.upcomingExams?.length ? (
+              <List disablePadding>
+                {data.upcomingExams.map((exam, index) => (
+                  <Box key={`exam-${exam.id}`}>
+                    <Box sx={{ py: 1.5 }}>
+                      {/* Timestamp at top-left */}
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
+                        {format(new Date(exam.startDate), 'MMM dd')} - {format(new Date(exam.endDate), 'MMM dd, yyyy')}
+                      </Typography>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar sx={{ width: 28, height: 28, bgcolor: 'error.light', fontSize: 10 }}>
+                          📝
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {exam.name}
+                          </Typography>
+                          <Chip label={exam.examType?.name || 'Exam'} size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 9, mt: 0.5 }} />
+                        </Box>
+                      </Stack>
+                    </Box>
+                    {index < data.upcomingExams.length - 1 && <Divider />}
+                  </Box>
+                ))}
+              </List>
+            ) : (
+              <EmptyState message="No upcoming exams" />
+            )}
+          </ActivityCard>
+        </Box>
+      </Box>
     </Box>
   );
 }
 
+// Activity Card Component
+interface ActivityCardProps {
+  title: string;
+  icon: React.ReactNode;
+  color: 'primary' | 'success' | 'warning' | 'error';
+  isLoading: boolean;
+  children: React.ReactNode;
+}
+
+function ActivityCard({ title, icon, color, isLoading, children }: ActivityCardProps) {
+  return (
+    <Card
+      elevation={0}
+      variant="outlined"
+      sx={{
+        borderRadius: 3,
+        transition: 'all 0.2s',
+        '&:hover': {
+          borderColor: `${color}.main`,
+          boxShadow: 1,
+        },
+      }}
+    >
+      <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+          <Avatar sx={{ width: 32, height: 32, bgcolor: `${color}.light`, color: `${color}.main` }}>
+            {icon}
+          </Avatar>
+          <Typography variant="subtitle1" fontWeight={600}>
+            {title}
+          </Typography>
+        </Stack>
+        <Divider sx={{ mb: 1 }} />
+        <Box sx={{ flex: 1 }}>
+          {isLoading ? (
+            <Box>
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} variant="text" height={50} sx={{ mb: 1 }} />
+              ))}
+            </Box>
+          ) : (
+            children
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Empty State Component
+function EmptyState({ message }: { message: string }) {
+  return (
+    <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Typography variant="body2" color="text.secondary">
+        {message}
+      </Typography>
+    </Box>
+  );
+}
+
+// Stat Card Component
 interface StatCardProps {
   title: string;
   value: string;

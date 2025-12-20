@@ -324,4 +324,49 @@ export class AdmissionsService {
 
         return { success: true, imported: importedCount, total: students.length };
     }
+
+    async getDashboardStats() {
+        const [active, alumni, archived] = await Promise.all([
+            this.prisma.studentDetails.count({ where: { status: 'active' } }),
+            this.prisma.studentDetails.count({ where: { status: 'alumni' } }),
+            this.prisma.studentDetails.count({ where: { status: 'archived' } }),
+        ]);
+
+        // Safer approach: Fetch active students and filter in JS
+        // This avoids MySQL/SQLite syntax differences with Raw Query
+        const activeStudents = await this.prisma.studentDetails.findMany({
+            where: { status: 'active' },
+            select: { id: true, studentId: true, name: true, className: true, section: true, dob: true }
+        });
+
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentDay = today.getDate();
+
+        const birthdayList = activeStudents
+            .filter(student => {
+                if (!student.dob) return false;
+                const dob = new Date(student.dob);
+                return dob.getMonth() === currentMonth && dob.getDate() === currentDay;
+            })
+            .map(student => {
+                const birthDate = new Date(student.dob);
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                return { ...student, age };
+            });
+
+        return {
+            stats: {
+                active,
+                alumni,
+                archived,
+                birthdayCount: birthdayList.length,
+            },
+            birthdays: birthdayList
+        };
+    }
 }
