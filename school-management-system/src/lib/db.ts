@@ -68,17 +68,7 @@ export interface Hostel {
   lastModified: Date;
 }
 
-export interface Inventory {
-  id?: number;
-  itemCode: string;
-  itemName: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  synced: boolean;
-  lastModified: Date;
-}
+
 
 export interface SyncQueue {
   id?: number;
@@ -96,7 +86,7 @@ class SchoolDatabase extends Dexie {
   examResults!: Table<ExamResult>;
   transports!: Table<Transport>;
   hostels!: Table<Hostel>;
-  inventory!: Table<Inventory>;
+
   syncQueue!: Table<SyncQueue>;
 
   constructor() {
@@ -107,7 +97,7 @@ class SchoolDatabase extends Dexie {
       examResults: '++id, studentId, examId, synced, lastModified',
       transports: '++id, vehicleNo, routeName, synced, lastModified',
       hostels: '++id, roomNo, hostelType, synced, lastModified',
-      inventory: '++id, itemCode, itemName, category, synced, lastModified',
+
       syncQueue: '++id, tableName, operation, timestamp',
     });
   }

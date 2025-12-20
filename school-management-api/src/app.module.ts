@@ -6,7 +6,7 @@ import { PrismaService } from './prisma.service';
 import { AuthModule } from './auth/auth.module';
 import { AdmissionsModule } from './admissions/admissions.module';
 import { FeesModule } from './fees/fees.module';
-import { InventoryModule } from './inventory/inventory.module';
+
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { FeeTypesModule } from './fee-types/fee-types.module';
@@ -22,7 +22,7 @@ import { ExaminationModule } from './examination/examination.module';
     AuthModule,
     AdmissionsModule,
     FeesModule,
-    InventoryModule,
+
     DashboardModule,
     SessionsModule,
     FeeTypesModule,

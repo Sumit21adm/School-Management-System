@@ -270,6 +270,14 @@ export const printSettingsService = {
     email?: string;
     website?: string;
     tagline?: string;
+    affiliationNo?: string;
+    affiliationNote?: string;
+    isoCertifiedNote?: string;
+    demandBillNote?: string;
+    feeReceiptNote?: string;
+    admitCardNote?: string;
+    transferCertNote?: string;
+    idCardNote?: string;
   }) => {
     const { data } = await apiClient.put('/print-settings', settingsData);
     return data;

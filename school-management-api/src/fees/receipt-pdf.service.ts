@@ -7,7 +7,7 @@ import * as fs from 'fs';
 // A6 size in points: 105mm × 148.5mm = 297.64pt × 420.94pt
 const A6_WIDTH = 297.64;
 const A6_HEIGHT = 420.94;
-const MARGIN = 15;
+const MARGIN = 15; // Safe print margin
 
 // Font paths for Rupee symbol support
 const FONTS_DIR = path.join(process.cwd(), 'src/fonts');
@@ -74,124 +74,198 @@ export class ReceiptPdfService {
         const contentWidth = A6_WIDTH - 2 * MARGIN;
         let y = MARGIN;
 
-        // --- HEADER ---
-        // Logo (if available)
+        // --- SINGLE SOLID BORDER AROUND ENTIRE DOCUMENT ---
+        doc.rect(MARGIN - 2, MARGIN - 2, contentWidth + 4, A6_HEIGHT - 2 * MARGIN + 4)
+            .lineWidth(0.75)
+            .stroke('#000000');
+
+        // --- HEADER SECTION ---
+        // Logo on left (45px), School info in middle, Document Title on right
+        const logoSize = 45;
+        const logoX = MARGIN;
+        const docTitleWidth = 70;
+        const textStartX = MARGIN + logoSize + 10;
+        const textWidth = contentWidth - logoSize - docTitleWidth - 20;
+
         if (settings?.logoUrl) {
             const logoPath = path.join(process.cwd(), settings.logoUrl);
             if (fs.existsSync(logoPath)) {
                 try {
-                    doc.image(logoPath, MARGIN, y, { width: 35, height: 35 });
+                    doc.image(logoPath, logoX, y, { width: logoSize, height: logoSize });
                 } catch (e) {
                     // Logo not available, continue without
                 }
             }
         }
 
-        // School name
-        doc.fontSize(11)
+        // Document Title Label (top-right corner, address bar style)
+        const docTitleX = A6_WIDTH - MARGIN - docTitleWidth;
+        const docTitleHeight = 20;
+        doc.rect(docTitleX, y + 8, docTitleWidth, docTitleHeight)
+            .fill('#F5F5F5'); // Light gray background
+
+        doc.fontSize(7)
             .font(fontBold)
-            .text(settings?.schoolName || 'SCHOOL NAME', MARGIN + 40, y + 5, {
-                width: contentWidth - 45,
+            .fillColor('#000000')
+            .text('FEE RECEIPT', docTitleX, y + 8 + 5, {
+                width: docTitleWidth,
                 align: 'center',
             });
 
-        y += 18;
+        // School Name (Black Bold)
+        doc.fontSize(13)
+            .font(fontBold)
+            .fillColor('#000000')
+            .text(settings?.schoolName || 'School Name', textStartX, y + 2, {
+                width: textWidth,
+            });
 
-        // Tagline or Address
+        // Tagline
+        let textY = y + 16;
         if (settings?.tagline) {
             doc.fontSize(7)
                 .font(fontRegular)
-                .text(settings.tagline, MARGIN + 40, y + 5, {
-                    width: contentWidth - 45,
-                    align: 'center',
+                .fillColor('#666666')
+                .text(settings.tagline, textStartX, textY, {
+                    width: textWidth,
                 });
-            y += 10;
+            textY += 10;
         }
 
-        // Address
+        // Affiliation Note
+        if (settings?.affiliationNote) {
+            doc.fontSize(6)
+                .font(fontBold)
+                .fillColor('#333333')
+                .text(settings.affiliationNote, textStartX, textY, {
+                    width: textWidth,
+                });
+            textY += 8;
+        }
+
+        // Affiliation No
+        if (settings?.affiliationNo) {
+            doc.fontSize(5)
+                .font(fontBold)
+                .fillColor('#333333')
+                .text(`Affiliation No: ${settings.affiliationNo}`, textStartX, textY, {
+                    width: textWidth,
+                });
+        }
+
+        y += logoSize + 5;
+
+        // --- Address Bar (Light gray background) ---
+        doc.rect(MARGIN, y, contentWidth, 12)
+            .fill('#F5F5F5');
+
         doc.fontSize(6)
             .font(fontRegular)
-            .text(settings?.schoolAddress || 'School Address', MARGIN, y + 15, {
+            .fillColor('#333333')
+            .text(settings?.schoolAddress || 'School Address', MARGIN, y + 3, {
                 width: contentWidth,
                 align: 'center',
             });
 
-        y += 28;
+        y += 14;
 
-        // Contact info
-        const contacts = [settings?.phone, settings?.email].filter(Boolean).join(' | ');
-        if (contacts) {
+        // --- Phone, Email & Website Row ---
+        const contactParts: string[] = [];
+        if (settings?.phone) contactParts.push(`Ph: ${settings.phone}`);
+        if (settings?.email) contactParts.push(`Email: ${settings.email}`);
+        if (settings?.website) contactParts.push(`Web: ${settings.website}`);
+
+        if (contactParts.length > 0) {
             doc.fontSize(5)
-                .text(contacts, MARGIN, y, {
+                .font(fontRegular)
+                .fillColor('#333333')
+                .text(contactParts.join('  |  '), MARGIN, y, {
+                    width: contentWidth,
+                    align: 'center',
+                });
+        }
+
+        y += 10;
+
+        // --- ISO Note ---
+        if (settings?.isoCertifiedNote) {
+            doc.fontSize(5)
+                .font(fontBold)
+                .fillColor('#333333')
+                .text(settings.isoCertifiedNote, MARGIN, y, {
                     width: contentWidth,
                     align: 'center',
                 });
             y += 10;
         }
 
-        // --- RECEIPT TITLE ---
-        y += 5;
-        doc.fontSize(10)
-            .font(fontBold)
-            .text('FEE RECEIPT', MARGIN, y, {
-                width: contentWidth,
-                align: 'center',
-            });
+        // --- Divider line after header ---
+        y += 3;
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#333333');
+        doc.lineWidth(1);
+        y += 8;
 
-        // Line under title
-        doc.moveTo(MARGIN, y + 15)
-            .lineTo(A6_WIDTH - MARGIN, y + 15)
-            .stroke();
+        // --- RECEIPT INFO SECTION ---
+        doc.fontSize(6)
+            .font(fontRegular)
+            .fillColor('#000000');
 
-        y += 20;
+        const leftColWidth = contentWidth * 0.55;
+        const rightColWidth = contentWidth * 0.45;
+        const rightColX = MARGIN + leftColWidth;
 
-        // --- RECEIPT INFO ---
-        doc.fontSize(7)
-            .font(fontRegular);
-
-        // Receipt No and Date row
-        doc.text(`Receipt No: ${transaction.receiptNo}`, MARGIN, y);
-        doc.text(`Date: ${new Date(transaction.createdAt).toLocaleDateString('en-GB')}`, MARGIN, y, { align: 'right', width: contentWidth });
-        y += 10;
-
-        // Student ID
-        doc.text(`Student ID: ${transaction.student?.admissionNo || 'N/A'}`, MARGIN, y);
-        y += 10;
-
-        // Student Name
-        doc.font(fontBold)
-            .text(`Name: ${transaction.student?.name || 'N/A'}`, MARGIN, y);
-        y += 10;
-
-        // Class/Section
-        doc.font(fontRegular)
-            .text(`Class: ${transaction.student?.className || ''} - ${transaction.student?.section || ''}`, MARGIN, y);
+        // Receipt No | Date
+        doc.font(fontBold).text('Receipt No:', MARGIN, y);
+        doc.font(fontRegular).text(transaction.receiptNo, MARGIN + 45, y);
+        doc.text(`Date: ${new Date(transaction.createdAt).toLocaleDateString('en-GB')}`, rightColX, y, { width: rightColWidth, align: 'right' });
         y += 12;
 
-        // Divider
-        doc.moveTo(MARGIN, y)
-            .lineTo(A6_WIDTH - MARGIN, y)
-            .stroke();
-        y += 5;
+        // --- Student Info (with light border) ---
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#CCCCCC');
+        doc.lineWidth(1);
+        y += 8;
+
+        const infoLeftX = MARGIN;
+        const infoRightX = MARGIN + contentWidth / 2;
+        const labelWidth = 50;
+
+        // Student ID | Class
+        doc.font(fontBold).fontSize(6).text('Student ID:', infoLeftX, y);
+        doc.font(fontRegular).text(transaction.student?.studentId || 'N/A', infoLeftX + labelWidth, y);
+        doc.font(fontBold).text('Class:', infoRightX, y);
+        doc.font(fontRegular).text(`${transaction.student?.className || ''} - ${transaction.student?.section || ''}`, infoRightX + 25, y);
+        y += 9;
+
+        // Name
+        doc.font(fontBold).text('Name:', infoLeftX, y);
+        doc.font(fontRegular).text(transaction.student?.name || 'N/A', infoLeftX + labelWidth, y, { width: contentWidth - labelWidth });
+        y += 9;
+
+        // Father's Name
+        doc.font(fontBold).text("Father's Name:", infoLeftX, y);
+        doc.font(fontRegular).text(transaction.student?.fatherName || 'N/A', infoLeftX + 55, y, { width: contentWidth - 55 });
+        y += 12;
 
         // --- FEE DETAILS TABLE ---
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#000000');
+        doc.lineWidth(1);
+        y += 4;
+
+        const col1X = MARGIN + 2;
+        const col2X = MARGIN + 200;
+
         // Table header
-        doc.fontSize(7)
-            .font(fontBold);
+        doc.fontSize(6)
+            .font(fontBold)
+            .fillColor('#000000');
 
-        const col1X = MARGIN;
-        const col2X = MARGIN + 120; // Unused in loop
-        const col3X = MARGIN + 120; // Unused in loop
-        const col4X = MARGIN + 220;
-
-        doc.text('Fee Type', col1X, y, { width: 115 });
-        doc.text('Amount', col4X, y, { width: 45, align: 'right' });
+        doc.text('Fee Type', col1X, y, { width: 150 });
+        doc.text('Amount', col2X, y, { width: 55, align: 'right' });
 
         y += 10;
-        doc.moveTo(MARGIN, y)
-            .lineTo(A6_WIDTH - MARGIN, y)
-            .stroke();
-        y += 5;
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#CCCCCC');
+        doc.lineWidth(1);
+        y += 3;
 
         // Table rows
         doc.fontSize(6)
@@ -199,57 +273,89 @@ export class ReceiptPdfService {
 
         for (const detail of transaction.paymentDetails || []) {
             const amount = Number(detail.amount);
-
-            doc.text(detail.feeType?.name || 'Fee', col1X, y, { width: 115 });
-            doc.text(amount.toFixed(2), col4X, y, { width: 45, align: 'right' });
-
-            y += 10;
+            doc.text(detail.feeType?.name || 'Fee', col1X, y, { width: 150 });
+            doc.text(amount.toFixed(2), col2X, y, { width: 55, align: 'right' });
+            y += 9;
         }
 
-        // Add line after items
-        y += 5;
-        doc.moveTo(MARGIN, y)
-            .lineTo(A6_WIDTH - MARGIN, y)
-            .stroke();
+        // Total line separator
+        y += 2;
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(1).stroke('#000000');
         y += 5;
 
         // --- TOTAL ---
         const totalAmount = Number(transaction.amount);
-        doc.fontSize(8)
+        doc.fontSize(9)
             .font(fontBold)
-            .text('TOTAL:', MARGIN, y);
-        doc.text(`₹ ${totalAmount.toFixed(2)}`, col4X - 30, y, { width: 75, align: 'right' });
-        y += 15;
+            .fillColor('#000000')
+            .text('TOTAL:', col1X, y);
+        doc.text(`₹ ${totalAmount.toFixed(2)}`, col2X - 30, y, { width: 85, align: 'right' });
+        y += 12;
 
         // Amount in words
-        doc.fontSize(6)
+        doc.fontSize(5)
             .font(fontRegular)
-            .text(`Amount in words: ${this.numberToWords(totalAmount)} Rupees Only`, MARGIN, y);
-        y += 15;
+            .text(`In Words: ${this.numberToWords(totalAmount)} Rupees Only`, col1X, y);
+        y += 10;
 
         // Payment Mode
-        doc.fontSize(7)
+        doc.fontSize(6)
             .font(fontRegular)
-            .text(`Payment Mode: ${transaction.paymentMode || 'CASH'}`, MARGIN, y);
+            .text(`Payment Mode: ${transaction.paymentMode || 'CASH'}`, col1X, y);
         if (transaction.referenceNo) {
-            y += 10;
-            doc.text(`Ref No: ${transaction.referenceNo}`, MARGIN, y);
+            doc.text(`  |  Ref: ${transaction.referenceNo}`, col1X + 80, y);
         }
         y += 15;
 
-        // --- FOOTER ---
+        // --- FOOTER SECTION (two columns) ---
+        const footerY = A6_HEIGHT - MARGIN - 55;
+        const qrPlaceholderWidth = 55;
+        const notesWidth = contentWidth - qrPlaceholderWidth - 10;
 
-        // Receiver Signature Placeholder
-        doc.fontSize(7)
-            .text('Receiver Signature', A6_WIDTH - MARGIN - 80, y, { width: 80, align: 'right' });
+        // Top border line
+        doc.moveTo(MARGIN, footerY).lineTo(A6_WIDTH - MARGIN, footerY).lineWidth(0.5).stroke('#000000');
 
-        // Thank you note
-        y = A6_HEIGHT - MARGIN - 15;
+        // Left Column - QR Code Placeholder
+        doc.rect(MARGIN + 2, footerY + 5, qrPlaceholderWidth, 45)
+            .lineWidth(0.5)
+            .stroke('#CCCCCC');
+
+        doc.fontSize(4)
+            .font(fontRegular)
+            .fillColor('#999999')
+            .text('Payment', MARGIN + 2, footerY + 20, {
+                width: qrPlaceholderWidth,
+                align: 'center',
+            });
+        doc.text('QR Code', MARGIN + 2, footerY + 26, {
+            width: qrPlaceholderWidth,
+            align: 'center',
+        });
+
+        // Right Column - Notes and School Info
+        const notesX = MARGIN + qrPlaceholderWidth + 12;
+
+        const noteText = settings?.feeReceiptNote || 'Thank you for your payment. This is a computer generated receipt.';
         doc.fontSize(5)
             .font(fontRegular)
-            .text('Thank you for your payment. This is a computer generated receipt.', MARGIN, y, {
-                width: contentWidth,
-                align: 'center',
+            .fillColor('#000000')
+            .text(`Note: ${noteText}`, notesX, footerY + 5, {
+                width: notesWidth - 5,
+            });
+
+        // Thanks and For: School Name
+        doc.fontSize(6)
+            .font(fontBold)
+            .text('Thanks', notesX, footerY + 32, {
+                width: notesWidth - 5,
+                align: 'right',
+            });
+
+        doc.fontSize(5)
+            .font(fontRegular)
+            .text(`For: ${settings?.schoolName || 'School Name'}`, notesX, footerY + 40, {
+                width: notesWidth - 5,
+                align: 'right',
             });
     }
 

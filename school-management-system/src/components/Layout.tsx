@@ -17,6 +17,7 @@ import {
   ListSubheader,
   Avatar,
   Skeleton,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -28,7 +29,7 @@ import {
   School,
   Receipt,
   TrendingUp,
-  Print,
+  Settings,
   CalendarToday,
   AccountBalance,
   Description,
@@ -81,7 +82,7 @@ const menuItems = [
     title: 'Settings',
     items: [
       { path: '/settings/sessions', label: 'Sessions', icon: CalendarToday },
-      { path: '/settings/print', label: 'Print Settings', icon: Print },
+      { path: '/settings/print', label: 'School Settings', icon: Settings },
     ],
   },
 ];
@@ -215,6 +216,30 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         <Typography variant="caption" fontWeight={500} sx={{ fontSize: '0.7rem' }}>
           {getElapsedText()}
         </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          color="primary"
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            window.location.reload();
+          }}
+          sx={{
+            ml: 1,
+            minWidth: 'auto',
+            fontSize: '0.65rem',
+            py: 0.2,
+            px: 1,
+            height: 24,
+            borderColor: 'primary.main',
+            '&:hover': {
+              bgcolor: 'primary.main',
+              color: 'white',
+            }
+          }}
+        >
+          Sync Now
+        </Button>
       </Box>
 
       {/* Navigation Menu */}

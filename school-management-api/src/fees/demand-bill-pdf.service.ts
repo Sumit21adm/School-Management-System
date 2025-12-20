@@ -7,7 +7,7 @@ import * as fs from 'fs';
 // A6 size in points: 105mm × 148.5mm = 297.64pt × 420.94pt
 const A6_WIDTH = 297.64;
 const A6_HEIGHT = 420.94;
-const MARGIN = 15;
+const MARGIN = 12;
 
 // Font paths for Rupee symbol support
 const FONTS_DIR = path.join(process.cwd(), 'src/fonts');
@@ -72,139 +72,218 @@ export class DemandBillPdfService {
 
     private drawDemandBillContent(doc: PDFKit.PDFDocument, bill: any, settings: any, fontRegular: string, fontBold: string) {
         const contentWidth = A6_WIDTH - 2 * MARGIN;
+
+        // --- SINGLE SOLID BORDER AROUND ENTIRE DOCUMENT ---
+        doc.rect(MARGIN - 2, MARGIN - 2, contentWidth + 4, A6_HEIGHT - 2 * MARGIN + 4)
+            .lineWidth(0.75) // Thinner border for cleaner look
+            .stroke('#000000');
+
+
         let y = MARGIN;
 
-        // --- HEADER ---
-        // Logo (if available)
+        // --- HEADER SECTION ---
+        // Logo on left (45px), School info in middle, Document Title on right
+        const logoSize = 45;
+        const logoX = MARGIN;
+        const docTitleWidth = 70;
+        const textStartX = MARGIN + logoSize + 10;
+        const textWidth = contentWidth - logoSize - docTitleWidth - 20;
+
         if (settings?.logoUrl) {
             const logoPath = path.join(process.cwd(), settings.logoUrl);
             if (fs.existsSync(logoPath)) {
                 try {
-                    doc.image(logoPath, MARGIN, y, { width: 35, height: 35 });
+                    doc.image(logoPath, logoX, y, { width: logoSize, height: logoSize });
                 } catch (e) {
                     // Logo not available, continue without
                 }
             }
         }
 
-        // School name
-        doc.fontSize(11)
+        // Document Title Label (top-right corner, address bar style)
+        const docTitleX = A6_WIDTH - MARGIN - docTitleWidth;
+        const docTitleHeight = 20;
+        doc.rect(docTitleX, y + 8, docTitleWidth, docTitleHeight)
+            .fill('#F5F5F5'); // Light gray background like address bar
+
+        doc.fontSize(7)
             .font(fontBold)
-            .text(settings?.schoolName || 'SCHOOL NAME', MARGIN + 40, y + 5, {
-                width: contentWidth - 45,
+            .fillColor('#000000')
+            .text('FEE DEMAND BILL', docTitleX, y + 8 + 5, {
+                width: docTitleWidth,
                 align: 'center',
             });
 
-        y += 18;
+        // School Name (Black Bold, left-aligned to right of logo)
+        doc.fontSize(13)
+            .font(fontBold)
+            .fillColor('#000000') // Black color
+            .text(settings?.schoolName || 'School Name', textStartX, y + 2, {
+                width: textWidth,
+            });
 
-        // Tagline or Address
+        // Tagline (Smaller gray text below school name)
+        let textY = y + 16;
         if (settings?.tagline) {
             doc.fontSize(7)
                 .font(fontRegular)
-                .text(settings.tagline, MARGIN + 40, y + 5, {
-                    width: contentWidth - 45,
-                    align: 'center',
+                .fillColor('#666666')
+                .text(settings.tagline, textStartX, textY, {
+                    width: textWidth,
                 });
-            y += 10;
+            textY += 10;
         }
 
-        // Address
+        // Affiliation Note (Bold dark gray below tagline)
+        if (settings?.affiliationNote) {
+            doc.fontSize(6)
+                .font(fontBold)
+                .fillColor('#333333')
+                .text(settings.affiliationNote, textStartX, textY, {
+                    width: textWidth,
+                });
+            textY += 8;
+        }
+
+        // Affiliation No (Bold dark gray below Affiliation Note)
+        if (settings?.affiliationNo) {
+            doc.fontSize(5)
+                .font(fontBold)
+                .fillColor('#333333')
+                .text(`Affiliation No: ${settings.affiliationNo}`, textStartX, textY, {
+                    width: textWidth,
+                });
+        }
+
+        y += logoSize + 5; // Gap before address bar
+
+        // --- Address Bar (Very light grey background, center aligned) ---
+        doc.rect(MARGIN, y, contentWidth, 12)
+            .fill('#F5F5F5'); // Very light gray
+
         doc.fontSize(6)
             .font(fontRegular)
-            .text(settings?.schoolAddress || 'School Address', MARGIN, y + 15, {
+            .fillColor('#333333')
+            .text(settings?.schoolAddress || 'School Address', MARGIN, y + 3, {
                 width: contentWidth,
                 align: 'center',
             });
 
-        y += 28;
+        y += 14;
 
-        // Contact info
-        const contacts = [settings?.phone, settings?.email].filter(Boolean).join(' | ');
-        if (contacts) {
+        // --- Phone, Email & Website Row (no border/stroke) ---
+        const contactParts: string[] = [];
+        if (settings?.phone) contactParts.push(`Ph: ${settings.phone}`);
+        if (settings?.email) contactParts.push(`Email: ${settings.email}`);
+        if (settings?.website) contactParts.push(`Web: ${settings.website}`);
+
+        if (contactParts.length > 0) {
             doc.fontSize(5)
-                .text(contacts, MARGIN, y, {
+                .font(fontRegular)
+                .fillColor('#333333')
+                .text(contactParts.join('  |  '), MARGIN, y, {
+                    width: contentWidth,
+                    align: 'center',
+                });
+        }
+
+        y += 10;
+
+        // --- ISO Note (Bold dark gray below contact row) ---
+        if (settings?.isoCertifiedNote) {
+            doc.fontSize(5)
+                .font(fontBold)
+                .fillColor('#333333')
+                .text(settings.isoCertifiedNote, MARGIN, y, {
                     width: contentWidth,
                     align: 'center',
                 });
             y += 10;
         }
 
-        // --- DEMAND BILL TITLE ---
+        // --- Divider line after header (more visible color) ---
+        y += 3;
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#333333'); // Darker color for visibility
+        doc.lineWidth(1);
         y += 5;
-        doc.fontSize(10)
-            .font(fontBold)
-            .text('FEE DEMAND BILL', MARGIN, y, {
-                width: contentWidth,
-                align: 'center',
-            });
 
-        // Line under title
-        doc.moveTo(MARGIN, y + 15)
-            .lineTo(A6_WIDTH - MARGIN, y + 15)
-            .stroke();
+        // --- BILL INFO SECTION ---
+        doc.fontSize(6)
+            .font(fontRegular)
+            .fillColor('#000000');
 
-        y += 20;
+        // Row 1: Bill No (left) | Date (right)
+        const leftColWidth = contentWidth * 0.55;
+        const rightColWidth = contentWidth * 0.45;
+        const rightColX = MARGIN + leftColWidth;
 
-        // --- BILL INFO ---
-        doc.fontSize(7)
-            .font(fontRegular);
+        // Bill No
+        doc.font(fontBold).text('Bill No:', MARGIN, y);
+        doc.font(fontRegular).text(bill.billNo, MARGIN + 30, y);
 
-        // Bill No and Date row
-        doc.text(`Bill No: ${bill.billNo}`, MARGIN, y);
-        doc.text(`Date: ${new Date().toLocaleDateString('en-GB')}`, MARGIN, y, { align: 'right', width: contentWidth });
-        y += 10;
+        // Date on right
+        doc.text(`Date: ${new Date().toLocaleDateString('en-GB')}`, rightColX, y, { width: rightColWidth, align: 'right' });
+        y += 9;
 
-        // Due Date
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 15); // 15 days due date
-        doc.text(`Due Date: ${dueDate.toLocaleDateString('en-GB')}`, MARGIN, y);
-        y += 10;
-
-        // Period
+        // Period (left) | Due Date (right)
         const period = bill.month && bill.year ? `${new Date(bill.year, bill.month - 1).toLocaleString('default', { month: 'long' })} ${bill.year}` : 'N/A';
         doc.text(`Period: ${period}`, MARGIN, y);
+
+        const dueDate = bill.dueDate ? new Date(bill.dueDate) : new Date();
+        doc.text(`Due Date: ${dueDate.toLocaleDateString('en-GB')}`, rightColX, y, { width: rightColWidth, align: 'right' });
         y += 10;
 
-        // Student ID
-        doc.text(`Student ID: ${bill.student?.admissionNo || 'N/A'}`, MARGIN, y);
-        y += 10;
+        // Student Info Section - lighter/thinner border (half weight)
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#CCCCCC');
+        doc.lineWidth(1);
+        y += 8; // Added more padding
 
-        // Student Name
-        doc.font(fontBold)
-            .text(`Name: ${bill.student?.name || 'N/A'}`, MARGIN, y);
-        y += 10;
+        // Student details in two columns
+        const infoLeftX = MARGIN;
+        const infoRightX = MARGIN + contentWidth / 2;
+        const labelWidth = 45;
 
-        // Class/Section
-        doc.font(fontRegular)
-            .text(`Class: ${bill.student?.className || ''} - ${bill.student?.section || ''}`, MARGIN, y);
-        y += 12;
+        // Row 1: Student ID | Class
+        doc.font(fontBold).fontSize(6).text('Student ID:', infoLeftX, y);
+        doc.font(fontRegular).text(bill.student?.studentId || 'N/A', infoLeftX + labelWidth + 5, y);
+        doc.font(fontBold).text('Class:', infoRightX, y);
+        doc.font(fontRegular).text(`${bill.student?.className || ''} - ${bill.student?.section || ''}`, infoRightX + 25, y);
+        y += 9;
 
-        // Divider
-        doc.moveTo(MARGIN, y)
-            .lineTo(A6_WIDTH - MARGIN, y)
-            .stroke();
-        y += 5;
+        // Row 2: Name
+        doc.font(fontBold).text('Name:', infoLeftX, y);
+        doc.font(fontRegular).text(bill.student?.name || 'N/A', infoLeftX + labelWidth, y, { width: contentWidth - labelWidth });
+        y += 9;
 
-        // --- FEE DETAILS TABLE ---
-        // Table header
-        doc.fontSize(7)
-            .font(fontBold);
+        // Row 3: Father's Name
+        doc.font(fontBold).text("Father's Name:", infoLeftX, y);
+        doc.font(fontRegular).text(bill.student?.fatherName || 'N/A', infoLeftX + 55, y, { width: contentWidth - 55 });
+        y += 12; // Added more padding before fee table
 
-        const col1X = MARGIN;
+        // --- FEE DETAILS TABLE (lighter borders - half weight) ---
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#000000');
+        doc.lineWidth(1);
+        y += 4; // Added more padding for table header
+
+        const col1X = MARGIN + 2;
         const col2X = MARGIN + 100;
-        const col3X = MARGIN + 160;
-        const col4X = MARGIN + 220;
+        const col3X = MARGIN + 150;
+        const col4X = MARGIN + 200;
+
+        // Table header - no background, just bold text
+        doc.fontSize(6)
+            .font(fontBold)
+            .fillColor('#000000');
 
         doc.text('Fee Type', col1X, y, { width: 95 });
         doc.text('Amount', col2X, y, { width: 45, align: 'right' });
         doc.text('Discount', col3X, y, { width: 45, align: 'right' });
-        doc.text('Net', col4X, y, { width: 45, align: 'right' }); // Shifted Net col left slightly
+        doc.text('Net', col4X, y, { width: 55, align: 'right' });
 
         y += 10;
-        doc.moveTo(MARGIN, y)
-            .lineTo(A6_WIDTH - MARGIN, y)
-            .stroke();
-        y += 5;
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(0.5).stroke('#CCCCCC');
+        doc.lineWidth(1);
+        y += 3;
 
         // Table rows
         doc.fontSize(6)
@@ -224,92 +303,112 @@ export class DemandBillPdfService {
             doc.text(item.feeType?.name || 'Fee', col1X, y, { width: 95 });
             doc.text(amount.toFixed(2), col2X, y, { width: 45, align: 'right' });
             doc.text(discount > 0 ? discount.toFixed(2) : '-', col3X, y, { width: 45, align: 'right' });
-            doc.text(net.toFixed(2), col4X, y, { width: 45, align: 'right' });
+            doc.text(net.toFixed(2), col4X, y, { width: 55, align: 'right' });
 
-            y += 10;
+            y += 9;
         }
 
-        // Add line after items
-        y += 5;
-        doc.moveTo(MARGIN, y)
-            .lineTo(A6_WIDTH - MARGIN, y)
-            .stroke();
-        y += 5;
+        // NO separator line after fee items (removed as per feedback)
 
-        // Previous Dues Logic
-        const billTotalAmount = Number(bill.totalAmount) || 0; // This is sum of items
-        const billDiscount = Number(bill.discount) || 0;       // Bill level discount
-        const billNetAmount = Number(bill.netAmount) || 0;     // Final stored amount
-
-        // previousDues = netAmount - (items - discount) 
-        // OR retrieve from calculation if possible. Since we don't have it stored directly on bill, 
-        // we infer it: previousDues = bill.netAmount - (totalGross - totalItemDiscount)
-        // Note: bill.discount should be 0 if we use item discounts, but let's be safe
-
-        const currentBillNet = totalGross - totalItemDiscount - billDiscount;
+        // Previous Dues
+        const billNetAmount = Number(bill.netAmount) || 0;
+        const currentBillNet = totalGross - totalItemDiscount;
         const previousDues = billNetAmount - currentBillNet;
 
-        // Show previous dues as separate line if applicable
         if (previousDues > 0) {
             doc.font(fontRegular);
             doc.text('Previous Dues', col1X, y, { width: 95 });
             doc.text(previousDues.toFixed(2), col2X, y, { width: 45, align: 'right' });
             doc.text('-', col3X, y, { width: 45, align: 'right' });
-            doc.text(previousDues.toFixed(2), col4X, y, { width: 45, align: 'right' });
-            y += 10;
-            doc.font(fontRegular);
+            doc.text(previousDues.toFixed(2), col4X, y, { width: 55, align: 'right' });
+            y += 9;
         }
 
-        // Calculate net amount from items + previousDues - total discount
-        const netAmount = totalGross + previousDues - totalItemDiscount;
-
+        // Total line separator
+        y += 2;
+        doc.moveTo(MARGIN, y).lineTo(A6_WIDTH - MARGIN, y).lineWidth(1).stroke('#000000');
         y += 5;
 
-        // Divider before total
-        doc.moveTo(MARGIN, y)
-            .lineTo(A6_WIDTH - MARGIN, y)
-            .stroke();
-        y += 8;
+        // --- TOTAL DUE (black text only) ---
+        const netAmount = totalGross + (previousDues > 0 ? previousDues : 0) - totalItemDiscount;
 
-        // --- TOTAL ---
-        doc.fontSize(8)
+        doc.fontSize(9)
             .font(fontBold)
-            .text('TOTAL DUE:', MARGIN, y);
-        doc.text(`₹ ${netAmount.toFixed(2)}`, col4X - 10, y, { width: 65, align: 'right' });
-        y += 15;
+            .fillColor('#000000')
+            .text('TOTAL DUE:', col1X, y);
+        doc.text(`₹ ${netAmount.toFixed(2)}`, col4X - 30, y, { width: 85, align: 'right' });
+        y += 12;
 
         // Status
         doc.fontSize(7)
-            .font(fontRegular)
-            .text(`Status: ${bill.status.toUpperCase()}`, MARGIN, y);
+            .font(fontBold)
+            .fillColor('#000000')
+            .text(`Status: ${bill.status.toUpperCase()}`, col1X, y);
         y += 10;
 
+        // Paid amount and balance
         const paidAmount = Number(bill.paidAmount) || 0;
         if (paidAmount > 0) {
-            doc.text(`Paid: ₹ ${paidAmount.toFixed(2)}`, MARGIN, y);
-            y += 10;
+            doc.font(fontRegular)
+                .fontSize(6)
+                .text(`Paid Amount: ₹ ${paidAmount.toFixed(2)}`, col1X, y);
+            y += 8;
             doc.font(fontBold)
-                .text(`Balance: ₹ ${(netAmount - paidAmount).toFixed(2)}`, MARGIN, y);
+                .fillColor('#D32F2F')
+                .text(`Balance Due: ₹ ${(netAmount - paidAmount).toFixed(2)}`, col1X, y);
             y += 10;
         }
 
-        // --- FOOTER ---
-        y = A6_HEIGHT - MARGIN - 35;
+        // --- FOOTER SECTION (two columns) ---
+        const footerY = A6_HEIGHT - MARGIN - 55;
+        const qrPlaceholderWidth = 55;
+        const notesWidth = contentWidth - qrPlaceholderWidth - 10;
 
-        // Payment instructions
-        doc.fontSize(6)
+        // Top border line
+        doc.moveTo(MARGIN, footerY).lineTo(A6_WIDTH - MARGIN, footerY).lineWidth(0.5).stroke('#000000');
+
+        // Left Column - QR Code Placeholder
+        doc.rect(MARGIN + 2, footerY + 5, qrPlaceholderWidth, 45)
+            .lineWidth(0.5)
+            .stroke('#CCCCCC');
+
+        doc.fontSize(4)
             .font(fontRegular)
-            .text('Please pay by the due date to avoid late fees.', MARGIN, y, {
-                width: contentWidth,
+            .fillColor('#999999')
+            .text('Payment', MARGIN + 2, footerY + 20, {
+                width: qrPlaceholderWidth,
                 align: 'center',
             });
+        doc.text('QR Code', MARGIN + 2, footerY + 26, {
+            width: qrPlaceholderWidth,
+            align: 'center',
+        });
 
-        // Footer note
+        // Right Column - Notes and School Info
+        const notesX = MARGIN + qrPlaceholderWidth + 12;
+
+        // Note label and content
+        const noteText = settings?.demandBillNote || 'Please pay by the due date to avoid late fees.';
         doc.fontSize(5)
-            .font(fontRegular) // Oblique not supported in NotoSans usually, using Regular
-            .text('This is a computer generated demand bill.', MARGIN, y + 10, {
-                width: contentWidth,
-                align: 'center',
+            .font(fontRegular)
+            .fillColor('#000000')
+            .text(`Note: ${noteText}`, notesX, footerY + 5, {
+                width: notesWidth - 5, // Added padding from right edge
+            });
+
+        // Thanks and For: School Name (right aligned at bottom of right column)
+        doc.fontSize(6)
+            .font(fontBold)
+            .text('Thanks', notesX, footerY + 32, {
+                width: notesWidth - 5, // Added padding from right edge
+                align: 'right',
+            });
+
+        doc.fontSize(5)
+            .font(fontRegular)
+            .text(`For: ${settings?.schoolName || 'School Name'}`, notesX, footerY + 40, {
+                width: notesWidth - 5, // Added padding from right edge
+                align: 'right',
             });
     }
 

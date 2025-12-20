@@ -286,36 +286,10 @@ enum DiscountType {
 
 
 
-// Inventory Tables
-model Inventory {
-  id          Int      @id @default(autoincrement())
-  itemCode    String   @unique @db.VarChar(20)
-  itemName    String   @db.VarChar(200)
-  category    String   @db.VarChar(50)
-  quantity    Int
-  unit        String   @db.VarChar(20)
-  price       Decimal  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  movements   StockMovement[]
 
-  @@map("inventory")
-}
 
-model StockMovement {
-  id          Int      @id @default(autoincrement())
-  itemId      Int
-  movementType String  @db.VarChar(20)
-  quantity    Int
-  remarks     String?  @db.Text
-  createdAt   DateTime @default(now())
 
-  item        Inventory @relation(fields: [itemId], references: [id])
-
-  @@index([itemId])
-  @@map("stock_movements")
-}
 
 // User/Auth Tables
 model User {
@@ -353,7 +327,7 @@ model StudentAcademicHistory {
   @@map("student_academic_history")
 }
 
-// Print Settings for customizable letterhead/header
+// Print Settings for customizable school configuration and letterhead
 model PrintSettings {
   id            Int      @id @default(autoincrement())
   schoolName    String   @db.VarChar(200)
@@ -363,6 +337,19 @@ model PrintSettings {
   website       String?  @db.VarChar(100)
   logoUrl       String?  @db.VarChar(255)
   tagline       String?  @db.VarChar(200)
+  
+  // Affiliation & Certification
+  affiliationNo      String?  @db.VarChar(50)
+  affiliationNote    String?  @db.Text     // e.g., "Affiliated to CBSE, New Delhi"
+  isoCertifiedNote   String?  @db.VarChar(255)
+  
+  // Document-specific Notes
+  demandBillNote     String?  @db.Text
+  feeReceiptNote     String?  @db.Text
+  admitCardNote      String?  @db.Text
+  transferCertNote   String?  @db.Text
+  idCardNote         String?  @db.Text
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

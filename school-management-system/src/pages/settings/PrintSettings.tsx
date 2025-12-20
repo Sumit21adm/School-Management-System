@@ -14,11 +14,18 @@ import {
     Snackbar,
     CircularProgress,
     Avatar,
+    Divider,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
 } from '@mui/material';
 import {
     Save as SaveIcon,
     CloudUpload as UploadIcon,
     Business as BusinessIcon,
+    ExpandMore as ExpandMoreIcon,
+    Badge as BadgeIcon,
+    Description as DocumentIcon,
 } from '@mui/icons-material';
 import { printSettingsService, apiClient } from '../../lib/api';
 
@@ -31,21 +38,41 @@ interface PrintSettings {
     website: string;
     logoUrl: string | null;
     tagline: string;
+    // Affiliation & Certification
+    affiliationNo: string;
+    affiliationNote: string;
+    isoCertifiedNote: string;
+    // Document Notes
+    demandBillNote: string;
+    feeReceiptNote: string;
+    admitCardNote: string;
+    transferCertNote: string;
+    idCardNote: string;
 }
+
+const defaultSettings: PrintSettings = {
+    id: null,
+    schoolName: '',
+    schoolAddress: '',
+    phone: '',
+    email: '',
+    website: '',
+    logoUrl: null,
+    tagline: '',
+    affiliationNo: '',
+    affiliationNote: '',
+    isoCertifiedNote: '',
+    demandBillNote: '',
+    feeReceiptNote: '',
+    admitCardNote: '',
+    transferCertNote: '',
+    idCardNote: '',
+};
 
 export default function PrintSettings() {
     const queryClient = useQueryClient();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [formData, setFormData] = useState<PrintSettings>({
-        id: null,
-        schoolName: '',
-        schoolAddress: '',
-        phone: '',
-        email: '',
-        website: '',
-        logoUrl: null,
-        tagline: '',
-    });
+    const [formData, setFormData] = useState<PrintSettings>(defaultSettings);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
     // Fetch settings
@@ -58,7 +85,7 @@ export default function PrintSettings() {
     useEffect(() => {
         if (settings) {
             setFormData({
-                id: settings.id,
+                id: settings.id ?? null,
                 schoolName: settings.schoolName || '',
                 schoolAddress: settings.schoolAddress || '',
                 phone: settings.phone || '',
@@ -66,6 +93,14 @@ export default function PrintSettings() {
                 website: settings.website || '',
                 logoUrl: settings.logoUrl || null,
                 tagline: settings.tagline || '',
+                affiliationNo: settings.affiliationNo || '',
+                affiliationNote: settings.affiliationNote || '',
+                isoCertifiedNote: settings.isoCertifiedNote || '',
+                demandBillNote: settings.demandBillNote || '',
+                feeReceiptNote: settings.feeReceiptNote || '',
+                admitCardNote: settings.admitCardNote || '',
+                transferCertNote: settings.transferCertNote || '',
+                idCardNote: settings.idCardNote || '',
             });
         }
     }, [settings]);
@@ -108,6 +143,14 @@ export default function PrintSettings() {
             email: formData.email || undefined,
             website: formData.website || undefined,
             tagline: formData.tagline || undefined,
+            affiliationNo: formData.affiliationNo || undefined,
+            affiliationNote: formData.affiliationNote || undefined,
+            isoCertifiedNote: formData.isoCertifiedNote || undefined,
+            demandBillNote: formData.demandBillNote || undefined,
+            feeReceiptNote: formData.feeReceiptNote || undefined,
+            admitCardNote: formData.admitCardNote || undefined,
+            transferCertNote: formData.transferCertNote || undefined,
+            idCardNote: formData.idCardNote || undefined,
         });
     };
 
@@ -124,7 +167,6 @@ export default function PrintSettings() {
 
     const getLogoUrl = (url: string | null) => {
         if (!url) return null;
-        // If URL starts with /, prepend the API base URL
         if (url.startsWith('/')) {
             return `${apiClient.defaults.baseURL}${url}`;
         }
@@ -144,19 +186,21 @@ export default function PrintSettings() {
     return (
         <Container maxWidth="lg" sx={{ py: 4 }}>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Print Settings
+                School Configuration
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Configure your school's letterhead for receipts, demand bills, and reports.
+                Configure your school's identity, affiliations, and document notes for receipts, bills, and reports.
             </Typography>
 
             <Grid container spacing={3}>
-                {/* Settings Form */}
+                {/* Main Settings Form */}
                 <Grid size={{ xs: 12, md: 8 }}>
-                    <Paper sx={{ p: 3 }}>
-                        <Typography variant="h6" gutterBottom>
-                            School Information
-                        </Typography>
+                    {/* School Information Section */}
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <BusinessIcon color="primary" />
+                            <Typography variant="h6">School Information</Typography>
+                        </Box>
 
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12 }}>
@@ -230,23 +274,150 @@ export default function PrintSettings() {
                                 />
                             </Grid>
                         </Grid>
-
-                        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button
-                                variant="contained"
-                                startIcon={<SaveIcon />}
-                                onClick={handleSave}
-                                disabled={saveMutation.isPending || !formData.schoolName || !formData.schoolAddress}
-                            >
-                                {saveMutation.isPending ? 'Saving...' : 'Save Settings'}
-                            </Button>
-                        </Box>
                     </Paper>
+
+                    {/* Affiliations & Certifications Section */}
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <BadgeIcon color="primary" />
+                            <Typography variant="h6">Affiliations & Certifications</Typography>
+                        </Box>
+
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Affiliation Number"
+                                    name="affiliationNo"
+                                    value={formData.affiliationNo}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 3430123"
+                                    helperText="CBSE/State Board affiliation number"
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="ISO Certification Note"
+                                    name="isoCertifiedNote"
+                                    value={formData.isoCertifiedNote}
+                                    onChange={handleChange}
+                                    placeholder="e.g. ISO 9001:2015 Certified"
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Affiliation Note"
+                                    name="affiliationNote"
+                                    value={formData.affiliationNote}
+                                    onChange={handleChange}
+                                    multiline
+                                    rows={2}
+                                    placeholder="e.g. Affiliated to CBSE, New Delhi (Affiliation No: 3430123)"
+                                    helperText="This note appears on official documents"
+                                />
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    {/* Document Notes Section */}
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <DocumentIcon color="primary" />
+                            <Typography variant="h6">Print Notes</Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Custom notes that will appear on respective documents
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Demand Bill Note"
+                                    name="demandBillNote"
+                                    value={formData.demandBillNote}
+                                    onChange={handleChange}
+                                    multiline
+                                    rows={3}
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Fee Receipt Note"
+                                    name="feeReceiptNote"
+                                    value={formData.feeReceiptNote}
+                                    onChange={handleChange}
+                                    multiline
+                                    rows={3}
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Admit Card Note"
+                                    name="admitCardNote"
+                                    value={formData.admitCardNote}
+                                    onChange={handleChange}
+                                    multiline
+                                    rows={3}
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Transfer Certificate Note"
+                                    name="transferCertNote"
+                                    value={formData.transferCertNote}
+                                    onChange={handleChange}
+                                    multiline
+                                    rows={3}
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="ID Card Note"
+                                    name="idCardNote"
+                                    value={formData.idCardNote}
+                                    onChange={handleChange}
+                                    multiline
+                                    rows={3}
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    {/* Save Button */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                            variant="contained"
+                            size="large"
+                            startIcon={<SaveIcon />}
+                            onClick={handleSave}
+                            disabled={saveMutation.isPending || !formData.schoolName || !formData.schoolAddress}
+                        >
+                            {saveMutation.isPending ? 'Saving...' : 'Save All Settings'}
+                        </Button>
+                    </Box>
                 </Grid>
 
-                {/* Logo Upload */}
+                {/* Logo Upload Sidebar */}
                 <Grid size={{ xs: 12, md: 4 }}>
-                    <Paper sx={{ p: 3 }}>
+                    <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
                         <Typography variant="h6" gutterBottom>
                             School Logo
                         </Typography>
@@ -317,49 +488,160 @@ export default function PrintSettings() {
                                 Max size: 5MB
                             </Typography>
                         </Box>
-                    </Paper>
 
-                    {/* Preview Card */}
-                    <Card sx={{ mt: 2 }}>
-                        <CardContent>
-                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                Header Preview
-                            </Typography>
+                        <Divider sx={{ my: 3 }} />
+
+                        {/* Preview Card - Matching Demand Bill PDF Header Design */}
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            Header Preview
+                        </Typography>
+                        <Box
+                            sx={{
+                                border: '1px solid #ccc',
+                                borderRadius: 1,
+                                backgroundColor: 'white',
+                                overflow: 'hidden',
+                            }}
+                        >
+                            {/* Main Header Section - Logo & School Info */}
+                            <Box sx={{ p: 1.5, pb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                    {/* Logo */}
+                                    <Box sx={{ flexShrink: 0 }}>
+                                        {formData.logoUrl ? (
+                                            <Avatar
+                                                src={getLogoUrl(formData.logoUrl) || ''}
+                                                sx={{ width: 50, height: 50 }}
+                                                variant="rounded"
+                                            />
+                                        ) : (
+                                            <Avatar sx={{ width: 50, height: 50, bgcolor: 'grey.200' }} variant="rounded">
+                                                <BusinessIcon sx={{ color: 'grey.400' }} />
+                                            </Avatar>
+                                        )}
+                                    </Box>
+
+                                    {/* School Name & Details */}
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography
+                                            variant="subtitle1"
+                                            fontWeight="bold"
+                                            sx={{
+                                                fontSize: '0.9rem',
+                                                color: '#000', // Black text
+                                                lineHeight: 1.2,
+                                            }}
+                                        >
+                                            {formData.schoolName || 'School Name'}
+                                        </Typography>
+                                        {formData.tagline && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    display: 'block',
+                                                    color: 'text.secondary',
+                                                    fontSize: '0.6rem',
+                                                    lineHeight: 1.3,
+                                                }}
+                                            >
+                                                {formData.tagline}
+                                            </Typography>
+                                        )}
+                                        {formData.affiliationNote && (
+                                            <Typography
+                                                variant="caption"
+                                                fontWeight="bold"
+                                                sx={{
+                                                    display: 'block',
+                                                    color: '#333',
+                                                    fontSize: '0.55rem',
+                                                    mt: 0.25,
+                                                }}
+                                            >
+                                                {formData.affiliationNote}
+                                            </Typography>
+                                        )}
+                                        {formData.affiliationNo && (
+                                            <Typography
+                                                variant="caption"
+                                                fontWeight="bold"
+                                                sx={{
+                                                    display: 'block',
+                                                    color: '#333',
+                                                    fontSize: '0.5rem',
+                                                }}
+                                            >
+                                                Affiliation No: {formData.affiliationNo}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                            </Box>
+
+                            {/* Address Bar - Light Gray Background */}
+                            {formData.schoolAddress && (
+                                <Box
+                                    sx={{
+                                        px: 1,
+                                        py: 0.5,
+                                        backgroundColor: '#f5f5f5', // Light gray
+                                        borderTop: '1px solid #e0e0e0',
+                                        borderBottom: '1px solid #e0e0e0',
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    <Typography variant="caption" sx={{ color: '#333', fontSize: '0.55rem' }}>
+                                        {formData.schoolAddress}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {/* Phone, Email, Website Row */}
                             <Box
                                 sx={{
-                                    p: 2,
-                                    border: '1px solid',
-                                    borderColor: 'grey.200',
-                                    borderRadius: 1,
-                                    textAlign: 'center',
-                                    backgroundColor: 'white',
+                                    px: 1,
+                                    py: 0.4,
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    gap: 1,
+                                    flexWrap: 'wrap',
                                 }}
                             >
-                                {formData.logoUrl && (
-                                    <Avatar
-                                        src={getLogoUrl(formData.logoUrl) || ''}
-                                        sx={{ width: 50, height: 50, mx: 'auto', mb: 1 }}
-                                    />
-                                )}
-                                <Typography variant="subtitle1" fontWeight="bold">
-                                    {formData.schoolName || 'School Name'}
-                                </Typography>
-                                {formData.tagline && (
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                        {formData.tagline}
+                                {formData.phone && (
+                                    <Typography variant="caption" sx={{ fontSize: '0.5rem', color: '#333' }}>
+                                        Ph: {formData.phone}
                                     </Typography>
                                 )}
-                                <Typography variant="caption" color="text.secondary">
-                                    {formData.schoolAddress || 'School Address'}
-                                </Typography>
-                                {(formData.phone || formData.email) && (
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                        {[formData.phone, formData.email].filter(Boolean).join(' | ')}
+                                {formData.phone && formData.email && (
+                                    <Typography variant="caption" sx={{ fontSize: '0.5rem', color: '#999' }}>|</Typography>
+                                )}
+                                {formData.email && (
+                                    <Typography variant="caption" sx={{ fontSize: '0.5rem', color: '#333' }}>
+                                        Email: {formData.email}
+                                    </Typography>
+                                )}
+                                {formData.email && formData.website && (
+                                    <Typography variant="caption" sx={{ fontSize: '0.5rem', color: '#999' }}>|</Typography>
+                                )}
+                                {formData.website && (
+                                    <Typography variant="caption" sx={{ fontSize: '0.5rem', color: '#333' }}>
+                                        Web: {formData.website}
                                     </Typography>
                                 )}
                             </Box>
-                        </CardContent>
-                    </Card>
+
+                            {/* Affiliation No & ISO Note - Below Contact */}
+                            {(formData.affiliationNo || formData.isoCertifiedNote) && (
+                                <Box sx={{ py: 0.3, textAlign: 'center' }}>
+                                    {formData.isoCertifiedNote && (
+                                        <Typography variant="caption" fontWeight="bold" sx={{ color: '#333', fontSize: '0.55rem' }}>
+                                            {formData.isoCertifiedNote}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            )}
+                        </Box>
+                    </Paper>
                 </Grid>
             </Grid>
 

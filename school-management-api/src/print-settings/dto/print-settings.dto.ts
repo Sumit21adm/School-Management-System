@@ -27,4 +27,40 @@ export class UpdatePrintSettingsDto {
     @IsString()
     @MaxLength(200)
     tagline?: string;
+
+    // Affiliation & Certification
+    @IsOptional()
+    @IsString()
+    @MaxLength(50)
+    affiliationNo?: string;
+
+    @IsOptional()
+    @IsString()
+    affiliationNote?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(255)
+    isoCertifiedNote?: string;
+
+    // Document-specific Notes
+    @IsOptional()
+    @IsString()
+    demandBillNote?: string;
+
+    @IsOptional()
+    @IsString()
+    feeReceiptNote?: string;
+
+    @IsOptional()
+    @IsString()
+    admitCardNote?: string;
+
+    @IsOptional()
+    @IsString()
+    transferCertNote?: string;
+
+    @IsOptional()
+    @IsString()
+    idCardNote?: string;
 }

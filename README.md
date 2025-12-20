@@ -1,530 +1,103 @@
 # School Management System
 
-A modern, full-stack school management system built with React, NestJS, and MySQL. Features comprehensive modules for student admissions, fee management, exams, transport, and inventory with offline-first capabilities.
+A modern, offline-first School Management System built with **React, NestJS, and MySQL**. Designed for seamless operation with robust fee management, admission tracking, and comprehensive reporting.
 
 ---
 
-## 🚀 Features Overview
+## 🚀 Quick Start Guide
 
-### ✨ **Core Functionality**
-- **Offline-First Architecture** - Works without internet using IndexedDB
-- **Real-time Data Sync** - Automatic synchronization when online
-- **Network Access Ready** - Accessible on local network for mobile devices
-- **Form Validation** - Comprehensive client and server-side validation
-- **Export Capabilities** - Excel and PDF export for all major modules
+Get the application running in minutes!
+
+### Prerequisites
+- **Node.js**: v20 or higher
+- **MySQL**: v8.0 or higher
+- **Git**
+
+### ⚡ Option 1: Automated Setup (Recommended for Mac/Linux)
+Run our one-step setup script which handles dependencies, database migrations, and starts the servers.
+
+```bash
+# 1. Clone the repository
+git clone <repository_url>
+cd School-Management-System
+
+# 2. Run the launcher
+./setup-and-run.sh
+```
+*The script will automatically check environment requirements, install packages, and launch the app.*
+
+### 🐳 Option 2: Docker (Production Ready)
+If you have Docker installed, you can spin up the entire stack (Database + API + Frontend) instantly.
+
+```bash
+docker-compose up -d
+```
+Access the app at: `http://localhost:5173`
+
+### 🛠️ Option 3: Manual Setup
+If you prefer full control:
+
+**Backend:**
+```bash
+cd school-management-api
+npm install
+# Configure .env (see documentation)
+npx prisma migrate dev
+npm run start:dev
+```
+
+**Frontend:**
+```bash
+cd school-management-system
+npm install
+npm run dev
+```
 
 ---
 
-## 📚 Modules
+## 🔐 Default Login Credentials
+- **Username:** `admin`
+- **Password:** `admin123`
 
-### 🎓 **Student Admissions**
-#### Fully Functional Features:
-- ✅ **Dynamic Section Filtering** - Sections populate based on selected class
-- ✅ **Student Registration** - Complete admission form with:
-  - Photo upload and cropping
-  - Parent/guardian information
-  - Class and section assignment
-  - Contact details (phone, WhatsApp, email)
-  - Document management (Aadhar card)
-- ✅ **Advanced Validation**
-  - Phone: 10-15 digits, numbers only
-  - Email: Valid format, optional
-  - Aadhar: Exactly 12 digits
-  - WhatsApp: 10-15 digits
-  - Date of Birth: Age 3-25 years
-  - Admission Date: Past 2 years to upcoming year
-  - Student ID: Uppercase letters, numbers, hyphens
-- ✅ **Search & Filter** - By student name/ID, class, section, status
-- ✅ **Student Details View** - Complete profile with all information
-- ✅ **Edit & Update** - Modify existing student records
-- ✅ **Archive Students** - Soft delete functionality
-- ✅ **Bulk Operations**
-  - Import via Excel template
-  - Export to Excel/PDF with filters
-  - Download import template
-- ✅ **User-Friendly UX**
-  - Placeholder examples in all form fields
-  - Real-time validation feedback
-  - Clear error messages
+---
 
-### 💰 **Fee Management**
-#### Fully Functional Features:
-- ✅ **Fee Collection** - Record student payments
-- ✅ **Multiple Payment Modes** - Cash, Cheque, Online, Card
-- ✅ **Receipt Generation** - Printable fee receipts
-- ✅ **Transaction History** - Complete payment records
-- ✅ **Date-Range Reports** - Filter by date range
-- ✅ **Export Functionality** - Excel/PDF export
+## 📚 Documentation
+We have organized the documentation into detailed sections for easier navigation:
 
-### 📦 **Inventory Management**
-#### Fully Functional Features:
-- ✅ **Item Catalog** - Manage school inventory items
-- ✅ **Stock Tracking** - Monitor stock levels
-- ✅ **Stock Movements** - Track items in/out
-- ✅ **Category Management** - Organize items by category
+- **[📂 Full Documentation Index](./documentation/README.md)**
+- **[🎓 Admissions Module](./documentation/modules/admissions.md)**
+- **[💰 Fee Management](./documentation/modules/fees.md)**
+- **[📝 Examination Analysis](./documentation/modules/examination.md)**
+- **[✨ Offline Features](./documentation/features/offline-mode.md)**
+- **[🛠️ Installation & Config](./documentation/getting-started/installation.md)**
+
+---
+
+## ✨ Key Features
+
+### Core Functionality
+- **Offline-First**: Works without an internet connection using IndexedDB. Syncs automatically when online.
+- **Local Network Access**: Optimized to work on mobile devices connected to the same WiFi.
+- **PDF Generation**: Professional receipts, demand bills, and report cards.
+
+### Modules Overview
+- **Student Admissions**: Complete registration flow with photo cropping and document management.
+- **Fee Management**: Flexible fee structures, partial payments, multiple fee heads, and demand bill generation.
+- **Examination**: Exam scheduling, marks entry, and automated grading.
+
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Frontend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **React** | 19.2.0 | UI framework |
-| **TypeScript** | Latest | Type safety |
-| **Vite** | Latest | Build tool |
-| **Material-UI (MUI)** | 7.3.5 | Component library |
-| **React Router** | 7.9.6 | Client-side routing |
-| **TanStack Query** | 5.90.11 | Data fetching & caching |
-| **React Hook Form** | 7.66.1 | Form management |
-| **Zod** | 4.1.13 | Schema validation |
-| **Axios** | 1.13.2 | HTTP client |
-| **Dexie.js** | 4.2.1 | IndexedDB wrapper (offline) |
-| **TailwindCSS** | 4.x | Utility-first styling |
-| **React Easy Crop** | 5.5.6 | Image cropping |
-
-### Backend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **NestJS** | 11.0.1 | Node.js framework |
-| **TypeScript** | Latest | Type safety |
-| **Prisma ORM** | 6.19.0 | Database ORM |
-| **MySQL** | 8.x | Database |
-| **Passport JWT** | 4.0.1 | Authentication |
-| **bcrypt** | 6.0.0 | Password hashing |
-| **ExcelJS** | 4.4.0 | Excel generation |
-| **PDFKit** | 0.17.2 | PDF generation |
-| **class-validator** | 0.14.3 | DTO validation |
-
-### DevOps & Tools
-- **Docker & Docker Compose** - Containerization
-- **Prisma Migrations** - Database version control
-- **ESLint** - Code linting
-- **Git** - Version control
+| Frontend | Backend | Database |
+|----------|---------|----------|
+| React 19 | NestJS 11 | MySQL 8 |
+| TypeScript | Prisma ORM | IndexedDB (Offline) |
+| Material UI | JWT Auth | Redis (Optional) |
+| Vite | PDFKit | Docker |
 
 ---
 
-## 📁 Project Structure
-
-```
-School-Management-System/
-├── school-management-system/          # React Frontend
-│   ├── src/
-│   │   ├── components/                # Reusable UI components
-│   │   │   ├── Layout.tsx            # Main layout with navigation
-│   │   │   └── ErrorBoundary.tsx     # Error handling
-│   │   ├── pages/                    # Route pages
-│   │   │   ├── Dashboard.tsx         # Main dashboard
-│   │   │   ├── Login.tsx             # Authentication
-│   │   │   ├── admissions/           # Admission module
-│   │   │   │   ├── AdmissionForm.tsx # Student registration form
-│   │   │   │   └── AdmissionList.tsx # Student list & management
-│   │   │   ├── fees/                 # Fee module
-│   │   │   │   ├── FeeCollection.tsx # Fee payment
-│   │   │   │   └── FeeReports.tsx    # Fee reports
-│   │   │   ├── exams/                # Exam module
-│   │   │   │   ├── ExamManagement.tsx
-│   │   │   │   └── MarksEntry.tsx
-│   │   │   └── transport/            # Transport module
-│   │   │       └── TransportManagement.tsx
-│   │   ├── lib/
-│   │   │   ├── api.ts                # API service layer
-│   │   │   ├── db.ts                 # IndexedDB for offline
-│   │   │   └── utils.ts              # Utility functions
-│   │   ├── utils/
-│   │   │   └── cropImage.ts          # Image cropping utility
-│   │   ├── App.tsx                   # Main app component
-│   │   ├── main.tsx                  # App entry point
-│   │   └── theme.ts                  # MUI theme config
-│   ├── public/                        # Static assets
-│   ├── package.json                   # Dependencies
-│   ├── vite.config.ts                 # Vite configuration
-│   ├── tailwind.config.js             # Tailwind configuration
-│   └── tsconfig.json                  # TypeScript config
-│
-├── school-management-api/             # NestJS Backend
-│   ├── src/
-│   │   ├── admissions/               # Admissions module
-│   │   │   ├── admissions.controller.ts
-│   │   │   ├── admissions.service.ts
-│   │   │   └── admissions.module.ts
-│   │   ├── fees/                     # Fee management module
-│   │   │   ├── fees.controller.ts
-│   │   │   ├── fees.service.ts
-│   │   │   └── fees.module.ts
-│   │   ├── exams/                    # Exam module
-│   │   │   └── exams.module.ts
-│   │   ├── transport/                # Transport module
-│   │   │   └── transport.module.ts
-│   │   ├── inventory/                # Inventory module
-│   │   │   └── inventory.module.ts
-│   │   ├── auth/                     # Authentication module
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── auth.service.ts
-│   │   │   ├── jwt.strategy.ts
-│   │   │   └── jwt-auth.guard.ts
-│   │   ├── app.module.ts             # Main application module
-│   │   ├── prisma.service.ts         # Prisma service
-│   │   └── main.ts                   # Application entry
-│   ├── prisma/
-│   │   ├── schema.prisma            # Database schema
-│   │   ├── migrations/              # Database migrations
-│   │   └── seed.ts                  # Database seeding
-│   ├── uploads/                     # Uploaded files (photos, etc.)
-│   ├── package.json                 # Dependencies
-│   ├── tsconfig.json               # TypeScript config
-│   └── nest-cli.json               # NestJS CLI config
-│
-├── docker-compose.yml              # Docker orchestration
-├── launch-school-app.sh            # Quick start script
-├── QUICK_START.md                  # Quick start guide
-├── DEVELOPMENT_SUMMARY.md          # Development notes
-└── README.md                       # This file
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Node.js** 20 or higher
-- **MySQL** 8.0 or higher
-- **npm** or **yarn**
-
-### One-Command Setup (First Time)
-```bash
-./setup-and-run.sh
-```
-This script automatically:
-- Checks prerequisites (Node.js)
-- **Creates .env files** with default config
-- **Installs dependencies**
-- **Runs database migrations**
-- Starts backend & frontend
-
-### Daily Launcher
-```bash
-./launch-school-app.sh
-```
-Use this once setup is complete to quickly start services.
-
-### Manual Setup
-
-#### 1. Database Setup
-```bash
-# Start MySQL
-brew services start mysql  # macOS
-# or
-sudo systemctl start mysql  # Linux
-
-# Create database
-mysql -u root -p
-CREATE DATABASE school_management;
-exit;
-```
-
-#### 2. Backend Setup
-```bash
-cd school-management-api
-
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your database credentials:
-# DATABASE_URL="mysql://root:password@localhost:3306/school_management"
-# JWT_SECRET="your-secret-key"
-
-# Run Prisma migrations
-npx prisma migrate dev
-
-# Generate Prisma Client
-npx prisma generate
-
-# (Optional) Seed database
-npm run seed
-
-# Start backend
-npm run start:dev
-```
-
-Backend will run on: **http://localhost:3001**
-
-#### 3. Frontend Setup
-```bash
-cd school-management-system
-
-# Install dependencies
-npm install
-
-# Configure API URL
-echo "VITE_API_URL=http://localhost:3001" > .env
-
-# Start frontend
-npm run dev
-```
-
-Frontend will run on: **http://localhost:5173**
-
----
-
-## 🌐 Network Access
-
-### Access from Mobile Devices
-
-The application is configured for local network access:
-
-#### Find Your Local IP
-```bash
-# macOS/Linux
-ifconfig | grep "inet "
-# Look for your local IP (typically 192.168.x.x)
-
-# Windows
-ipconfig
-```
-
-#### Access URLs
-- **Frontend:** `http://YOUR_LOCAL_IP:5173`
-- **Backend:** `http://YOUR_LOCAL_IP:3001`
-
-### Configuration Details
-
-**Backend (`main.ts`):**
-```typescript
-await app.listen(3001, '0.0.0.0');  // Listens on all interfaces
-app.enableCors({ origin: '*' });    // Development only
-```
-
-**Frontend (`vite.config.ts`):**
-```typescript
-server: {
-  host: true,  // Enables network access
-  port: 5173
-}
-```
-
----
-
-## 📊 Database Schema
-
-### Student Management
-- **`student_details`** - Student information (id, name, class, section, gender, dob, contact, etc.)
-
-### Fee Management
-- **`feetransaction_new`** - Fee transactions with payment details
-### Core Tables
-- **`student_details`** - Student information
-- **`feetransaction_new`** - Fee transactions
-- **`inventory`**, **`stock_movements`** - Inventory tracking
-- **`users`** - System users and authentication
-
----
-
-##  Default Credentials
-
-```
-Username: admin
-Password: admin123
-```
-
-⚠️ **Important:** Change these credentials in production!
-
----
-
-## 📝 API Endpoints
-
-### Base URL
-```
-http://localhost:3001
-```
-
-### Admissions
-- `GET /admissions` - List all students (with filters)
-- `GET /admissions/sections/:className` - Get available sections for a class
-- `POST /admissions` - Create new student
-- `GET /admissions/:id` - Get student details
-- `PUT /admissions/:id` - Update student
-- `DELETE /admissions/:id` - Archive student
-- `GET /admissions/export` - Export students (Excel/PDF)
-- `POST /admissions/import` - Import students from Excel
-- `GET /admissions/template` - Download import template
-
-### Fees
-- `POST /fees/collect` - Collect fee payment
-- `GET /fees/transactions` - List all transactions
-- `GET /fees/receipt/:receiptNo` - Get receipt details
-- `GET /fees/export` - Export transactions
-
----
-
-## 🔄 Offline Functionality
-
-The application works seamlessly offline using **IndexedDB**:
-
-1. **Automatic Detection** - Detects online/offline status
-2. **Local Storage** - All data cached in browser
-3. **Queue System** - Operations queued when offline
-4. **Auto Sync** - Syncs automatically when connection restored
-5. **Conflict Resolution** - Last-write-wins strategy
-
----
-
-## 🏗️ Development
-
-### Running in Development Mode
-
-**Backend:**
-```bash
-cd school-management-api
-npm run start:dev  # Watch mode with hot reload
-```
-
-**Frontend:**
-```bash
-cd school-management-system
-npm run dev  # Vite dev server with HMR
-```
-
-### Building for Production
-
-**Frontend:**
-```bash
-cd school-management-system
-npm run build
-# Output: dist/
-```
-
-**Backend:**
-```bash
-cd school-management-api
-npm run build
-# Output: dist/
-```
-
-### Database Migrations
-
-**Create new migration:**
-```bash
-cd school-management-api
-npx prisma migrate dev --name migration_name
-```
-
-**Apply migrations:**
-```bash
-npx prisma migrate deploy
-```
-
-**Reset database:**
-```bash
-npx prisma migrate reset
-```
-
----
-
-## 📋 Changelog
-
-### [2025-12-04] - Exams and Transport Removal
-
-#### Removed
-- 🗑️ **Exams Management module**
-  - Frontend pages deleted (ExamManagement, MarksEntry)
-  - Backend module removed
-  - Database tables dropped (exam_creator, exam_results)
-  - Removed from routes and navigation
-- 🗑️ **Transport Management module**
-  - Frontend page deleted (TransportManagement)
-  - Backend module removed
-  - Database tables dropped (transport, transport_assignments)
-  - Removed from routes and navigation
-
-**Reason:** Focusing development on core features (Admissions, Fees, Inventory) one module at a time.
-
-### [2025-12-04] - Hostel Management Removal
-
-#### Removed
-- 🗑️ **Hostel Management module** - Feature not required
-  - Backend hostel module deleted
-  - Database tables removed (`hostel`, `hostel_assignments`)
-  - Removed from schema relations
-  - Documentation updated
-
-### [2025-12-04] - Form Enhancements & Network Access
-
-#### Added
-- ✨ **Dynamic Section Filter**
-  - Sections populate based on selected class
-  - New API: `GET /admissions/sections/:className`
-  - Auto-resets when class changes
-  - Shows only active sections with students
-
-- ✨ **Enhanced Form Validation**
-  - Phone: 10-15 digits validation
-  - Email: Optional with format validation
-  - Aadhar: Exactly 12 digits
-  - WhatsApp: 10-15 digits
-  - DOB: Age 3-25 years
-  - Admission Date: Past 2 years to upcoming year
-  - Student ID: Uppercase, numbers, hyphens
-
-- ✨ **UX Improvements**
-  - Placeholder examples for all fields:
-    - Student ID: "e.g. STU2024001"
-    - Phone: "e.g. 9876543210 (10-15 digits)"
-    - Email: "e.g. student@example.com"
-    - Aadhar: "e.g. 123456789012 (12 digits)"
-  - Real-time validation feedback
-  - Clear error messages
-
-- ✨ **Network Configuration**
-  - Backend listens on `0.0.0.0`
-  - Frontend dev server with `--host`
-  - CORS enabled for development
-  - Mobile-ready for local network
-
-#### Changed
-- 🔄 Section dropdown disabled until class selected
-- 🔄 Email field truly optional
-
-#### Technical
-- 📦 Database migrations for schema updates
-- 📦 Enhanced service queries
-- 📦 Improved API client
-
----
-
-## 🤝 Contributing
-
-This is a school management system project. For feature requests or improvements:
-1. Create a feature branch
-2. Make your changes
-3. Update documentation
-4. Add entry to changelog
-5. Submit pull request
-
----
-
-## 📄 License
-
-Proprietary - All rights reserved
-
----
-
-## 🆘 Support
-
-For questions or issues:
-- Create an issue in the repository
-- Contact the development team
-
----
-
-## 🙏 Acknowledgments
-
-Built with modern web technologies to provide a robust, offline-capable school management solution.
-
----
-
-**Last Updated:** 2025-12-04  
-**Version:** 1.0.0  
-**Status:** ✅ Production Ready
+## 🤝 Support
+For detailed development guides, API references, and business logic explanations, please refer to the **[Documentation Directory](./documentation/README.md)**.
