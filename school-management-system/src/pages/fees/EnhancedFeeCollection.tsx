@@ -770,6 +770,28 @@ export default function EnhancedFeeCollection() {
                           ₹{dashboard.summary.totalDues.toLocaleString()}
                         </Typography>
                       </Box>
+                      {dashboard.summary.advanceBalance > 0 && (
+                        <Box
+                          sx={{
+                            mt: 2,
+                            p: 2,
+                            backgroundColor: 'success.light',
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'success.main',
+                          }}
+                        >
+                          <Typography variant="body2" color="success.dark" fontWeight={500}>
+                            Advance Balance
+                          </Typography>
+                          <Typography variant="h5" fontWeight={700} color="success.dark">
+                            ₹{dashboard.summary.advanceBalance.toLocaleString()}
+                          </Typography>
+                          <Typography variant="caption" color="success.dark">
+                            Will be auto-applied to next bill
+                          </Typography>
+                        </Box>
+                      )}
                     </Stack>
                   </CardContent>
                 </Card>

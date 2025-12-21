@@ -356,6 +356,9 @@ export class FeesService {
         // Calculate Total Advance (Sum of absolute negative balances)
         const totalAdvance = feeHeads.reduce((sum, fh) => sum + (fh.balance < 0 ? Math.abs(fh.balance) : 0), 0);
 
+        // Calculate dynamic advance balance (Total Paid - Total Billed)
+        const advanceBalance = await this.calculateAdvanceBalance(dto.studentId, dto.sessionId);
+
         return {
             student: {
                 studentId: student.studentId,
@@ -373,6 +376,7 @@ export class FeesService {
                 totalPaid,
                 totalDues,
                 totalAdvance, // Expose advance if needed later
+                advanceBalance, // Available advance to apply to future bills
             },
             transactions: transactions.map(txn => ({
                 id: txn.id,
@@ -527,42 +531,44 @@ export class FeesService {
                     });
                 }
 
-                // Auto-calculate and add late fees if enabled and student has previous dues
-                // BUT only if late fee wasn't already charged in a previous bill for this session
-                if (dto.autoCalculateLateFees !== false && previousDues > 0) {
+                // Auto-calculate and add late fees based on NUMBER OF OVERDUE MONTHS
+                // Late Fee = (Late Fee Rate) × (Number of Overdue Months)
+                if (dto.autoCalculateLateFees !== false) {
                     // Get late fee from fee structure for this class
                     const lateFeeItem = feeStructure.feeItems.find(
                         item => item.feeType.name === 'Late Fee'
                     );
 
                     if (lateFeeItem) {
-                        // Check if late fee was already added in any previous bill for this session
-                        const existingLateFee = await this.prisma.demandBillItem.findFirst({
-                            where: {
-                                feeTypeId: lateFeeItem.feeTypeId,
-                                bill: {
-                                    studentId: student.studentId,
-                                    sessionId: dto.sessionId,
-                                },
-                            },
-                        });
+                        // Count how many previous months have unpaid balance
+                        const overdueMonths = await this.countOverdueMonths(
+                            student.studentId,
+                            dto.sessionId,
+                            dto.month,
+                            dto.year
+                        );
 
-                        // Only add late fee if not already charged in this session
-                        if (!existingLateFee) {
-                            const lateFeeAmount = Number(lateFeeItem.amount);
+                        if (overdueMonths > 0) {
+                            const lateFeePerMonth = Number(lateFeeItem.amount);
+                            const totalLateFee = lateFeePerMonth * overdueMonths;
 
                             billItems.push({
                                 feeTypeId: lateFeeItem.feeTypeId,
-                                amount: new Decimal(lateFeeAmount),
+                                amount: new Decimal(totalLateFee),
                                 discountAmount: new Decimal(0),
                             });
-                            totalAmount += lateFeeAmount;
+                            totalAmount += totalLateFee;
                         }
                     }
                 }
 
                 const netAmount = totalAmount - totalDiscount + previousDues;
                 const billNo = `BILL${dto.year}${String(dto.month).padStart(2, '0')}${Date.now()}`;
+
+                // Calculate available advance (overpayment) and apply to bill
+                const availableAdvance = await this.calculateAdvanceBalance(student.studentId, dto.sessionId);
+                const advanceToApply = Math.min(availableAdvance, netAmount);
+                const finalNetAmount = netAmount - advanceToApply;
 
                 // Create demand bill
                 const bill = await this.prisma.demandBill.create({
@@ -576,8 +582,9 @@ export class FeesService {
                         dueDate,
                         totalAmount: new Decimal(totalAmount),
                         previousDues: new Decimal(previousDues),
+                        advanceUsed: new Decimal(advanceToApply),
                         discount: new Decimal(totalDiscount),
-                        netAmount: new Decimal(netAmount),
+                        netAmount: new Decimal(finalNetAmount),
                         billItems: {
                             create: billItems,
                         },
@@ -634,6 +641,58 @@ export class FeesService {
             const unpaid = Number(bill.netAmount) - Number(bill.paidAmount);
             return sum + unpaid;
         }, 0);
+    }
+
+    /**
+     * Count the number of overdue months (bills with unpaid balance)
+     * Used for per-month late fee calculation
+     */
+    private async countOverdueMonths(
+        studentId: string,
+        sessionId: number,
+        currentMonth: number,
+        currentYear: number
+    ): Promise<number> {
+        // Get all previous bills
+        const previousBills = await this.prisma.demandBill.findMany({
+            where: {
+                studentId,
+                sessionId,
+                OR: [
+                    { year: { lt: currentYear } },
+                    { year: currentYear, month: { lt: currentMonth } },
+                ],
+            },
+        });
+
+        // Count bills where there's still a balance due (not fully paid)
+        return previousBills.filter(bill =>
+            Number(bill.netAmount) > Number(bill.paidAmount)
+        ).length;
+    }
+
+    /**
+     * Calculate available advance (overpayment) balance for a student
+     * Advance = Total Paid - Total Net Billed
+     */
+    private async calculateAdvanceBalance(
+        studentId: string,
+        sessionId: number
+    ): Promise<number> {
+        // Get total paid from all transactions
+        const transactions = await this.prisma.feeTransaction.findMany({
+            where: { studentId, sessionId },
+        });
+        const totalPaid = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Get total billed (net amount) from all demand bills
+        const bills = await this.prisma.demandBill.findMany({
+            where: { studentId, sessionId },
+        });
+        const totalBilled = bills.reduce((sum, b) => sum + Number(b.netAmount), 0);
+
+        // Advance is positive if paid more than billed
+        return Math.max(0, totalPaid - totalBilled);
     }
 
     /**
@@ -720,6 +779,7 @@ export class FeesService {
                 year: bill.year,
                 dueDate: bill.dueDate,
                 amount: Number(bill.totalAmount), // Show Gross
+                advanceUsed: Number(bill.advanceUsed), // Advance applied to this bill
                 paid: Number(bill.paidAmount),
                 balance: currentBalance > 0 ? currentBalance : 0,
                 status: dynamicStatus,
