@@ -29,7 +29,7 @@ The application relies on environment variables for configuration. Below are the
 
 ### Development
 - Copy `.env.example` (if available) to `.env`.
-- `launch-school-app.sh` automatically creates default `.env` files if missing.
+- The `run-mac.sh` / `run-linux.sh` scripts automatically create default `.env` files if missing.
 
 ### Production
 - Ensure `JWT_SECRET` is strong and unique.

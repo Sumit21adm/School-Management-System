@@ -1,112 +1,127 @@
 # 🚀 Installation & Setup Guide
 
-This guide covers how to set up the School Management System on your local machine for development or production.
+This guide covers how to set up the School Management System on your local machine.
 
 ## Prerequisites
 
 Before starting, ensure you have the following installed:
-- **Node.js** (v20 or higher) - [Download](https://nodejs.org/)
-- **MySQL** (v8.0 or higher) - [Download](https://dev.mysql.com/downloads/)
+- **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop/) (for MySQL database)
+- **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
 - **Git** - [Download](https://git-scm.com/)
-- **npm** (comes with Node.js) or **yarn**
 
 ---
 
-## 📥 Option 1: Automated Setup (Mac/Linux)
+## 📥 Quick Start (Recommended)
 
-We provide a script to automate the entire setup process.
+We provide platform-specific scripts that handle everything automatically.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Sumit21adm/School-Management-System.git
-   cd School-Management-System
-   ```
+### 1. Clone the repository
+```bash
+git clone https://github.com/Sumit21adm/School-Management-System.git
+cd School-Management-System
+```
 
-2. **Run the setup script:**
-   ```bash
-   ./setup-and-run.sh
-   ```
+### 2. Run the appropriate script for your OS
 
-   This script will:
-   - Check for prerequisites
-   - Install backend & frontend dependencies
-   - Configure default `.env` files
-   - Run database migrations
-   - Start both servers
+**Mac:**
+```bash
+./run-mac.sh
+```
+
+**Linux:**
+```bash
+./run-linux.sh
+```
+
+**Windows:**
+Double-click `run-windows.bat`
+
+The script will:
+- ✅ Check Docker and Node.js installation
+- ✅ Start MySQL in a Docker container
+- ✅ Install all dependencies
+- ✅ Configure environment automatically
+- ✅ Run database migrations
+- ✅ Start API (port 3001) and Frontend (port 5173)
+- ✅ Open your browser to the app
 
 ---
 
-## 🛠️ Option 2: Manual Installation
+## 🛠️ Manual Installation
 
-If you prefer manual control or are on Windows, follow these steps.
+If you prefer manual control, follow these steps.
 
-### Step 1: Database Setup
-1. Start your MySQL server.
-2. Create a new database:
-   ```sql
-   CREATE DATABASE school_management;
-   ```
+### Step 1: Start MySQL (using Docker)
+```bash
+docker run -d \
+  --name school-mysql \
+  -e MYSQL_ROOT_PASSWORD=rootpassword \
+  -e MYSQL_DATABASE=school_management \
+  -e MYSQL_USER=school_user \
+  -e MYSQL_PASSWORD=school_pass \
+  -p 3306:3306 \
+  mysql:8.0
+```
 
 ### Step 2: Backend Setup
-1. Navigate to the API directory:
-   ```bash
-   cd school-management-api
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Configure Environment:
-   - Copy `.env.example` to `.env`
-   - Update `DATABASE_URL` with your MySQL credentials:
-     ```env
-     DATABASE_URL="mysql://root:password@localhost:3306/school_management"
-     ```
-4. Run Migrations:
-   ```bash
-   npx prisma migrate dev
-   ```
-5. Start Server:
-   ```bash
-   npm run start:dev
-   ```
-   *Server runs on: http://localhost:3001*
+```bash
+cd school-management-api
+npm install
+
+# Create .env file
+cat > .env << EOF
+DATABASE_URL="mysql://school_user:school_pass@localhost:3306/school_management"
+JWT_SECRET="dev-jwt-secret-change-in-production"
+PORT=3001
+EOF
+
+# Run migrations
+npx prisma db push
+
+# Start server
+npm run start:dev
+```
+*Server runs on: http://localhost:3001*
 
 ### Step 3: Frontend Setup
-1. Open a new terminal and navigate to the system directory:
-   ```bash
-   cd school-management-system
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Configure Environment:
-   - Create `.env` file:
-     ```env
-     VITE_API_URL=http://localhost:3001
-     ```
-4. Start Application:
-   ```bash
-   npm run dev
-   ```
-   *App runs on: http://localhost:5173*
+```bash
+cd school-management-system
+npm install
+npm run dev
+```
+*App runs on: http://localhost:5173*
 
 ---
 
-## 🐳 Option 3: Docker Setup (Recommended for Production)
+## 🌱 Seed Sample Data (Optional)
 
-1. Ensure Docker Desktop is running.
-2. Run the compose command:
-   ```bash
-   docker-compose up -d
-   ```
-   This spins up the Database, Backend, and Frontend containers automatically.
+To populate the database with sample data:
+```bash
+cd school-management-api
+npm run seed
+```
+
+This creates:
+- Admin user (admin / admin123)
+- 12 Fee types
+- 1 Academic session
+- 30 Sample students
+- Fee structures for all classes
 
 ---
 
 ## ✅ Verification
-- Open http://localhost:5173 to see the login page.
-- Login with default credentials:
-  - **Username:** `admin`
-  - **Password:** `admin123`
+
+1. Open http://localhost:5173
+2. Login with default credentials:
+   - **Username:** `admin`
+   - **Password:** `admin123`
+
+---
+
+## 🛑 Stopping the Application
+
+- Press `Ctrl+C` in the terminal running the script
+- MySQL container keeps running for next time
+- To stop MySQL: `docker stop school-mysql-hybrid`
+- To remove MySQL data: `docker rm school-mysql-hybrid && docker volume rm school_mysql_data`

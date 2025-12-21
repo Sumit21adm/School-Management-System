@@ -40,9 +40,6 @@ Thumbs.db
 .AppleDouble
 .LSOverride
 
-# Turbo
-.turbo/
-
 # Prisma Generated
 generated/
 **/generated/

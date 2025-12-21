@@ -7,9 +7,11 @@ The project follows a monorepo-style structure separating the Frontend (React) a
 School-Management-System/
 ├── school-management-system/      # Frontend Application (React + Vite)
 ├── school-management-api/         # Backend API (NestJS + Prisma)
-├── documentation/                 # Project Documentation
-├── docker-compose.yml             # Docker orchestration
-└── launch-school-app.sh           # Quick start script
+├── Documentation/                 # Project Documentation
+├── run-mac.sh                     # Mac quick start script
+├── run-linux.sh                   # Linux quick start script
+├── run-windows.bat                # Windows quick start script
+└── README.md                      # Project overview
 ```
 
 ---
