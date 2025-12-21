@@ -1,7 +1,7 @@
 # School Management System
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-Proprietary-red)
+![License](https://img.shields.io/badge/license-MIT-green)
 ![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 ![Lines of Code](https://img.shields.io/badge/lines_of_code-~17k-blueviolet)
 ![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)
@@ -14,105 +14,187 @@
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)
 
-
 A modern, offline-first School Management System built with **React, NestJS, and MySQL**. Designed for seamless operation with robust fee management, admission tracking, and comprehensive reporting.
 
+## 📁 Project Structure
+
+```
+School-Management-System/
+├── school-management-system/       # React Frontend
+│   ├── src/
+│   │   ├── components/            # Reusable UI components
+│   │   ├── pages/                 # Page components
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Admissions.tsx
+│   │   │   ├── FeeCollection.tsx
+│   │   │   └── ...
+│   │   ├── services/              # API clients
+│   │   ├── stores/                # State management
+│   │   ├── db/                    # IndexedDB for offline
+│   │   └── types/                 # TypeScript interfaces
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── school-management-api/          # NestJS Backend
+│   ├── src/
+│   │   ├── admissions/            # Admissions module
+│   │   ├── fees/                  # Fee management
+│   │   ├── auth/                  # Authentication
+│   │   ├── prisma/                # Prisma module
+│   │   └── main.ts                # Entry point
+│   ├── prisma/
+│   │   ├── schema.prisma          # Database schema
+│   │   ├── migrations/            # Database migrations
+│   │   └── seed.ts                # Database seeding
+│   ├── uploads/                   # Uploaded files
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── docker-compose.yml              # Docker orchestration
+├── Makefile                        # Development commands
+├── run-windows.bat                 # Windows launcher
+├── run-mac.sh                      # Mac launcher
+├── run-linux.sh                    # Linux launcher
+└── README.md                       # This file
+```
+
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start
 
-Get the application running in minutes!
+**Prerequisites:** 
+- [Docker](https://docs.docker.com/get-docker/) (for MySQL database)
+- [Node.js 18+](https://nodejs.org/)
 
-### Prerequisites
-- **Node.js**: v20 or higher
-- **MySQL**: v8.0 or higher
-- **Git**
+### Windows
+Double-click **`run-windows.bat`**
 
-### ⚡ Option 1: Automated Setup (Recommended for Mac/Linux)
-Run our one-step setup script which handles dependencies, database migrations, and starts the servers.
-
+### Mac
 ```bash
-# 1. Clone the repository
-git clone <repository_url>
-cd School-Management-System
-
-# 2. Run the launcher
-./setup-and-run.sh
+./run-mac.sh
 ```
-*The script will automatically check environment requirements, install packages, and launch the app.*
 
-### 🐳 Option 2: Docker (Production Ready)
-If you have Docker installed, you can spin up the entire stack (Database + API + Frontend) instantly.
-
+### Linux
 ```bash
-docker-compose up -d
+./run-linux.sh
 ```
-Access the app at: `http://localhost:5173`
 
-### 🛠️ Option 3: Manual Setup
-If you prefer full control:
+The script will:
+1. ✅ Start MySQL in Docker container
+2. ✅ Check Node.js and install dependencies
+3. ✅ Configure environment automatically
+4. ✅ Run database migrations
+5. ✅ Start API (port 3001) and Frontend (port 5173)
+6. ✅ Open http://localhost:5173 in your browser
 
-**Backend:**
+---
+
+## 🌐 Network Access
+
+### Access from Mobile Devices
+
+The application is configured for local network access:
+
+#### Find Your Local IP
+```bash
+# macOS/Linux
+ifconfig | grep "inet "
+# Look for your local IP (typically 192.168.x.x)
+
+# Windows
+ipconfig
+```
+
+#### Access URLs
+- **Frontend:** `http://YOUR_LOCAL_IP:5173`
+- **Backend:** `http://YOUR_LOCAL_IP:3001`
+
+---
+
+## 📊 Database Schema
+
+### Core Tables
+- **`student_details`** - Student information
+- **`feetransaction_new`** - Fee transactions
+- **`inventory`**, **`stock_movements`** - Inventory tracking
+- **`users`** - System users and authentication
+
+---
+
+## 🔑 Default Credentials
+
+```
+Username: admin
+Password: admin123
+```
+
+⚠️ **Important:** Change these credentials in production!
+
+---
+
+## 📝 API Endpoints
+
+### Base URL
+```
+http://localhost:3001
+```
+
+### Admissions
+- `GET /admissions` - List all students (with filters)
+- `GET /admissions/sections/:className` - Get available sections
+- `POST /admissions` - Create new student
+- `GET /admissions/:id` - Get student details
+- `PUT /admissions/:id` - Update student
+- `DELETE /admissions/:id` - Archive student
+
+### Fees
+- `POST /fees/collect` - Collect fee payment
+- `GET /fees/transactions` - List all transactions
+- `GET /fees/receipt/:receiptNo` - Get receipt details
+
+---
+
+## 🔄 Offline Functionality
+
+The application works seamlessly offline using **IndexedDB**:
+
+1. **Automatic Detection** - Detects online/offline status
+2. **Local Storage** - All data cached in browser
+3. **Queue System** - Operations queued when offline
+4. **Auto Sync** - Syncs automatically when connection restored
+5. **Conflict Resolution** - Last-write-wins strategy
+
+---
+
+## 🏗️ Development
+
+### Database Migrations
+
 ```bash
 cd school-management-api
-npm install
-# Configure .env (see documentation)
-npx prisma migrate dev
-npm run start:dev
-```
-
-**Frontend:**
-```bash
-cd school-management-system
-npm install
-npm run dev
+npx prisma migrate dev --name migration_name
+npx prisma migrate deploy
+npx prisma migrate reset
 ```
 
 ---
 
-## 🔐 Default Login Credentials
-- **Username:** `admin`
-- **Password:** `admin123`
+## 🤝 Contributing
+
+1. Fork the repository
+2. Clone your fork
+3. Run `make start`
+4. Make changes
+5. Submit pull request
 
 ---
 
-## 📚 Documentation
-We have organized the documentation into detailed sections for easier navigation:
+## 📄 License
 
-- **[📂 Full Documentation Index](./documentation/README.md)**
-- **[🎓 Admissions Module](./documentation/modules/admissions.md)**
-- **[💰 Fee Management](./documentation/modules/fees.md)**
-- **[📝 Examination Analysis](./documentation/modules/examination.md)**
-- **[✨ Offline Features](./documentation/features/offline-mode.md)**
-- **[🛠️ Installation & Config](./documentation/getting-started/installation.md)**
+MIT
 
 ---
 
-## ✨ Key Features
-
-### Core Functionality
-- **Offline-First**: Works without an internet connection using IndexedDB. Syncs automatically when online.
-- **Local Network Access**: Optimized to work on mobile devices connected to the same WiFi.
-- **PDF Generation**: Professional receipts, demand bills, and report cards.
-
-### Modules Overview
-- **Student Admissions**: Complete registration flow with photo cropping and document management.
-- **Fee Management**: Flexible fee structures, partial payments, multiple fee heads, and demand bill generation.
-- **Examination**: Exam scheduling, marks entry, and automated grading.
-
-
----
-
-## 🛠️ Technology Stack
-
-| Frontend | Backend | Database |
-|----------|---------|----------|
-| React 19 | NestJS 11 | MySQL 8 |
-| TypeScript | Prisma ORM | IndexedDB (Offline) |
-| Material UI | JWT Auth | Redis (Optional) |
-| Vite | PDFKit | Docker |
-
----
-
-## 🤝 Support
-For detailed development guides, API references, and business logic explanations, please refer to the **[Documentation Directory](./documentation/README.md)**.
+**Last Updated:** 2025-12-21  
+**Version:** 1.0.0  
+**Status:** ✅ Production Ready

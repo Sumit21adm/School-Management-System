@@ -161,6 +161,18 @@ export default function SessionsManagement() {
         }
     };
 
+    // Helper function to generate session name from dates
+    const generateSessionName = (startDate: string, endDate: string): string => {
+        if (!startDate || !endDate) return '';
+        const start = parse(startDate, 'yyyy-MM-dd', new Date());
+        const end = parse(endDate, 'yyyy-MM-dd', new Date());
+        const startMonth = format(start, 'MMM').toUpperCase();
+        const startYear = format(start, 'yyyy');
+        const endMonth = format(end, 'MMM').toUpperCase();
+        const endYear = format(end, 'yyyy');
+        return `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
+    };
+
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Paper sx={{ p: 3 }}>
@@ -254,17 +266,23 @@ export default function SessionsManagement() {
                             <TextField
                                 label="Session Name"
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 fullWidth
-                                placeholder="e.g., APR 2025-MAR 2026"
+                                disabled
+                                helperText={!formData.name ? "Select start and end dates to auto-generate Session Names" : ""}
+                                InputProps={{
+                                    readOnly: true,
+                                }}
                             />
                             <DatePicker
                                 label="Start Date"
                                 value={formData.startDate ? parse(formData.startDate, 'yyyy-MM-dd', new Date()) : null}
                                 onChange={(date) => {
+                                    const newStartDate = date ? format(date, 'yyyy-MM-dd') : '';
+                                    const newName = generateSessionName(newStartDate, formData.endDate);
                                     setFormData({
                                         ...formData,
-                                        startDate: date ? format(date, 'yyyy-MM-dd') : '',
+                                        startDate: newStartDate,
+                                        name: newName || formData.name,
                                     });
                                 }}
                                 slotProps={{
@@ -278,9 +296,12 @@ export default function SessionsManagement() {
                                 label="End Date"
                                 value={formData.endDate ? parse(formData.endDate, 'yyyy-MM-dd', new Date()) : null}
                                 onChange={(date) => {
+                                    const newEndDate = date ? format(date, 'yyyy-MM-dd') : '';
+                                    const newName = generateSessionName(formData.startDate, newEndDate);
                                     setFormData({
                                         ...formData,
-                                        endDate: date ? format(date, 'yyyy-MM-dd') : '',
+                                        endDate: newEndDate,
+                                        name: newName || formData.name,
                                     });
                                 }}
                                 slotProps={{

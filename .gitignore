@@ -5,13 +5,16 @@ node_modules/
 
 # Testing
 coverage/
+
+# Logs
 *.log
 logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+debug.log
 
-# Production
+# Production/Build
 dist/
 build/
 .next/
@@ -40,9 +43,10 @@ Thumbs.db
 # Turbo
 .turbo/
 
-# Generated
-apps/api/generated/
+# Prisma Generated
 generated/
+**/generated/
+school-management-api/generated/
 
 # Uploads
 uploads/
@@ -53,3 +57,5 @@ uploads/
 .cache/
 tmp/
 
+# Docker volumes (if any local data)
+mysql_data/
