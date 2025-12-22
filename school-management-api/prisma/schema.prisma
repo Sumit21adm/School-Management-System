@@ -125,6 +125,7 @@ model DemandBill {
   dueDate       DateTime @db.Date
   totalAmount   Decimal  @db.Decimal(10, 2)
   previousDues  Decimal  @default(0) @db.Decimal(10, 2)
+  advanceUsed   Decimal  @default(0) @db.Decimal(10, 2)  // Advance (overpayment) applied to this bill
   lateFee       Decimal  @default(0) @db.Decimal(10, 2)
   discount      Decimal  @default(0) @db.Decimal(10, 2)
   netAmount     Decimal  @db.Decimal(10, 2)
