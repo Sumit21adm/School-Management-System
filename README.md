@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
-![Lines of Code](https://img.shields.io/badge/lines_of_code-~17k-blueviolet)
+![Lines of Code](https://img.shields.io/badge/lines_of_code-~19k-blueviolet)
 ![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)
 
 ![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)
@@ -50,11 +50,13 @@ School-Management-System/
 │   ├── package.json
 │   └── tsconfig.json
 │
+├── scripts/                        # Utility scripts
+│   ├── run-windows.bat             # Windows launcher
+│   ├── run-mac.sh                  # Mac launcher
+│   ├── run-linux.sh                # Linux launcher
+│   └── count-lines.sh              # LOC counter
 ├── docker-compose.yml              # Docker orchestration
 ├── Makefile                        # Development commands
-├── run-windows.bat                 # Windows launcher
-├── run-mac.sh                      # Mac launcher
-├── run-linux.sh                    # Linux launcher
 └── README.md                       # This file
 ```
 
@@ -67,16 +69,16 @@ School-Management-System/
 - [Node.js 18+](https://nodejs.org/)
 
 ### Windows
-Double-click **`run-windows.bat`**
+Double-click **`scripts/run-windows.bat`**
 
 ### Mac
 ```bash
-./run-mac.sh
+./scripts/run-mac.sh
 ```
 
 ### Linux
 ```bash
-./run-linux.sh
+./scripts/run-linux.sh
 ```
 
 The script will:
