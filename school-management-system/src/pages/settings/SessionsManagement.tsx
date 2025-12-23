@@ -76,8 +76,10 @@ export default function SessionsManagement() {
 
     const activateMutation = useMutation({
         mutationFn: sessionService.activate,
-        onSuccess: () => {
+        onSuccess: (_, sessionId) => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
+            // Also update the selected session in localStorage to the newly activated one
+            localStorage.setItem('selectedSessionId', sessionId.toString());
             setSuccessMessage('Session activated successfully!');
         },
         onError: (error: any) => {

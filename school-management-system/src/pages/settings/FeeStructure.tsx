@@ -24,12 +24,26 @@ import {
     DialogContent,
     DialogActions,
     Snackbar,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    Divider,
+    Tooltip,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Check as CheckIcon, CloudDone as CloudDoneIcon, Sync as SyncIcon } from '@mui/icons-material';
+import {
+    Add as AddIcon,
+    Delete as DeleteIcon,
+    Edit as EditIcon,
+    Check as CheckIcon,
+    CloudDone as CloudDoneIcon,
+    Sync as SyncIcon,
+    ExpandMore as ExpandMoreIcon,
+    Category as CategoryIcon,
+    Close as CloseIcon,
+} from '@mui/icons-material';
 import { useSession } from '../../contexts/SessionContext';
-import { feeTypeService, feeStructureService } from '../../lib/api';
+import { feeTypeService, feeStructureService, classService } from '../../lib/api';
 
-const CLASSES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const FREQUENCIES = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'One-time', 'Refundable', 'Not Set'];
 
 interface FeeItem {
@@ -41,14 +55,24 @@ interface FeeItem {
 
 export default function FeeStructure() {
     const { selectedSession } = useSession();
-    const [selectedClass, setSelectedClass] = useState('1');
+    const [selectedClass, setSelectedClass] = useState('');
     const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
     const [selectedFeeType, setSelectedFeeType] = useState<number | ''>('');
+    const [newFeeAmount, setNewFeeAmount] = useState<number>(0);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
     const [unsavedIds, setUnsavedIds] = useState<Set<number>>(new Set());
     const queryClient = useQueryClient();
+
+    // Fee Types Management State
+    const [feeTypesExpanded, setFeeTypesExpanded] = useState(false);
+    const [editingFeeTypeId, setEditingFeeTypeId] = useState<number | null>(null);
+    const [newFeeType, setNewFeeType] = useState({ name: '', description: '', frequency: '' });
+    const [editFeeType, setEditFeeType] = useState({ id: 0, name: '', description: '', frequency: '' });
+    const [deleteFeeTypeDialogOpen, setDeleteFeeTypeDialogOpen] = useState(false);
+    const [feeTypeToDelete, setFeeTypeToDelete] = useState<any>(null);
+    const [feeTypeSaving, setFeeTypeSaving] = useState(false);
 
     // Check if there are unsaved changes
     const hasUnsavedChanges = unsavedIds.size > 0;
@@ -67,17 +91,23 @@ export default function FeeStructure() {
         }
     };
 
-    // Fetch fee types
-    const { data: feeTypesData } = useQuery({
+    // Fetch fee types (including inactive for management)
+    const { data: feeTypesData, refetch: refetchFeeTypes } = useQuery({
         queryKey: ['feeTypes'],
-        queryFn: () => feeTypeService.getAll(true),
+        queryFn: () => feeTypeService.getAll(false), // false = include inactive
+    });
+
+    // Fetch available classes
+    const { data: classes } = useQuery({
+        queryKey: ['classes'],
+        queryFn: classService.getAll,
     });
 
     // Fetch fee structure
     const { data: structureData } = useQuery({
         queryKey: ['feeStructure', selectedSession?.id, selectedClass],
         queryFn: () => feeStructureService.getStructure(selectedSession!.id, selectedClass),
-        enabled: !!selectedSession,
+        enabled: !!selectedSession && !!selectedClass,
     });
 
     // Initialize fee items when structure loads
@@ -102,8 +132,8 @@ export default function FeeStructure() {
         }
     }, [structureData, feeTypesData]);
 
-    const handleAddFeeType = () => {
-        if (!selectedFeeType || !feeTypesData) return;
+    const handleAddFeeType = async () => {
+        if (!selectedFeeType || !feeTypesData || !selectedSession) return;
 
         const feeType = feeTypesData.feeTypes.find((ft: any) => ft.id === selectedFeeType);
         if (!feeType) return;
@@ -114,18 +144,49 @@ export default function FeeStructure() {
             return;
         }
 
-        setFeeItems([
-            ...feeItems,
-            {
-                feeTypeId: feeType.id,
-                feeTypeName: feeType.name,
-                amount: 0,
-                frequency: feeType.frequency,
-            },
-        ]);
-        // Mark as unsaved
-        setUnsavedIds(prev => new Set(prev).add(feeType.id));
-        setSelectedFeeType('');
+        const newItem = {
+            feeTypeId: feeType.id,
+            feeTypeName: feeType.name,
+            amount: newFeeAmount || 0,
+            frequency: feeType.frequency,
+        };
+
+        // Add to local state
+        const updatedItems = [...feeItems, newItem];
+        setFeeItems(updatedItems);
+
+        // Save to database immediately
+        try {
+            setIsSaving(true);
+            const saveItems = updatedItems
+                .filter(item => item.amount > 0)
+                .map(item => ({
+                    feeTypeId: item.feeTypeId,
+                    amount: item.amount,
+                    isOptional: false,
+                    frequency: item.frequency || null,
+                }));
+
+            await feeStructureService.upsertStructure(selectedSession.id, selectedClass, {
+                description: `Class ${selectedClass} fee structure`,
+                items: saveItems,
+            });
+
+            // Mark as saved
+            setSavedIds(prev => new Set(prev).add(feeType.id));
+            queryClient.invalidateQueries({ queryKey: ['feeStructure'] });
+
+            // Reset form
+            setSelectedFeeType('');
+            setNewFeeAmount(0);
+        } catch (error) {
+            console.error('Save failed:', error);
+            alert('Failed to save fee. Please try again.');
+            // Remove the item from local state if save failed
+            setFeeItems(feeItems);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     // Delete State
@@ -308,9 +369,91 @@ export default function FeeStructure() {
         return sum + ((item.amount || 0) * multiplier);
     }, 0);
 
-    // Get available fee types (not already added)
+    // Fee Types Management Handlers
+    const handleCreateFeeType = async () => {
+        if (!newFeeType.name.trim()) {
+            setSnackbar({ open: true, message: 'Fee type name is required', severity: 'error' });
+            return;
+        }
+        setFeeTypeSaving(true);
+        try {
+            await feeTypeService.create({
+                name: newFeeType.name.trim(),
+                description: newFeeType.description.trim(),
+                frequency: newFeeType.frequency || null,
+            });
+            setNewFeeType({ name: '', description: '', frequency: '' });
+            refetchFeeTypes();
+            setSnackbar({ open: true, message: 'Fee type created successfully', severity: 'success' });
+        } catch (error: any) {
+            setSnackbar({ open: true, message: error?.response?.data?.message || 'Failed to create fee type', severity: 'error' });
+        } finally {
+            setFeeTypeSaving(false);
+        }
+    };
+
+    const handleStartEditFeeType = (feeType: any) => {
+        setEditingFeeTypeId(feeType.id);
+        setEditFeeType({
+            id: feeType.id,
+            name: feeType.name,
+            description: feeType.description || '',
+            frequency: feeType.frequency || '',
+        });
+    };
+
+    const handleSaveEditFeeType = async () => {
+        if (!editFeeType.name.trim()) {
+            setSnackbar({ open: true, message: 'Fee type name is required', severity: 'error' });
+            return;
+        }
+        setFeeTypeSaving(true);
+        try {
+            await feeTypeService.update(editFeeType.id, {
+                name: editFeeType.name.trim(),
+                description: editFeeType.description.trim(),
+                frequency: editFeeType.frequency || null,
+            });
+            setEditingFeeTypeId(null);
+            refetchFeeTypes();
+            queryClient.invalidateQueries({ queryKey: ['feeStructure'] });
+            setSnackbar({ open: true, message: 'Fee type updated successfully', severity: 'success' });
+        } catch (error: any) {
+            setSnackbar({ open: true, message: error?.response?.data?.message || 'Failed to update fee type', severity: 'error' });
+        } finally {
+            setFeeTypeSaving(false);
+        }
+    };
+
+    const handleCancelEditFeeType = () => {
+        setEditingFeeTypeId(null);
+        setEditFeeType({ id: 0, name: '', description: '', frequency: '' });
+    };
+
+    const handleDeleteFeeTypeClick = (feeType: any) => {
+        setFeeTypeToDelete(feeType);
+        setDeleteFeeTypeDialogOpen(true);
+    };
+
+    const handleDeleteFeeTypeConfirm = async () => {
+        if (!feeTypeToDelete) return;
+        setFeeTypeSaving(true);
+        try {
+            await feeTypeService.delete(feeTypeToDelete.id);
+            refetchFeeTypes();
+            setSnackbar({ open: true, message: 'Fee type deleted successfully', severity: 'success' });
+        } catch (error: any) {
+            setSnackbar({ open: true, message: error?.response?.data?.message || 'Failed to delete fee type. It may be in use.', severity: 'error' });
+        } finally {
+            setDeleteFeeTypeDialogOpen(false);
+            setFeeTypeToDelete(null);
+            setFeeTypeSaving(false);
+        }
+    };
+
+    // Get available fee types (not already added) - only active ones for structure
     const availableFeeTypes = feeTypesData?.feeTypes.filter(
-        (ft: any) => !feeItems.some(item => item.feeTypeId === ft.id)
+        (ft: any) => ft.isActive !== false && !feeItems.some(item => item.feeTypeId === ft.id)
     ) || [];
 
     if (!selectedSession) {
@@ -328,6 +471,187 @@ export default function FeeStructure() {
                     Fee Structure Management
                 </Typography>
 
+                {/* Fee Types Management Accordion */}
+                <Accordion
+                    expanded={feeTypesExpanded}
+                    onChange={() => setFeeTypesExpanded(!feeTypesExpanded)}
+                    sx={{ mb: 3, bgcolor: 'grey.50', '&:before': { display: 'none' } }}
+                >
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CategoryIcon color="primary" />
+                            <Typography fontWeight={600}>Manage Fee Types</Typography>
+                            <Chip
+                                label={`${feeTypesData?.feeTypes?.length || 0} types`}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                            />
+                        </Box>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <Divider sx={{ mb: 2 }} />
+
+                        {/* Add New Fee Type Row */}
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                            <TextField
+                                label="Fee Type Name"
+                                size="small"
+                                value={newFeeType.name}
+                                onChange={(e) => setNewFeeType({ ...newFeeType, name: e.target.value })}
+                                sx={{ minWidth: 180 }}
+                                placeholder="e.g. Transport Fee"
+                            />
+                            <TextField
+                                label="Description"
+                                size="small"
+                                value={newFeeType.description}
+                                onChange={(e) => setNewFeeType({ ...newFeeType, description: e.target.value })}
+                                sx={{ minWidth: 200 }}
+                                placeholder="Optional description"
+                            />
+                            <FormControl size="small" sx={{ minWidth: 140 }}>
+                                <InputLabel>Frequency</InputLabel>
+                                <Select
+                                    value={newFeeType.frequency}
+                                    label="Frequency"
+                                    onChange={(e) => setNewFeeType({ ...newFeeType, frequency: e.target.value })}
+                                >
+                                    <MenuItem value="">Not Set</MenuItem>
+                                    {FREQUENCIES.filter(f => f !== 'Not Set').map((freq) => (
+                                        <MenuItem key={freq} value={freq}>{freq}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <Button
+                                variant="contained"
+                                startIcon={feeTypeSaving ? <SyncIcon sx={{ animation: 'spin 1s linear infinite' }} /> : <AddIcon />}
+                                onClick={handleCreateFeeType}
+                                disabled={feeTypeSaving || !newFeeType.name.trim()}
+                            >
+                                Add Fee Type
+                            </Button>
+                        </Box>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        {/* Fee Types Table */}
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: 'grey.200' }}>
+                                    <TableCell><strong>Name</strong></TableCell>
+                                    <TableCell><strong>Description</strong></TableCell>
+                                    <TableCell><strong>Frequency</strong></TableCell>
+                                    <TableCell align="center" sx={{ width: 120 }}><strong>Actions</strong></TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {feeTypesData?.feeTypes?.map((ft: any) => (
+                                    <TableRow key={ft.id} hover>
+                                        <TableCell>
+                                            {editingFeeTypeId === ft.id ? (
+                                                <TextField
+                                                    size="small"
+                                                    value={editFeeType.name}
+                                                    onChange={(e) => setEditFeeType({ ...editFeeType, name: e.target.value })}
+                                                    sx={{ minWidth: 150 }}
+                                                />
+                                            ) : (
+                                                ft.name
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {editingFeeTypeId === ft.id ? (
+                                                <TextField
+                                                    size="small"
+                                                    value={editFeeType.description}
+                                                    onChange={(e) => setEditFeeType({ ...editFeeType, description: e.target.value })}
+                                                    sx={{ minWidth: 180 }}
+                                                />
+                                            ) : (
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {ft.description || '-'}
+                                                </Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {editingFeeTypeId === ft.id ? (
+                                                <Select
+                                                    size="small"
+                                                    value={editFeeType.frequency}
+                                                    onChange={(e) => setEditFeeType({ ...editFeeType, frequency: e.target.value })}
+                                                    sx={{ minWidth: 120 }}
+                                                >
+                                                    <MenuItem value="">Not Set</MenuItem>
+                                                    {FREQUENCIES.filter(f => f !== 'Not Set').map((freq) => (
+                                                        <MenuItem key={freq} value={freq}>{freq}</MenuItem>
+                                                    ))}
+                                                </Select>
+                                            ) : (
+                                                ft.frequency ? (
+                                                    <Chip
+                                                        label={ft.frequency}
+                                                        size="small"
+                                                        color={getFrequencyColor(ft.frequency)}
+                                                    />
+                                                ) : (
+                                                    <Chip label="Not Set" size="small" variant="outlined" />
+                                                )
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="center">
+                                            {editingFeeTypeId === ft.id ? (
+                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    <Tooltip title="Save">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="success"
+                                                            onClick={handleSaveEditFeeType}
+                                                            disabled={feeTypeSaving}
+                                                        >
+                                                            {feeTypeSaving ? <SyncIcon sx={{ fontSize: 18 }} /> : <CheckIcon />}
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Cancel">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="default"
+                                                            onClick={handleCancelEditFeeType}
+                                                        >
+                                                            <CloseIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            ) : (
+                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    <Tooltip title="Edit">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="primary"
+                                                            onClick={() => handleStartEditFeeType(ft)}
+                                                        >
+                                                            <EditIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Delete">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="error"
+                                                            onClick={() => handleDeleteFeeTypeClick(ft)}
+                                                        >
+                                                            <DeleteIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </AccordionDetails>
+                </Accordion>
+
                 <Box sx={{ display: 'flex', gap: 2, my: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                     <FormControl size="small" sx={{ minWidth: 200 }}>
                         <Typography variant="caption" sx={{ mb: 0.5 }}>
@@ -342,18 +666,26 @@ export default function FeeStructure() {
                     </FormControl>
 
                     <FormControl size="small" sx={{ minWidth: 150 }}>
-                        <Typography variant="caption" sx={{ mb: 0.5 }}>
-                            Class
-                        </Typography>
                         <Select
                             value={selectedClass}
                             onChange={(e) => setSelectedClass(e.target.value)}
+                            displayEmpty
+                            renderValue={(selected) => {
+                                if (!selected) {
+                                    return <em>Select Class</em>;
+                                }
+                                const selectedClassObj = classes?.find((cls: any) => cls.name === selected);
+                                return selectedClassObj?.displayName || selected;
+                            }}
                         >
-                            {CLASSES.map((cls) => (
-                                <MenuItem key={cls} value={cls}>
-                                    Class {cls}
+                            {classes?.map((cls: any) => (
+                                <MenuItem key={cls.id} value={cls.name}>
+                                    {cls.displayName || cls.name}
                                 </MenuItem>
                             ))}
+                            {(!classes || classes.length === 0) && (
+                                <MenuItem disabled>No classes found</MenuItem>
+                            )}
                         </Select>
                     </FormControl>
 
@@ -363,6 +695,7 @@ export default function FeeStructure() {
                             value={selectedFeeType}
                             onChange={(e) => setSelectedFeeType(e.target.value as number)}
                             label="Select Fee Type to Add"
+                            disabled={!selectedClass}
                         >
                             {availableFeeTypes.map((ft: any) => (
                                 <MenuItem key={ft.id} value={ft.id}>
@@ -372,11 +705,22 @@ export default function FeeStructure() {
                         </Select>
                     </FormControl>
 
+                    <TextField
+                        type="number"
+                        size="small"
+                        label="Amount (₹)"
+                        value={newFeeAmount || ''}
+                        onChange={(e) => setNewFeeAmount(parseFloat(e.target.value) || 0)}
+                        disabled={!selectedClass || !selectedFeeType}
+                        sx={{ width: 150 }}
+                        inputProps={{ min: 0, step: 100 }}
+                    />
+
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
                         onClick={handleAddFeeType}
-                        disabled={!selectedFeeType}
+                        disabled={!selectedClass || !selectedFeeType || !newFeeAmount}
                         sx={{ height: 40 }}
                     >
                         Add Fee Type
@@ -527,6 +871,34 @@ export default function FeeStructure() {
                     </>
                 )}
             </Paper>
+
+            {/* Delete Fee Type Confirmation Dialog */}
+            <Dialog open={deleteFeeTypeDialogOpen} onClose={() => setDeleteFeeTypeDialogOpen(false)}>
+                <DialogTitle sx={{ color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <DeleteIcon />
+                    Delete Fee Type
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to delete <strong>{feeTypeToDelete?.name}</strong>?
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        This will permanently remove this fee type. It cannot be deleted if it's used in any fee structure.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteFeeTypeDialogOpen(false)} variant="outlined">Cancel</Button>
+                    <Button
+                        onClick={handleDeleteFeeTypeConfirm}
+                        color="error"
+                        variant="contained"
+                        disabled={feeTypeSaving}
+                        autoFocus
+                    >
+                        {feeTypeSaving ? 'Deleting...' : 'Delete'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>

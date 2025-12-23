@@ -24,7 +24,7 @@ import {
     DialogActions,
     Chip,
 } from '@mui/material';
-import { promotionService } from '../../lib/api';
+import { promotionService, classService } from '../../lib/api';
 import { useSession } from '../../contexts/SessionContext';
 
 export default function StudentPromotions() {
@@ -131,6 +131,12 @@ export default function StudentPromotions() {
     const meta = previewData?.meta;
     const canMarkPassout = meta?.isPassoutClass;
 
+    // Fetch available classes
+    const { data: classes } = useQuery({
+        queryKey: ['classes'],
+        queryFn: classService.getAll,
+    });
+
     return (
         <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
             <Typography variant="h4" gutterBottom>
@@ -168,9 +174,9 @@ export default function StudentPromotions() {
                             onChange={(e) => setClassName(e.target.value)}
                             label="Class"
                         >
-                            {[...Array(12)].map((_, i) => (
-                                <MenuItem key={i + 1} value={String(i + 1)}>
-                                    Class {i + 1}
+                            {classes?.map((cls: any) => (
+                                <MenuItem key={cls.id} value={cls.name}>
+                                    {cls.displayName || cls.name}
                                 </MenuItem>
                             ))}
                         </Select>

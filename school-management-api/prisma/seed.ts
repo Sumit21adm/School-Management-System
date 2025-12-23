@@ -8,20 +8,20 @@ async function main() {
   const hashedPassword = await bcrypt.hash('admin123', 10);
 
   const admin = await prisma.user.upsert({
-    where: { username: 'admin' },
+    where: { username: 'superadmin' },
     update: {},
     create: {
-      username: 'admin',
+      username: 'superadmin',
       password: hashedPassword,
-      name: 'System Administrator',
-      email: 'admin@school.com',
-      role: 'admin',
+      name: 'Super Administrator',
+      email: 'superadmin@school.com',
+      role: 'SUPER_ADMIN',
       active: true,
     },
   });
 
-  console.log('✅ Admin user created:', admin.email);
-  console.log('   Username: admin');
+  console.log('✅ Super Admin user created:', admin.email);
+  console.log('   Username: superadmin');
   console.log('   Password: admin123');
 
   // Create default fee types
@@ -60,7 +60,41 @@ async function main() {
     });
   }
 
+  /* Redundant block removed */
+
   console.log('✅ Fee types created');
+
+  // Seed Classes
+  const classes = [
+    { name: 'Mount 1', displayName: 'Mount 1', order: 1 },
+    { name: 'Mount 2', displayName: 'Mount 2', order: 2 },
+    { name: 'Mount 3', displayName: 'Mount 3', order: 3 },
+    { name: '1', displayName: 'Class 1', order: 4 },
+    { name: '2', displayName: 'Class 2', order: 5 },
+    { name: '3', displayName: 'Class 3', order: 6 },
+    { name: '4', displayName: 'Class 4', order: 7 },
+    { name: '5', displayName: 'Class 5', order: 8 },
+    { name: '6', displayName: 'Class 6', order: 9 },
+    { name: '7', displayName: 'Class 7', order: 10 },
+    { name: '8', displayName: 'Class 8', order: 11 },
+    { name: '9', displayName: 'Class 9', order: 12 },
+    { name: '10', displayName: 'Class 10', order: 13 },
+    { name: '11', displayName: 'Class 11', order: 14 },
+    { name: '12', displayName: 'Class 12', order: 15 },
+  ];
+
+  for (const cls of classes) {
+    await prisma.schoolClass.upsert({
+      where: { name: cls.name },
+      update: { order: cls.order, displayName: cls.displayName },
+      create: {
+        name: cls.name,
+        displayName: cls.displayName,
+        order: cls.order,
+      },
+    });
+  }
+  console.log('✅ Classes created');
 
   // Create academic session
   const session = await prisma.academicSession.upsert({
@@ -76,81 +110,41 @@ async function main() {
 
   console.log('✅ Academic session created:', session.name);
 
-  // Create sample students (30 students across classes 1-12)
-  const classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-  const sections = ['A', 'B'];
-  const firstNames = ['Rahul', 'Priya', 'Amit', 'Sneha', 'Arjun', 'Ananya', 'Rohan', 'Kavya', 'Aditya', 'Diya'];
-  const lastNames = ['Sharma', 'Kumar', 'Singh', 'Patel', 'Verma', 'Gupta', 'Reddy', 'Rao', 'Joshi', 'Nair'];
+  // Create default subjects
+  const subjects = [
+    { name: 'Mathematics', code: 'MATH', description: 'Mathematics and Numerical Skills', color: '#3B82F6' },
+    { name: 'Science', code: 'SCI', description: 'General Science', color: '#10B981' },
+    { name: 'English', code: 'ENG', description: 'English Language and Literature', color: '#EF4444' },
+    { name: 'Hindi', code: 'HIN', description: 'Hindi Language', color: '#F59E0B' },
+    { name: 'Social Studies', code: 'SST', description: 'History, Geography, Civics', color: '#8B5CF6' },
+    { name: 'Computer Science', code: 'CS', description: 'Computer and IT Skills', color: '#06B6D4' },
+    { name: 'Physical Education', code: 'PE', description: 'Sports and Physical Activities', color: '#EC4899' },
+    { name: 'Art & Craft', code: 'ART', description: 'Drawing and Creative Arts', color: '#F97316' },
+  ];
 
-  let studentCount = 0;
-  for (let i = 0; i < 30; i++) {
-    const className = classes[Math.floor(i / 2.5)];
-    const section = sections[i % 2];
-    const firstName = firstNames[i % firstNames.length];
-    const lastName = lastNames[Math.floor(i / 3) % lastNames.length];
-    const name = `${firstName} ${lastName}`;
-
-    await prisma.studentDetails.create({
-      data: {
-        studentId: `D-2024${String(1000 + i).padStart(4, '0')}`,
-        name,
-        dob: new Date(2010 + Math.floor(i / 3), (i % 12), 15),
-        gender: i % 2 === 0 ? 'Male' : 'Female',
-        fatherName: `${lastNames[i % lastNames.length]} (Father)`,
-        motherName: `Mrs. ${lastNames[i % lastNames.length]}`,
-        phone: `98${String(10000000 + i).substring(0, 8)}`,
-        address: `${i + 1}, Sample Street, City - 110001`,
-        className,
-        section,
-        sessionId: session.id,
-        admissionDate: new Date('2024-04-01'),
-        status: 'active',
-      },
-    });
-    studentCount++;
-  }
-
-  console.log(`✅ Created ${studentCount} sample students`);
-
-  // Create fee structures for all classes
-  const monthlyFees = {
-    '1': 2000, '2': 2200, '3': 2500, '4': 2700, '5': 3000, '6': 3200,
-    '7': 3500, '8': 3700, '9': 4000, '10': 4200, '11': 4500, '12': 4500
-  };
-
-  for (const className of classes) {
-    const baseFee = monthlyFees[className as keyof typeof monthlyFees];
-
-    await prisma.feeStructure.create({
-      data: {
-        sessionId: session.id,
-        className,
-        feeItems: {
-          create: [
-            { feeTypeId: createdFeeTypes['Tuition Fee'].id, amount: baseFee },
-            { feeTypeId: createdFeeTypes['Computer Fee'].id, amount: 300 },
-            { feeTypeId: createdFeeTypes['Laboratory Fee'].id, amount: 1500 },
-            { feeTypeId: createdFeeTypes['Exam Fee'].id, amount: 250 },
-            { feeTypeId: createdFeeTypes['Library Fee'].id, amount: 800 },
-            { feeTypeId: createdFeeTypes['Sports Fee'].id, amount: 200 },
-            { feeTypeId: createdFeeTypes['Miscellaneous Fee'].id, amount: 150 },
-            { feeTypeId: createdFeeTypes['Development Fee'].id, amount: 2000 },
-            { feeTypeId: createdFeeTypes['Late Fee'].id, amount: 100 }, // ₹100 fixed late fee
-          ],
-        },
-      },
+  for (const subject of subjects) {
+    await prisma.subject.upsert({
+      where: { code: subject.code },
+      update: {},
+      create: subject,
     });
   }
 
-  console.log('✅ Fee structures created for all classes');
+  console.log('✅ Subjects created');
 
-  console.log('\n🎉 Sample data seeding completed successfully!');
+  // NOTE: Sample data generation (Students, Fee Structures) has been removed as per request.
+  // The system will start with:
+  // 1. Admin User (admin/admin123)
+  // 2. Default Fee Types
+  // 3. Current Academic Session
+
+  console.log('\n🎉 System initialization completed successfully!');
   console.log('📊 Summary:');
   console.log('   - 1 Admin user');
   console.log('   - 12 Fee types');
+  console.log('   - 8 Subjects');
   console.log('   - 1 Academic session');
-  console.log(`   - ${studentCount} Students`);
-  console.log('   - 12 Fee structures (one per class)');
+  console.log('   - 0 Students (Clean state)');
 }
 
 main()

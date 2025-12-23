@@ -37,7 +37,7 @@ import {
 } from '@mui/material';
 import { FileText, Download, Send, Printer } from 'lucide-react';
 import axios from 'axios';
-import { feeService } from '../../lib/api';
+import { feeService, classService } from '../../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -69,23 +69,7 @@ const MONTHS = [
   'December',
 ];
 
-const CLASSES = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
-
-// Define which sections each class has
-const CLASS_SECTIONS: Record<string, string[]> = {
-  '1': ['A', 'B'],
-  '2': ['A', 'B'],
-  '3': ['A', 'B', 'C'],
-  '4': ['A', 'B', 'C'],
-  '5': ['A', 'B', 'C'],
-  '6': ['A', 'B', 'C', 'D'],
-  '7': ['A', 'B', 'C', 'D'],
-  '8': ['A', 'B', 'C', 'D'],
-  '9': ['A', 'B', 'C'],
-  '10': ['A', 'B', 'C'],
-  '11': ['A', 'B'],
-  '12': ['A', 'B'],
-};
+const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
 
 export default function DemandBillGeneration() {
   const { selectedSession } = useSession();
@@ -215,6 +199,12 @@ export default function DemandBillGeneration() {
     }
   }, [selectedSession, setValue]);
 
+  // Fetch available classes
+  const { data: classes } = useQuery({
+    queryKey: ['classes'],
+    queryFn: classService.getAll,
+  });
+
   return (
     <Box>
       <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
@@ -267,11 +257,14 @@ export default function DemandBillGeneration() {
                             <InputLabel>Class</InputLabel>
                             <Select {...field} label="Class">
                               <MenuItem value="">Select Class</MenuItem>
-                              {CLASSES.map((cls) => (
-                                <MenuItem key={cls} value={cls}>
-                                  Class {cls}
+                              {classes?.map((cls: any) => (
+                                <MenuItem key={cls.id} value={cls.name}>
+                                  {cls.displayName || cls.name}
                                 </MenuItem>
                               ))}
+                              {(!classes || classes.length === 0) && (
+                                <MenuItem disabled>No classes found</MenuItem>
+                              )}
                             </Select>
                           </FormControl>
                         )}
@@ -283,14 +276,13 @@ export default function DemandBillGeneration() {
                         control={control}
                         render={({ field }) => {
                           const selectedClass = watch('className');
-                          const availableSections = selectedClass ? CLASS_SECTIONS[selectedClass] || [] : [];
 
                           return (
                             <FormControl fullWidth disabled={!selectedClass}>
                               <InputLabel>Section (Optional)</InputLabel>
                               <Select {...field} label="Section (Optional)">
                                 <MenuItem value="">All Sections</MenuItem>
-                                {availableSections.map((sec) => (
+                                {SECTIONS.map((sec) => (
                                   <MenuItem key={sec} value={sec}>
                                     Section {sec}
                                   </MenuItem>
