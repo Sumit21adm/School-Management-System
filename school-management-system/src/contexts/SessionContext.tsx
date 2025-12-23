@@ -48,13 +48,36 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         ? allSessions.find(s => s.id === selectedSessionId) || activeSession
         : activeSession;
 
-    // Update selected session when sessions load
+    // Update selected session when sessions load or when active session changes
     useEffect(() => {
-        if (activeSession && !selectedSessionId) {
+        if (allSessions.length === 0) return; // Wait for sessions to load
+
+        const savedId = localStorage.getItem('selectedSessionId');
+
+        // Case 1: No saved session - default to active session
+        if (!savedId && activeSession) {
             setSelectedSessionId(activeSession.id);
             localStorage.setItem('selectedSessionId', activeSession.id.toString());
+            return;
         }
-    }, [activeSession, selectedSessionId]);
+
+        // Case 2: Saved session ID exists - verify it's still valid
+        if (savedId) {
+            const savedIdNum = parseInt(savedId);
+            const savedSession = allSessions.find(s => s.id === savedIdNum);
+
+            if (!savedSession) {
+                // Session was deleted - switch to active session
+                if (activeSession) {
+                    setSelectedSessionId(activeSession.id);
+                    localStorage.setItem('selectedSessionId', activeSession.id.toString());
+                }
+            } else if (selectedSessionId !== savedIdNum) {
+                // Sync state with localStorage
+                setSelectedSessionId(savedIdNum);
+            }
+        }
+    }, [activeSession, allSessions, selectedSessionId]);
 
     const switchSession = (sessionId: number) => {
         setSelectedSessionId(sessionId);

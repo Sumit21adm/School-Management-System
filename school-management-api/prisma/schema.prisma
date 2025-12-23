@@ -11,6 +11,22 @@ datasource db {
 }
 
 // Student and Admission Tables
+// Student and Admission Tables
+model SchoolClass {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(20) // The internal identifier/value e.g. "1", "LKG"
+  displayName String   @db.VarChar(50)         // The visual name e.g. "Class 1", "LKG / Mount 2"
+  order       Int      @default(0)             // For sorting (Play=1, LKG=2, ... 12=15)
+  capacity    Int?     // Optional: max students
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classSubjects ClassSubject[]
+
+  @@map("school_classes")
+}
+
 model StudentDetails {
   id               Int       @id @default(autoincrement())
   studentId        String    @unique @db.VarChar(20)
@@ -292,18 +308,36 @@ enum DiscountType {
 
 
 
+// User Roles
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  ACCOUNTANT
+  TEACHER
+  COORDINATOR
+  RECEPTIONIST
+  SECURITY
+  PARENT
+  STUDENT
+}
+
 // User/Auth Tables
 model User {
-  id          Int      @id @default(autoincrement())
-  username    String   @unique @db.VarChar(50)
-  password    String   @db.VarChar(255)
-  role        String   @db.VarChar(20)
-  name        String   @db.VarChar(100)
-  email       String?  @db.VarChar(100)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  username    String    @unique @db.VarChar(50)
+  password    String    @db.VarChar(255)
+  role        UserRole  @default(RECEPTIONIST)
+  permissions String?   @db.Text // JSON array of permission strings
+  name        String    @db.VarChar(100)
+  email       String?   @db.VarChar(100)
+  phone       String?   @db.VarChar(15)
+  active      Boolean   @default(true)
+  lastLogin   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
+  @@index([role])
+  @@index([active])
   @@map("users")
 }
 
@@ -375,13 +409,35 @@ model Subject {
   id          Int      @id @default(autoincrement())
   name        String   @unique @db.VarChar(50) // e.g., "Mathematics", "Science"
   code        String?  @unique @db.VarChar(20) // e.g., "MATH"
+  description String?  @db.Text
+  color       String?  @db.VarChar(7)  // Hex color for UI display
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   examSchedules ExamSchedule[]
+  classSubjects ClassSubject[]
+  
   @@map("subjects")
 }
+
+model ClassSubject {
+  id            Int      @id @default(autoincrement())
+  classId       Int
+  subjectId     Int
+  isCompulsory  Boolean  @default(true)
+  weeklyPeriods Int      @default(0)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  class   SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+  @@map("class_subjects")
+}
+
 
 model Exam {
   id          Int      @id @default(autoincrement())

@@ -314,3 +314,90 @@ export const examinationService = {
   addSchedule: (examId: number, data: any) => apiClient.post(`/exams/${examId}/schedule`, data),
   deleteSchedule: (scheduleId: number) => apiClient.delete(`/exams/schedule/${scheduleId}`),
 };
+// User Management Service
+export const usersService = {
+  getAll: async (includeInactive: boolean = false) => {
+    const { data } = await apiClient.get('/users', {
+      params: { includeInactive: includeInactive ? 'true' : 'false' },
+    });
+    return data;
+  },
+  getById: async (id: number) => {
+    const { data } = await apiClient.get(`/users/${id}`);
+    return data;
+  },
+  create: async (userData: {
+    username: string;
+    password: string;
+    name: string;
+    role: string;
+    email?: string;
+    phone?: string;
+    permissions?: string[];
+  }) => {
+    const { data } = await apiClient.post('/users', userData);
+    return data;
+  },
+  update: async (id: number, userData: {
+    name?: string;
+    role?: string;
+    email?: string;
+    phone?: string;
+    active?: boolean;
+    permissions?: string[];
+  }) => {
+    const { data } = await apiClient.put(`/users/${id}`, userData);
+    return data;
+  },
+  changePassword: async (id: number, newPassword: string) => {
+    const { data } = await apiClient.put(`/users/${id}/password`, { newPassword });
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await apiClient.delete(`/users/${id}`);
+    return data;
+  },
+};
+
+
+export const classService = {
+  getAll: async () => {
+    const { data } = await apiClient.get('/classes');
+    return data;
+  },
+  create: async (classData: any) => {
+    const { data } = await apiClient.post('/classes', classData);
+    return data;
+  },
+  update: async (id: number, classData: any) => {
+    const { data } = await apiClient.patch(`/classes/${id}`, classData);
+    return data;
+  },
+  reorder: async (items: any[]) => {
+    const { data } = await apiClient.post('/classes/reorder', { items });
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await apiClient.delete(`/classes/${id}`);
+    return data;
+  },
+};
+
+export const subjectService = {
+  getAll: async () => {
+    const { data } = await apiClient.get('/subjects');
+    return data;
+  },
+  create: async (subjectData: any) => {
+    const { data } = await apiClient.post('/subjects', subjectData);
+    return data;
+  },
+  update: async (id: number, subjectData: any) => {
+    const { data } = await apiClient.patch(`/subjects/${id}`, subjectData);
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await apiClient.delete(`/subjects/${id}`);
+    return data;
+  },
+};

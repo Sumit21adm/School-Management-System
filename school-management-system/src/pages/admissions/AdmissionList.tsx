@@ -72,7 +72,7 @@ import {
   Download,
   Printer,
 } from 'lucide-react';
-import { admissionService, feeService } from '../../lib/api';
+import { admissionService, feeService, classService } from '../../lib/api';
 import { db } from '../../lib/db';
 import { useSession } from '../../contexts/SessionContext';
 
@@ -87,6 +87,12 @@ export default function AdmissionList() {
       const response = await admissionService.getDashboardStats();
       return response.data;
     }
+  });
+
+  // Fetch classes for filter
+  const { data: classes } = useQuery({
+    queryKey: ['classes'],
+    queryFn: classService.getAll,
   });
 
   const [birthdayDialogOpen, setBirthdayDialogOpen] = useState(false);
@@ -643,9 +649,9 @@ export default function AdmissionList() {
                 onChange={(e) => setClassFilter(e.target.value as string)}
               >
                 <MenuItem value="">All Classes</MenuItem>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
-                  <MenuItem key={num} value={num.toString()}>
-                    Class {num}
+                {classes?.map((cls: any) => (
+                  <MenuItem key={cls.id} value={cls.name}>
+                    {cls.displayName || cls.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -1517,9 +1523,9 @@ export default function AdmissionList() {
                 onChange={(e) => setExportClass(e.target.value)}
               >
                 <MenuItem value="">All Classes</MenuItem>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
-                  <MenuItem key={num} value={num.toString()}>
-                    Class {num}
+                {classes?.map((cls: any) => (
+                  <MenuItem key={cls.id} value={cls.name}>
+                    {cls.displayName || cls.name}
                   </MenuItem>
                 ))}
               </Select>

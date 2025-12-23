@@ -28,8 +28,9 @@ import {
     Description as DocumentIcon,
 } from '@mui/icons-material';
 import { printSettingsService, apiClient } from '../../lib/api';
+import ImageCropDialog from '../../components/ImageCropDialog';
 
-interface PrintSettings {
+interface SchoolSettingsData {
     id: number | null;
     schoolName: string;
     schoolAddress: string;
@@ -50,7 +51,7 @@ interface PrintSettings {
     idCardNote: string;
 }
 
-const defaultSettings: PrintSettings = {
+const defaultSettings: SchoolSettingsData = {
     id: null,
     schoolName: '',
     schoolAddress: '',
@@ -69,11 +70,13 @@ const defaultSettings: PrintSettings = {
     idCardNote: '',
 };
 
-export default function PrintSettings() {
+export default function SchoolSettings() {
     const queryClient = useQueryClient();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [formData, setFormData] = useState<PrintSettings>(defaultSettings);
+    const [formData, setFormData] = useState<SchoolSettingsData>(defaultSettings);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+    const [cropDialogOpen, setCropDialogOpen] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     // Fetch settings
     const { data: settings, isLoading } = useQuery({
@@ -161,8 +164,29 @@ export default function PrintSettings() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            uploadMutation.mutate(file);
+            // Open crop dialog instead of direct upload
+            setSelectedFile(file);
+            setCropDialogOpen(true);
         }
+        // Reset input so same file can be selected again
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const handleCropComplete = (croppedBlob: Blob) => {
+        // Convert blob to file and upload
+        const croppedFile = new File([croppedBlob], selectedFile?.name || 'logo.png', {
+            type: 'image/png',
+        });
+        uploadMutation.mutate(croppedFile);
+        setCropDialogOpen(false);
+        setSelectedFile(null);
+    };
+
+    const handleCropDialogClose = () => {
+        setCropDialogOpen(false);
+        setSelectedFile(null);
     };
 
     const getLogoUrl = (url: string | null) => {
@@ -654,6 +678,16 @@ export default function PrintSettings() {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
+
+            {/* Image Crop Dialog */}
+            <ImageCropDialog
+                open={cropDialogOpen}
+                imageFile={selectedFile}
+                onClose={handleCropDialogClose}
+                onCropComplete={handleCropComplete}
+                aspectRatio={1}
+                title="Crop School Logo"
+            />
         </Container>
     );
 }

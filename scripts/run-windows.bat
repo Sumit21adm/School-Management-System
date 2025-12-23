@@ -13,7 +13,8 @@ echo   MySQL: Docker ^| App: npm/node
 echo  ========================================
 echo.
 
-set PROJECT_DIR=%~dp0
+set SCRIPT_DIR=%~dp0
+set PROJECT_DIR=%SCRIPT_DIR%..\
 set API_DIR=%PROJECT_DIR%school-management-api
 set FRONTEND_DIR=%PROJECT_DIR%school-management-system
 set LOGS_DIR=%PROJECT_DIR%logs

@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   AppBar,
   Box,
@@ -34,15 +34,18 @@ import {
   AccountBalance,
   Description,
   Sync as SyncIcon,
-  School as AlumniIcon, // Added AlumniIcon
+  School as AlumniIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from '@mui/icons-material';
+import { useColorMode } from '../contexts/ThemeContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { printSettingsService, dashboardService } from '../lib/api';
 import SessionSelector from './SessionSelector';
 import { formatDistanceToNow } from 'date-fns';
 
 interface LayoutProps {
-  children: ReactNode;
+  children?: ReactNode; // Make children optional
   onLogout: () => void;
 }
 
@@ -52,44 +55,113 @@ const menuItems = [
   {
     title: 'Main',
     items: [
-      { path: '/', label: 'Dashboard', icon: DashboardIcon },
+      { path: '/', label: 'Dashboard', icon: DashboardIcon, requiredPermission: 'dashboard_view' },
     ],
   },
   {
     title: 'Student Info',
     items: [
-      { path: '/admissions', label: 'Admissions', icon: PersonAddIcon },
-      { path: '/promotions', label: 'Promotions', icon: TrendingUp },
+      { path: '/admissions', label: 'Admissions', icon: PersonAddIcon, requiredPermission: 'admissions_view' },
+      { path: '/promotions', label: 'Promotions', icon: TrendingUp, requiredPermission: 'promotions_view' },
     ],
   },
   {
     title: 'Fee Management',
     items: [
-      { path: '/fees/collection-enhanced', label: 'Fee Collection', icon: MoneyIcon },
-      { path: '/fees/demand-bills', label: 'Demand Bills', icon: Description },
-      { path: '/fees/reports', label: 'Fee Receipt', icon: Receipt },
-      { path: '/settings/fee-structure', label: 'Fee Structure', icon: AccountBalance },
+      { path: '/fees/collection-enhanced', label: 'Fee Collection', icon: MoneyIcon, requiredPermission: 'fees_collect' },
+      { path: '/fees/demand-bills', label: 'Demand Bills', icon: Description, requiredPermission: 'demand_bills_view' },
+      { path: '/fees/reports', label: 'Fee Receipt', icon: Receipt, requiredPermission: 'fees_receipts' },
+      { path: '/settings/fee-structure', label: 'Fee Structure', icon: AccountBalance, requiredPermission: 'fee_structure_view' },
     ],
   },
   {
     title: 'Examination',
     items: [
-      { path: '/exams', label: 'Exams', icon: Description },
-      { path: '/examination/configuration', label: 'Configuration', icon: Description },
+      { path: '/exams', label: 'Exams', icon: Description, requiredPermission: 'exams_view' },
+      { path: '/examination/configuration', label: 'Configuration', icon: Description, requiredPermission: 'exam_config' },
     ],
   },
   {
     title: 'Settings',
     items: [
-      { path: '/settings/sessions', label: 'Sessions', icon: CalendarToday },
-      { path: '/settings/print', label: 'School Settings', icon: Settings },
+      { path: '/settings/sessions', label: 'Sessions', icon: CalendarToday, requiredPermission: 'sessions_view' },
+      { path: '/settings/classes', label: 'Class Management', icon: School, requiredPermission: 'school_settings' },
+      { path: '/settings/print', label: 'School Settings', icon: Settings, requiredPermission: 'school_settings' },
+      { path: '/settings/users', label: 'User Management', icon: Settings, requiredPermission: 'users_manage' },
     ],
   },
 ];
 
+// Role-based default permissions (fallback when user has no custom permissions)
+const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  SUPER_ADMIN: ['*'], // Has all permissions
+  ADMIN: [
+    'dashboard_view', 'dashboard_stats',
+    'admissions_view', 'admissions_create', 'admissions_edit', 'admissions_delete', 'admissions_import', 'admissions_export', 'promotions_view', 'promotions_execute',
+    'fees_view', 'fees_collect', 'fees_receipts', 'fees_refund',
+    'demand_bills_view', 'demand_bills_generate', 'demand_bills_print',
+    'fee_structure_view', 'fee_structure_edit', 'fee_types_manage',
+    'exams_view', 'exams_create', 'exams_edit', 'exams_schedules', 'exam_config',
+    'sessions_view', 'sessions_manage', 'school_settings', 'users_view',
+  ],
+  ACCOUNTANT: [
+    'dashboard_view',
+    'fees_view', 'fees_collect', 'fees_receipts',
+    'demand_bills_view', 'demand_bills_generate', 'demand_bills_print',
+    'fee_structure_view',
+  ],
+  TEACHER: [
+    'dashboard_view',
+    'admissions_view',
+    'exams_view', 'exams_edit',
+  ],
+  COORDINATOR: [
+    'dashboard_view', 'dashboard_stats',
+    'admissions_view', 'admissions_create', 'admissions_edit', 'promotions_view',
+    'exams_view', 'exams_create', 'exams_edit', 'exams_schedules',
+  ],
+  RECEPTIONIST: [
+    'dashboard_view',
+    'admissions_view', 'admissions_create',
+    'fees_view', 'fees_collect', 'fees_receipts',
+  ],
+};
+
+// Get current user permissions from localStorage
+const getCurrentUserPermissions = (): { role: string; permissions: string[]; name: string } => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      const userRole = (user.role || '').toUpperCase(); // Normalize to uppercase
+      const userPerms = user.permissions || [];
+      // If user has no custom permissions, fall back to role defaults
+      const permissions = userPerms.length > 0
+        ? userPerms
+        : (ROLE_DEFAULT_PERMISSIONS[userRole] || []);
+      return {
+        role: userRole,
+        permissions: permissions,
+        name: user.name || user.username || 'User',
+      };
+    }
+  } catch (e) {
+    console.error('Error parsing user from localStorage', e);
+  }
+  return { role: '', permissions: [], name: 'User' };
+};
+
+// Check if user has permission (SUPER_ADMIN bypasses all checks)
+const hasPermission = (requiredPermission: string, userRole: string, userPermissions: string[]): boolean => {
+  if (userRole === 'SUPER_ADMIN') return true;
+  if (userPermissions.includes('*')) return true; // Wildcard permission
+  return userPermissions.includes(requiredPermission);
+};
+
 export default function Layout({ children, onLogout }: LayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { mode, toggleColorMode } = useColorMode();
 
   // Fetch school branding from print settings
   const { data: printSettings, isLoading: isLoadingSettings } = useQuery({
@@ -101,7 +173,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   // Fetch dashboard stats for last updated indicator
   const { dataUpdatedAt, refetch: refetchDashboard, isFetching: isDashboardFetching } = useQuery({
     queryKey: ['dashboardStats'],
-    queryFn: dashboardService.getStats,
+    queryFn: () => dashboardService.getStats(),
     refetchInterval: 15000,
     staleTime: 10000,
   });
@@ -123,6 +195,17 @@ export default function Layout({ children, onLogout }: LayoutProps) {
 
     return () => clearInterval(interval);
   }, [dataUpdatedAt]);
+
+  // Update Favicon based on Logo
+  useEffect(() => {
+    if (printSettings?.logoUrl) {
+      const link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      link.href = `${import.meta.env.VITE_API_URL}${printSettings.logoUrl}`;
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+  }, [printSettings?.logoUrl]);
 
   const getElapsedText = () => {
     if (isDashboardFetching) return 'Syncing...';
@@ -151,12 +234,18 @@ export default function Layout({ children, onLogout }: LayoutProps) {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           {isLoadingSettings ? (
-            <Skeleton variant="circular" width={36} height={36} />
+            <Skeleton variant="rectangular" width={36} height={36} sx={{ borderRadius: 1 }} />
           ) : printSettings?.logoUrl ? (
-            <Avatar
+            <Box
+              component="img"
               src={`${import.meta.env.VITE_API_URL}${printSettings.logoUrl}`}
               alt={printSettings?.schoolName || 'School'}
-              sx={{ width: 36, height: 36 }}
+              sx={{
+                width: 36,
+                height: 36,
+                objectFit: 'contain',
+                borderRadius: 1,
+              }}
             />
           ) : (
             <School sx={{ fontSize: 28, color: 'primary.main' }} />
@@ -179,142 +268,92 @@ export default function Layout({ children, onLogout }: LayoutProps) {
 
       <Divider />
 
-      {/* Last Updated Indicator */}
-      <Box
-        onClick={() => refetchDashboard()}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 0.75,
-          mx: 2,
-          my: 1.5,
-          px: 1.5,
-          py: 0.75,
-          borderRadius: 3,
-          bgcolor: isDashboardFetching ? 'action.hover' : 'grey.100',
-          color: 'text.secondary',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          border: '1px dashed',
-          borderColor: 'grey.300',
-          '&:hover': {
-            bgcolor: 'primary.50',
-            borderColor: 'primary.light',
-            color: 'primary.main',
-          },
-        }}
-      >
-        <SyncIcon sx={{
-          fontSize: 14,
-          animation: isDashboardFetching ? 'spin 1s linear infinite' : 'none',
-          '@keyframes spin': {
-            from: { transform: 'rotate(0deg)' },
-            to: { transform: 'rotate(360deg)' }
-          }
-        }} />
-        <Typography variant="caption" fontWeight={500} sx={{ fontSize: '0.7rem' }}>
-          {getElapsedText()}
-        </Typography>
-        <Button
-          size="small"
-          variant="outlined"
-          color="primary"
-          onClick={(e: React.MouseEvent) => {
-            e.stopPropagation();
-            window.location.reload();
-          }}
-          sx={{
-            ml: 1,
-            minWidth: 'auto',
-            fontSize: '0.65rem',
-            py: 0.2,
-            px: 1,
-            height: 24,
-            borderColor: 'primary.main',
-            '&:hover': {
-              bgcolor: 'primary.main',
-              color: 'white',
-            }
-          }}
-        >
-          Sync Now
-        </Button>
-      </Box>
-
       {/* Navigation Menu */}
       <List sx={{ px: 1.5, py: 2 }}>
-        {menuItems.map((section, index) => (
-          <Box key={section.title || index} sx={{ mb: 2 }}>
-            {section.title && (
-              <ListSubheader
-                sx={{
-                  bgcolor: 'transparent',
-                  color: 'text.secondary',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  lineHeight: '20px',
-                  mb: 1,
-                }}
-              >
-                {section.title}
-              </ListSubheader>
-            )}
-            {section.items.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                location.pathname === item.path ||
-                (item.path !== '/' && location.pathname.startsWith(item.path));
+        {menuItems.map((section, index) => {
+          // Get user permissions
+          const { role: userRole, permissions: userPermissions } = getCurrentUserPermissions();
 
-              return (
-                <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                  <ListItemButton
-                    component={Link}
-                    to={item.path}
-                    onClick={() => setMobileOpen(false)}
-                    selected={isActive}
-                    sx={{
-                      borderRadius: 2,
-                      py: 1.5,
-                      px: 2,
-                      '&.Mui-selected': {
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                        '&:hover': {
-                          bgcolor: 'primary.dark',
-                        },
-                        '& .MuiListItemIcon-root': {
-                          color: 'primary.contrastText',
-                        },
-                      },
-                      '&:hover': {
-                        bgcolor: isActive ? 'primary.dark' : 'action.hover',
-                      },
-                    }}
-                  >
-                    <ListItemIcon
+          // Filter items based on permissions
+          const visibleItems = section.items.filter(item =>
+            hasPermission(item.requiredPermission, userRole, userPermissions)
+          );
+
+          // Don't render section if no visible items
+          if (visibleItems.length === 0) return null;
+
+          return (
+            <Box key={section.title || index} sx={{ mb: 2 }}>
+              {section.title && (
+                <ListSubheader
+                  sx={{
+                    bgcolor: 'transparent',
+                    color: 'text.secondary',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    lineHeight: '20px',
+                    mb: 1,
+                  }}
+                >
+                  {section.title}
+                </ListSubheader>
+              )}
+              {visibleItems.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  location.pathname === item.path ||
+                  (item.path !== '/' && location.pathname.startsWith(item.path));
+
+                return (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton
+                      component={Link}
+                      to={item.path}
+                      onClick={() => setMobileOpen(false)}
+                      selected={isActive}
                       sx={{
-                        minWidth: 40,
-                        color: isActive ? 'inherit' : 'text.secondary',
+                        borderRadius: 2,
+                        py: 1.5,
+                        px: 2,
+                        '&.Mui-selected': {
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          },
+                          '& .MuiListItemIcon-root': {
+                            color: 'primary.contrastText',
+                          },
+                        },
+                        '&:hover': {
+                          bgcolor: isActive ? 'primary.dark' : 'action.hover',
+                        },
                       }}
                     >
-                      <Icon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={item.label}
-                      primaryTypographyProps={{
-                        fontWeight: isActive ? 600 : 500,
-                        fontSize: '0.95rem',
-                      }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-          </Box>
-        ))}
+                      <ListItemIcon
+                        sx={{
+                          minWidth: 40,
+                          color: isActive ? 'inherit' : 'text.secondary',
+                        }}
+                      >
+                        <Icon />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{
+                          fontWeight: isActive ? 600 : 500,
+                          fontSize: '0.95rem',
+                        }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })}
+            </Box>
+          );
+        })}
       </List>
     </Box>
   );
@@ -323,7 +362,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
 
-      {/* AppBar */}
+      {/* AppBar and Drawer code remains same ... */}
       <AppBar
         position="fixed"
         elevation={1}
@@ -344,10 +383,113 @@ export default function Layout({ children, onLogout }: LayoutProps) {
             <MenuIcon />
           </IconButton>
 
+          {/* Theme Toggle */}
+          <IconButton
+            color="inherit"
+            onClick={toggleColorMode}
+            sx={{ ml: 1, mr: 1 }}
+          >
+            {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+
+          {/* Sync Status */}
+          <Box
+            onClick={() => refetchDashboard()}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 2,
+              bgcolor: isDashboardFetching ? 'action.hover' : 'grey.100',
+              color: 'text.secondary',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: 'primary.50',
+                color: 'primary.main',
+              },
+            }}
+          >
+            <SyncIcon sx={{
+              fontSize: 14,
+              animation: isDashboardFetching ? 'spin 1s linear infinite' : 'none',
+              '@keyframes spin': {
+                from: { transform: 'rotate(0deg)' },
+                to: { transform: 'rotate(360deg)' }
+              }
+            }} />
+            <Typography variant="caption" fontWeight={500} sx={{ fontSize: '0.7rem' }}>
+              {getElapsedText()}
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                window.location.reload();
+              }}
+              sx={{
+                ml: 0.5,
+                minWidth: 'auto',
+                fontSize: '0.65rem',
+                py: 0.2,
+                px: 1,
+                height: 22,
+                borderColor: 'primary.main',
+                '&:hover': {
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                }
+              }}
+            >
+              Refresh
+            </Button>
+          </Box>
+
           <Box sx={{ flexGrow: 1 }} />
 
           {/* Session Selector */}
           <SessionSelector />
+
+          {/* User Info */}
+          {(() => {
+            const userInfo = getCurrentUserPermissions();
+            const roleColors: Record<string, string> = {
+              SUPER_ADMIN: '#d32f2f',
+              ADMIN: '#1976d2',
+              ACCOUNTANT: '#388e3c',
+              TEACHER: '#7b1fa2',
+              COORDINATOR: '#f57c00',
+              RECEPTIONIST: '#0097a7',
+            };
+            return (
+              <Box sx={{ display: 'flex', alignItems: 'center', mx: 2, gap: 1 }}>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.2 }}>
+                    {userInfo.name}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'white',
+                      bgcolor: roleColors[userInfo.role] || '#757575',
+                      px: 1,
+                      py: 0.2,
+                      borderRadius: 1,
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {userInfo.role.replace('_', ' ')}
+                  </Typography>
+                </Box>
+              </Box>
+            );
+          })()}
 
           <IconButton
             color="inherit"
@@ -418,7 +560,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         }}
       >
         <Toolbar /> {/* Spacer for fixed AppBar */}
-        {children}
+        {children || <Outlet />}
       </Box>
     </Box>
   );

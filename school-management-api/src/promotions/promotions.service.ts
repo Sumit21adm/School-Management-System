@@ -22,7 +22,7 @@ export class PromotionsService {
         });
 
         const eligible = students.filter((s) => s.status === 'active');
-        const nextClass = this.calculateNextClass(params.className);
+        const nextClass = await this.calculateNextClass(params.className);
         const isPassoutClass = ['10', '12'].includes(params.className);
 
         return {
@@ -104,11 +104,24 @@ export class PromotionsService {
         return results;
     }
 
-    private calculateNextClass(currentClass: string): string | null {
-        const classNum = parseInt(currentClass);
-        if (classNum >= 1 && classNum < 12) {
-            return (classNum + 1).toString();
-        }
-        return null; // Class 12 has no next class
+    async calculateNextClass(currentClass: string): Promise<string | null> {
+        const currentParams = await this.prisma.schoolClass.findUnique({
+            where: { name: currentClass }
+        });
+
+        if (!currentParams) return null;
+
+        const nextClass = await this.prisma.schoolClass.findFirst({
+            where: {
+                order: {
+                    gt: currentParams.order
+                }
+            },
+            orderBy: {
+                order: 'asc'
+            }
+        });
+
+        return nextClass ? nextClass.name : null;
     }
 }

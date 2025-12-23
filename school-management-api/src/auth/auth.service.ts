@@ -8,7 +8,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async login(username: string, password: string) {
     const user = await this.prisma.user.findUnique({
@@ -28,6 +28,22 @@ export class AuthService {
       throw new UnauthorizedException('Account is inactive');
     }
 
+    // Update last login timestamp
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
+
+    // Parse permissions from JSON string
+    let permissions: string[] = [];
+    if (user.permissions) {
+      try {
+        permissions = JSON.parse(user.permissions);
+      } catch {
+        permissions = [];
+      }
+    }
+
     const payload = { sub: user.id, username: user.username, role: user.role };
     const token = this.jwtService.sign(payload);
 
@@ -39,6 +55,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
+        permissions: permissions,
       },
     };
   }

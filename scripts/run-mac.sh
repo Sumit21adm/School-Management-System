@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-# School Management System - Hybrid Runner (Linux)
+# School Management System - Hybrid Runner
 # ============================================
 # MySQL runs in Docker, App runs with npm/node
 # Only requires: Docker + Node.js (no system MySQL)
@@ -15,7 +15,8 @@ echo "  MySQL: Docker | App: npm/node"
 echo " ========================================"
 echo ""
 
-PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 API_DIR="$PROJECT_DIR/school-management-api"
 FRONTEND_DIR="$PROJECT_DIR/school-management-system"
 LOGS_DIR="$PROJECT_DIR/logs"
@@ -31,15 +32,20 @@ mkdir -p "$LOGS_DIR"
 if ! command -v docker &> /dev/null; then
     echo " [!] Docker is not installed."
     echo ""
-    echo " Install Docker: https://docs.docker.com/engine/install/"
+    echo " Please install Docker Desktop from: https://www.docker.com/products/docker-desktop/"
+    open "https://www.docker.com/products/docker-desktop/"
     exit 1
 fi
 
 # Check if Docker is running
 if ! docker info &> /dev/null 2>&1; then
-    echo " [!] Docker is not running."
-    echo " Please start Docker daemon: sudo systemctl start docker"
-    exit 1
+    echo " [!] Docker is not running. Starting Docker Desktop..."
+    open -a Docker
+    echo ""
+    echo " Waiting for Docker to start..."
+    while ! docker info &> /dev/null 2>&1; do
+        sleep 3
+    done
 fi
 echo " [OK] Docker is running"
 
@@ -47,7 +53,7 @@ echo " [OK] Docker is running"
 if ! command -v node &> /dev/null; then
     echo " [!] Node.js is not installed."
     echo ""
-    echo " Install Node.js 18+: https://nodejs.org/"
+    echo " Please install Node.js 18+ from: https://nodejs.org/"
     exit 1
 fi
 
@@ -72,6 +78,7 @@ MYSQL_PASSWORD="school_pass"
 
 # Check if MySQL container exists
 if docker ps -a --format '{{.Names}}' | grep -q "^${MYSQL_CONTAINER}$"; then
+    # Container exists, check if running
     if docker ps --format '{{.Names}}' | grep -q "^${MYSQL_CONTAINER}$"; then
         echo " [OK] MySQL container already running"
     else
@@ -91,7 +98,7 @@ else
         mysql:8.0
 fi
 
-# Wait for MySQL
+# Wait for MySQL to be ready
 echo " Waiting for MySQL to be ready..."
 MAX_ATTEMPTS=30
 ATTEMPT=0
@@ -110,6 +117,7 @@ echo ""
 # Configure Environment
 # ============================================
 
+# Create/update .env file for API
 cat > "$API_DIR/.env" << EOF
 # Database (Docker MySQL)
 DATABASE_URL="mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@localhost:${MYSQL_PORT}/${MYSQL_DATABASE}"
@@ -154,6 +162,7 @@ echo ""
 # Start Application
 # ============================================
 
+# Function to cleanup
 cleanup() {
     echo ""
     echo " Stopping services..."
@@ -162,25 +171,30 @@ cleanup() {
     echo ""
     echo " MySQL container is still running."
     echo " To stop MySQL: docker stop $MYSQL_CONTAINER"
+    echo " To remove data: docker rm $MYSQL_CONTAINER && docker volume rm school_mysql_data"
     exit 0
 }
 
 trap cleanup SIGINT SIGTERM
 
+# Start API
 echo " Starting API server on port 3001..."
 cd "$API_DIR"
 npm run start:dev > "$LOGS_DIR/api.log" 2>&1 &
 API_PID=$!
 
+# Start Frontend
 echo " Starting Frontend on port 5173..."
 cd "$FRONTEND_DIR"
 npm run dev > "$LOGS_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 
+# Wait for startup
 echo ""
 echo " Waiting for services to start..."
 sleep 8
 
+# Verify processes
 if ! kill -0 $API_PID 2>/dev/null; then
     echo " [!] API failed to start. Check logs/api.log"
     tail -20 "$LOGS_DIR/api.log"
@@ -203,15 +217,17 @@ echo "  API:      http://localhost:3001/api"
 echo ""
 echo "  MySQL:    localhost:3306"
 echo "            User: $MYSQL_USER"
+echo "            Pass: $MYSQL_PASSWORD"
 echo "            DB:   $MYSQL_DATABASE"
 echo ""
+echo "  Logs:     logs/api.log, logs/frontend.log"
+echo ""
 
-# Open browser if xdg-open available
-if command -v xdg-open &> /dev/null; then
-    xdg-open "http://localhost:5173"
-fi
+# Open browser
+open "http://localhost:5173"
 
 echo " Press Ctrl+C to stop app (MySQL stays running)"
 echo ""
 
+# Wait
 wait $API_PID $FRONTEND_PID

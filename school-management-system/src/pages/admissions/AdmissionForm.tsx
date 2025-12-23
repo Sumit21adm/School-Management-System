@@ -121,20 +121,35 @@ const admissionSchema = z.object({
 
 type AdmissionFormData = z.infer<typeof admissionSchema>;
 
+import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+
+// ... (other imports)
+
 export default function AdmissionForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // Crop state
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
   const [tempPhotoUrl, setTempPhotoUrl] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  // Fetch classes
+  const fetchClasses = async () => {
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}/classes`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    return response.data;
+  };
+
+  const { data: classOptions = [] } = useQuery({ queryKey: ['classes'], queryFn: fetchClasses });
 
   const { control, handleSubmit, watch, reset,
     formState: { errors },
@@ -142,6 +157,7 @@ export default function AdmissionForm() {
     resolver: zodResolver(admissionSchema),
     defaultValues: {
       gender: 'male',
+      // ... (rest of default values)
       category: '',
       religion: '',
       apaarId: '',
@@ -1001,14 +1017,16 @@ export default function AdmissionForm() {
                             if (selected === '') {
                               return <Typography color="text.secondary">Select Class</Typography>;
                             }
-                            return `Class ${selected}`;
+                            return classOptions.find(c => c.name === selected)?.displayName || selected;
                           }}
                         >
                           <MenuItem value="" disabled>
                             Select Class
                           </MenuItem>
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(c => (
-                            <MenuItem key={c} value={c.toString()}>Class {c}</MenuItem>
+                          {classOptions.map((cls) => (
+                            <MenuItem key={cls.id} value={cls.name}>
+                              {cls.displayName}
+                            </MenuItem>
                           ))}
                         </Select>
                         {errors.className && <FormHelperText>{errors.className.message}</FormHelperText>}

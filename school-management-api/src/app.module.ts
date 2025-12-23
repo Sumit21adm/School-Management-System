@@ -15,6 +15,9 @@ import { DiscountsModule } from './discounts/discounts.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { PrintSettingsModule } from './print-settings/print-settings.module';
 import { ExaminationModule } from './examination/examination.module';
+import { UsersModule } from './users/users.module';
+import { ClassesModule } from './modules/classes/classes.module';
+import { SubjectsModule } from './subjects/subjects.module';
 
 @Module({
   imports: [
@@ -22,6 +25,7 @@ import { ExaminationModule } from './examination/examination.module';
     AuthModule,
     AdmissionsModule,
     FeesModule,
+    ClassesModule,
 
     DashboardModule,
     SessionsModule,
@@ -31,6 +35,8 @@ import { ExaminationModule } from './examination/examination.module';
     PromotionsModule,
     PrintSettingsModule,
     ExaminationModule,
+    UsersModule,
+    SubjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

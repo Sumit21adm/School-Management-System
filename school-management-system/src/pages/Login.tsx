@@ -149,24 +149,6 @@ export default function Login({ onLogin }: LoginProps) {
                 </Button>
               </Stack>
             </Box>
-
-            {/* Credentials Info */}
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2,
-                bgcolor: 'grey.50',
-                borderRadius: 2,
-                borderColor: 'grey.300',
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                Default credentials:
-              </Typography>
-              <Typography variant="body2" fontFamily="monospace" fontWeight={500}>
-                admin / admin123
-              </Typography>
-            </Paper>
           </Stack>
         </Paper>
       </Container>

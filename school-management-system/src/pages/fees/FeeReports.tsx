@@ -24,7 +24,7 @@ import {
   Menu,
   Divider,
 } from '@mui/material';
-import { feeService } from '../../lib/api';
+import { feeService, classService } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/utils';
 
 type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
@@ -105,6 +105,12 @@ export default function FeeReports() {
     },
   });
 
+  // Fetch available classes
+  const { data: classes } = useQuery({
+    queryKey: ['classes'],
+    queryFn: classService.getAll,
+  });
+
   // Pagination
   const totalPages = Math.ceil(allTransactions.length / pageSize);
   const paginatedTransactions = allTransactions.slice(
@@ -163,14 +169,17 @@ export default function FeeReports() {
           />
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Class</InputLabel>
+            <InputLabel>Class</InputLabel>
             <Select
               value={className}
               label="Class"
               onChange={(e) => setClassName(e.target.value)}
             >
               <MenuItem value="">All Classes</MenuItem>
-              {['Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'].map((c) => (
-                <MenuItem key={c} value={c}>{c}</MenuItem>
+              {classes?.map((c: any) => (
+                <MenuItem key={c.id} value={c.name}>
+                  {c.displayName || c.name}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
