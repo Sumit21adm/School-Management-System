@@ -118,6 +118,12 @@ export const feeStructureService = {
         const { data } = await apiClient.get(`/api/fee-structure/${sessionId}/${className}`);
         return data;
     },
+    getClassFees: async (className: string, sessionId: number) => {
+        const { data } = await apiClient.get('/api/fee-structure/class-fees', {
+            params: { className, sessionId }
+        });
+        return data;
+    },
     upsertStructure: async (sessionId: number, className: string, structureData: any) => {
         const { data } = await apiClient.put(`/api/fee-structure/${sessionId}/${className}`, structureData);
         return data;

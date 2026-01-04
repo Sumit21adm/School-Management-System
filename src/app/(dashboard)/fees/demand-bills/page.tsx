@@ -34,8 +34,10 @@ import {
     TableHead,
     TableRow,
 } from '@mui/material';
-import { FileText, Download, Printer } from 'lucide-react';
-import { feeService, feeTypeService, classService } from '@/lib/api';
+import { FileText, Download, Printer, AlertTriangle, Settings } from 'lucide-react';
+import { feeService, feeTypeService, classService, feeStructureService } from '@/lib/api';
+import { useSessionContext } from '@/contexts/SessionContext';
+import Link from 'next/link';
 
 const demandBillSchema = z.object({
     generationType: z.enum(['single', 'class', 'all']),
@@ -63,6 +65,7 @@ export default function DemandBillGeneration() {
     const [selectedFeeTypes, setSelectedFeeTypes] = useState<number[]>([]);
     const [autoCalculateLateFees, setAutoCalculateLateFees] = useState(true);
     const queryClient = useQueryClient();
+    const { selectedSessionId } = useSessionContext();
 
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
@@ -82,21 +85,35 @@ export default function DemandBillGeneration() {
     });
 
     const generationType = watch('generationType');
+    const selectedClass = watch('className');
 
-    // Fetch fee types
+    // Fetch all fee types (for fallback)
     const { data: feeTypesData } = useQuery({
         queryKey: ['fee-types'],
         queryFn: () => feeTypeService.getAll(),
         staleTime: 5 * 60 * 1000,
     });
 
-    const feeTypes = feeTypesData?.feeTypes || feeTypesData || [];
+    const allFeeTypes = feeTypesData?.feeTypes || feeTypesData || [];
 
     // Fetch classes
     const { data: classes } = useQuery({
         queryKey: ['classes'],
         queryFn: () => classService.getAll(),
     });
+
+    // Fetch class-specific fee structure when class is selected
+    const { data: classFees, isLoading: isLoadingClassFees } = useQuery({
+        queryKey: ['class-fees', selectedClass, selectedSessionId],
+        queryFn: () => feeStructureService.getClassFees(selectedClass!, selectedSessionId!),
+        enabled: !!selectedClass && !!selectedSessionId && generationType === 'class',
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Use class fees if available, otherwise fall back to all fee types
+    const feeTypes = (classFees?.configured && classFees?.feeTypes?.length > 0)
+        ? classFees.feeTypes
+        : allFeeTypes;
 
     // Pre-select Tuition Fee when fee types load
     const hasInitializedRef = useRef(false);
@@ -306,6 +323,45 @@ export default function DemandBillGeneration() {
                                     <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                                         Select Fee Types to Include
                                     </Typography>
+
+                                    {/* Warning when fee structure is not configured */}
+                                    {generationType === 'class' && selectedClass && !isLoadingClassFees && !classFees?.configured && (
+                                        <Alert
+                                            severity="warning"
+                                            sx={{ mb: 2 }}
+                                            icon={<AlertTriangle size={20} />}
+                                            action={
+                                                <Button
+                                                    component={Link}
+                                                    href="/settings/fee-structure"
+                                                    size="small"
+                                                    color="warning"
+                                                    startIcon={<Settings size={16} />}
+                                                >
+                                                    Configure
+                                                </Button>
+                                            }
+                                        >
+                                            <Typography variant="body2" fontWeight={600}>
+                                                No fee structure configured for {selectedClass}
+                                            </Typography>
+                                            <Typography variant="caption">
+                                                Bills will be skipped for this class. Please configure fee amounts first.
+                                            </Typography>
+                                        </Alert>
+                                    )}
+
+                                    {/* Success indicator when structure is configured */}
+                                    {generationType === 'class' && selectedClass && classFees?.configured && (
+                                        <Alert severity="success" sx={{ mb: 2 }}>
+                                            <Typography variant="body2">
+                                                Fee structure configured: {classFees.feeTypes?.length} fee types,
+                                                Monthly: ₹{classFees.totalMonthly?.toLocaleString()},
+                                                Yearly: ₹{classFees.totalYearly?.toLocaleString()}
+                                            </Typography>
+                                        </Alert>
+                                    )}
+
                                     <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
                                         <Button
                                             size="small"
@@ -347,6 +403,14 @@ export default function DemandBillGeneration() {
                                                         label={
                                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                                 {feeType.name}
+                                                                {feeType.amount && (
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label={`₹${feeType.amount.toLocaleString()}`}
+                                                                        color="primary"
+                                                                        sx={{ height: 20 }}
+                                                                    />
+                                                                )}
                                                                 {feeType.frequency && (
                                                                     <Chip size="small" label={feeType.frequency} sx={{ height: 20 }} />
                                                                 )}

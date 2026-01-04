@@ -19,20 +19,48 @@ A modern, full-featured school management application built with **Next.js 16**,
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+- **Node.js** v18+ — [Download](https://nodejs.org/)
+- **MySQL** 8.0+ — via Homebrew (`brew install mysql && brew services start mysql`) or [Download](https://dev.mysql.com/downloads/)
+
+### Setup
+
 ```bash
 # 1. Install dependencies
 npm install
 
 # 2. Set up environment
 cp .env.example .env
-# Edit .env with your database credentials
+# Edit .env with your MySQL credentials (see below)
 
-# 3. Initialize database
-npx prisma migrate dev
+# 3. Create database
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS school_management;"
 
-# 4. Start development server
+# 4. Push schema & seed data
+npx prisma db push
+npx prisma db seed
+
+# 5. Start development server
 npm run dev
 ```
+
+### Environment Configuration (`.env`)
+
+```env
+DATABASE_URL="mysql://root@127.0.0.1:3306/school_management"
+NEXTAUTH_SECRET="dev-nextauth-secret-change-in-production"
+NEXTAUTH_URL="http://localhost:3000"
+JWT_SECRET="dev-jwt-secret-change-in-production"
+```
+
+> **Note:** If your MySQL root user has a password, use: `mysql://root:YOUR_PASSWORD@127.0.0.1:3306/school_management`
+
+### Default Login
+
+| Username | Password | Role |
+|----------|----------|------|
+| `superadmin` | `admin123` | Super Administrator |
 
 Open [http://localhost:3000](http://localhost:3000) to access the application.
 

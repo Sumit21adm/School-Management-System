@@ -67,7 +67,8 @@ const menuItems = [
         items: [
             { path: '/fees', label: 'Fee Collection', icon: MoneyIcon },
             { path: '/fees/demand-bills', label: 'Demand Bills', icon: Description },
-            { path: '/fees/reports', label: 'Fee Receipt', icon: Receipt },
+            { path: '/fees/reports', label: 'Fee Reports', icon: Receipt },
+            { path: '/fees/fee-book', label: 'Student Fee Book', icon: Description },
             { path: '/settings/fee-structure', label: 'Fee Structure', icon: AccountBalance },
         ],
     },
