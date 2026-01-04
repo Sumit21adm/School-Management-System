@@ -1,92 +1,43 @@
-# Documentation Index
+# School Management System Documentation
 
-Welcome to the School Management System documentation!
+Welcome to the comprehensive documentation for the School Management System. This documentation is designed to help developers, administrators, and users understand the system's architecture, features, and usage.
 
-## Quick Links
+## 📂 Documentation Structure
 
-### Getting Started
-- **[Project Status & Roadmap](./PROJECT_STATUS.md)** - Current features, planned features, and project timeline
-- **[Development Guide](./DEVELOPMENT_GUIDE.md)** - Setup, architecture, and development guidelines
+### 🚀 [Getting Started](./getting-started/README.md)
+- [Installation & Setup](./getting-started/installation.md)
+- [Project Structure](./getting-started/project-structure.md)
+- [Environment Configuration](./getting-started/env-config.md)
 
-### Implementation Guides
-- **[Phase 2: Timetable Management](./PHASE_2_GUIDE.md)** - Detailed guide for implementing timetable features
+### 📦 [Modules](./modules/README.md)
+Detailed documentation for each functional module:
+- [Admissions](./modules/admissions.md)
+- [Fee Management](./modules/fees.md)
+- [Examination](./modules/examination.md)
+- [Academic Sessions](./modules/sessions.md)
+- [Promotions](./modules/promotions.md)
 
-## Documentation Structure
+### ✨ [Features](./features/README.md)
+Specific feature guides and deep dives:
+- [Offline Capability](./features/offline-mode.md)
+- [PDF Generation](./features/pdf-generation.md)
+- [Authentication](./features/authentication.md)
+- [Data Synchronization](./features/data-sync.md)
 
-```
-docs/
-├── README.md                  # This file
-├── PROJECT_STATUS.md          # Current status and roadmap
-├── DEVELOPMENT_GUIDE.md       # Development setup and guidelines
-└── PHASE_2_GUIDE.md          # Phase 2 implementation guide
-```
+### 🧠 [Business Logic](./logic/README.md)
+Explanation of complex business logic and algorithms:
+- [Fee Calculation](./logic/fee-calculation.md)
+- [Promotion Logic](./logic/promotion-logic.md)
+- [Session Management](./logic/session-management.md)
 
-## Key Information
+### 📝 [Release Notes](./release-notes/README.md)
+- [Changelog](./release-notes/changelog.md)
+- [Version History](./release-notes/version-history.md)
 
-### Current Version
-**v1.0.0 - Pilot Release**
-- Status: Ready for testing
-- Last Updated: December 23, 2024
-
-### Quick Access
-
-**Application URLs:**
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
-- Prisma Studio: http://localhost:5555
-
-**Default Login:**
-- Username: `superadmin`
-- Password: `admin123`
-
-**Run Application:**
-```bash
-./run-mac.sh
-```
-
-### What's Completed
-
-✅ Student Management
-✅ Fee Management (Complete workflow)
-✅ Subject Management (CRUD operations)
-✅ Class Management (Read-only)
-✅ Academic Sessions
-✅ User Roles & Permissions
-✅ Basic Examination Module
-
-### What's Next
-
-🚧 Phase 2: Timetable & Scheduling
-- Class-subject assignments
-- Teacher-subject assignments
-- Class timetable builder
-- Teacher routine auto-generation
-
-## For New Developers
-
-1. Read [PROJECT_STATUS.md](./PROJECT_STATUS.md) to understand current state
-2. Follow [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) for setup
-3. Check [PHASE_2_GUIDE.md](./PHASE_2_GUIDE.md) for next features
-
-## For Returning to Project
-
-1. Check [PROJECT_STATUS.md](./PROJECT_STATUS.md) for latest updates
-2. Review "Next Steps" section
-3. Follow implementation guides for planned features
-
-## Support
-
-### Common Tasks
-- **Reset Database:** See DEVELOPMENT_GUIDE.md → Database Changes
-- **Add New Module:** See DEVELOPMENT_GUIDE.md → Adding a New Module
-- **Debug Issues:** See DEVELOPMENT_GUIDE.md → Troubleshooting
-
-### Resources
-- NestJS: https://docs.nestjs.com/
-- Prisma: https://www.prisma.io/docs
-- React Query: https://tanstack.com/query/latest
-- Material-UI: https://mui.com/
+## 🔍 Quick Links
+- [API Documentation](./api-docs.md)
+- [Database Schema](./database-schema.md)
+- [Contribution Guide](./CONTRIBUTING.md)
 
 ---
-
-**Questions?** Check the relevant guide or create an issue in the repository.
+*Maintained by the Development Team*
