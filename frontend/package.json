@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
+    "start": "node server.js",
+    "start:prod": "node server.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "express": "^4.21.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.2.2",
