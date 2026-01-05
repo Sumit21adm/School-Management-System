@@ -6,7 +6,7 @@
 echo "📦 Preparing to upload frontend to Hostinger..."
 
 # Navigate to the frontend dist directory
-cd "$(dirname "$0")/../school-management-system/dist" || exit 1
+cd "$(dirname "$0")/../frontend/dist" || exit 1
 
 echo "📁 Current directory: $(pwd)"
 echo "📋 Files to upload:"

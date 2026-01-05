@@ -34,11 +34,11 @@ npm-debug.log*
 *.tsbuildinfo
 
 # Prisma
-school-management-api/prisma/*.db
-school-management-api/prisma/*.db-journal
+backend/prisma/*.db
+backend/prisma/*.db-journal
 
 # Uploads
-school-management-api/uploads/
+backend/uploads/
 
 # OS files
 Thumbs.db

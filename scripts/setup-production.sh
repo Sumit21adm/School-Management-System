@@ -32,7 +32,7 @@ fi
 
 # Install backend dependencies
 echo " [2/7] Installing backend dependencies..."
-cd school-management-api
+cd backend
 npm install --production
 cd ..
 
@@ -52,7 +52,7 @@ mkdir -p logs
 
 # Generate Prisma Client
 echo " [5/7] Generating Prisma Client..."
-cd school-management-api
+cd backend
 npx prisma generate
 
 # Run database migrations
@@ -100,7 +100,7 @@ echo ""
 echo "  ⚠️  Remember to:"
 echo "  1. Configure your domain/subdomain in Hostinger hPanel"
 echo "  2. Point it to port 3001 for API"
-echo "  3. Set up frontend serving (static files from school-management-system/dist)"
+echo "  3. Set up frontend serving (static files from frontend/dist)"
 echo "  4. Configure SSL certificate"
 echo "  5. Change default admin password!"
 echo ""

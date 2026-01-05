@@ -15,12 +15,12 @@ A full-stack School Management System (ERP) for K-12 educational institutions.
 
 ```
 School-Management-System/
-├── school-management-api/      # Backend (NestJS)
+├── backend/      # Backend (NestJS)
 │   ├── src/                    # Source code
 │   ├── prisma/                 # Database schema & migrations
 │   └── package.json
 │
-├── school-management-system/   # Frontend (React + Vite)
+├── frontend/   # Frontend (React + Vite)
 │   ├── src/                    # Source code  
 │   └── package.json
 │

@@ -11,7 +11,7 @@ Your repository structure:
 
 ```
 School-Management-System/
-├── school-management-api/          # NestJS Backend
+├── backend/          # NestJS Backend
 │   ├── src/
 │   ├── prisma/
 │   │   ├── schema.prisma
@@ -19,7 +19,7 @@ School-Management-System/
 │   ├── package.json
 │   └── .env
 │
-└── school-management-system/       # React Frontend (Vite)
+└── frontend/       # React Frontend (Vite)
     ├── src/
     ├── package.json
     └── .env
@@ -92,7 +92,7 @@ DB_PASSWORD = YourSecurePassword123!
 
 ### 2.1 Backend Package.json Scripts
 
-Your `school-management-api/package.json` already has:
+Your `backend/package.json` already has:
 
 ```json
 {
@@ -107,7 +107,7 @@ Your `school-management-api/package.json` already has:
 
 ### 2.2 Create Production Environment File
 
-Create `.env.production` in `school-management-api/`:
+Create `.env.production` in `backend/`:
 
 ```env
 # Database Configuration
@@ -281,7 +281,7 @@ After seeding:
 
 ### 6.1 Create Production Environment File
 
-Create `.env.production` in `school-management-system/`:
+Create `.env.production` in `frontend/`:
 
 ```env
 VITE_API_URL=https://api.yourdomain.com
@@ -425,9 +425,9 @@ In **hPanel → Domains → DNS Zone**, ensure:
 
 | File | Purpose |
 |------|---------|
-| `school-management-api/.env.production` | Backend environment variables |
-| `school-management-system/.env.production` | Frontend API URL |
-| `school-management-api/src/main.ts` | CORS configuration |
+| `backend/.env.production` | Backend environment variables |
+| `frontend/.env.production` | Frontend API URL |
+| `backend/src/main.ts` | CORS configuration |
 
 ### Hostinger Panel Locations
 
