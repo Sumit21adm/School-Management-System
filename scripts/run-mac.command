@@ -162,31 +162,16 @@ echo ""
 # Start Application
 # ============================================
 
-# Function to cleanup
-cleanup() {
-    echo ""
-    echo " Stopping services..."
-    kill $API_PID 2>/dev/null
-    kill $FRONTEND_PID 2>/dev/null
-    echo ""
-    echo " MySQL container is still running."
-    echo " To stop MySQL: docker stop $MYSQL_CONTAINER"
-    echo " To remove data: docker rm $MYSQL_CONTAINER && docker volume rm school_mysql_data"
-    exit 0
-}
-
-trap cleanup SIGINT SIGTERM
-
 # Start API
 echo " Starting API server on port 3001..."
 cd "$API_DIR"
-npm run start:dev > "$LOGS_DIR/api.log" 2>&1 &
+nohup npm run start:dev > "$LOGS_DIR/api.log" 2>&1 &
 API_PID=$!
 
 # Start Frontend
 echo " Starting Frontend on port 5173..."
 cd "$FRONTEND_DIR"
-npm run dev > "$LOGS_DIR/frontend.log" 2>&1 &
+nohup npm run dev > "$LOGS_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 
 # Wait for startup
@@ -209,7 +194,7 @@ fi
 
 echo ""
 echo " ========================================"
-echo "  Application Started!"
+echo "  Application Started in Background!"
 echo " ========================================"
 echo ""
 echo "  Frontend: http://localhost:5173"
@@ -221,13 +206,14 @@ echo "            Pass: $MYSQL_PASSWORD"
 echo "            DB:   $MYSQL_DATABASE"
 echo ""
 echo "  Logs:     logs/api.log, logs/frontend.log"
+echo "  PIDs:     API=$API_PID, Frontend=$FRONTEND_PID"
 echo ""
 
 # Open browser
 open "http://localhost:5173"
 
-echo " Press Ctrl+C to stop app (MySQL stays running)"
+echo " [INFO] The terminal window can now be closed."
+echo "        Use 'scripts/stop-mac.command' to stop the application."
 echo ""
 
-# Wait
-wait $API_PID $FRONTEND_PID
+exit 0
