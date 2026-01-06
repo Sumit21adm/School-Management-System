@@ -172,10 +172,10 @@ REM Start Application
 REM ============================================
 
 echo  Starting API server on port 3001...
-start "School API" cmd /c "cd /d %API_DIR% && npm run start:dev"
+start "School API" /MIN cmd /c "cd /d %API_DIR% && npm run start:dev"
 
 echo  Starting Frontend on port 5173...
-start "School Frontend" cmd /c "cd /d %FRONTEND_DIR% && npm run dev"
+start "School Frontend" /MIN cmd /c "cd /d %FRONTEND_DIR% && npm run dev"
 
 echo.
 echo  Waiting for services to start...
@@ -194,11 +194,12 @@ echo             User: %MYSQL_USER%
 echo             Pass: %MYSQL_PASSWORD%
 echo             DB:   %MYSQL_DATABASE%
 echo.
-echo   To stop: Close the API and Frontend windows
-echo   MySQL will keep running in Docker
+echo   [INFO] App windows are MINIMIZED (check taskbar).
+echo          Use 'scripts/stop-windows.bat' to stop.
 echo.
 
 start http://localhost:5173
 
-echo  Press any key to exit this window...
-pause >nul
+echo  Exiting launcher...
+timeout /t 3 /nobreak >nul
+
