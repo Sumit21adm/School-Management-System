@@ -40,9 +40,23 @@ if %ERRORLEVEL% NEQ 0 (
 REM Check if Docker is running
 docker info >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
-    echo  [!] Docker is not running. Please start Docker Desktop.
-    pause
-    exit /b 1
+    echo  [!] Docker is not running. Attempting to start Docker Desktop...
+    if exist "C:\Program Files\Docker\Docker\Docker Desktop.exe" (
+        start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+    ) else (
+        echo  [!] Could not find Docker Desktop executable.
+        echo      Please start Docker Desktop manually.
+        pause
+        exit /b 1
+    )
+    
+    echo  Waiting for Docker to start...
+    :WAIT_DOCKER_START
+    timeout /t 3 /nobreak >nul
+    docker info >nul 2>nul
+    if %ERRORLEVEL% NEQ 0 (
+        goto :WAIT_DOCKER_START
+    )
 )
 echo  [OK] Docker is running
 
