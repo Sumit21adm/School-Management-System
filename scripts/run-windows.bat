@@ -117,7 +117,7 @@ docker run -d ^
 
 :WAIT_MYSQL
 echo  Waiting for MySQL to be ready...
-timeout /t 15 /nobreak >nul
+timeout /t 30 /nobreak >nul
 
 :MYSQL_READY
 echo  [OK] MySQL is ready
@@ -129,7 +129,7 @@ REM ============================================
 
 (
     echo # Database (Docker MySQL)
-    echo DATABASE_URL="mysql://%MYSQL_USER%:%MYSQL_PASSWORD%@localhost:%MYSQL_PORT%/%MYSQL_DATABASE%"
+    echo DATABASE_URL="mysql://%MYSQL_USER%:%MYSQL_PASSWORD%@127.0.0.1:%MYSQL_PORT%/%MYSQL_DATABASE%"
     echo.
     echo # Authentication
     echo JWT_SECRET="dev-jwt-secret-change-in-production"
