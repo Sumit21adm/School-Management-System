@@ -172,10 +172,10 @@ REM Start Application
 REM ============================================
 
 echo  Starting API server on port 3001...
-start "School API" /MIN cmd /c "cd /d %API_DIR% && npm run start:dev"
+start "School API" /MIN /B cmd /c "cd /d %API_DIR% && npm run start:dev > "%LOGS_DIR%\api.log" 2>&1"
 
 echo  Starting Frontend on port 5173...
-start "School Frontend" /MIN cmd /c "cd /d %FRONTEND_DIR% && npm run dev"
+start "School Frontend" /MIN /B cmd /c "cd /d %FRONTEND_DIR% && npm run dev > "%LOGS_DIR%\frontend.log" 2>&1"
 
 echo.
 echo  Waiting for services to start...
@@ -194,7 +194,8 @@ echo             User: %MYSQL_USER%
 echo             Pass: %MYSQL_PASSWORD%
 echo             DB:   %MYSQL_DATABASE%
 echo.
-echo   [INFO] App windows are MINIMIZED (check taskbar).
+echo   [INFO] App started in background.
+echo          Logs: logs\api.log, logs\frontend.log
 echo          Use 'scripts/stop-windows.bat' to stop.
 echo.
 
