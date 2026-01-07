@@ -172,10 +172,10 @@ REM Start Application
 REM ============================================
 
 echo  Starting API server on port 3001...
-start "School API" /MIN /B cmd /c "cd /d %API_DIR% && npm run start:dev > "%LOGS_DIR%\api.log" 2>&1"
+start "School API" /MIN cmd /c "cd /d %API_DIR% && npm run start:dev > "%LOGS_DIR%\api.log" 2>&1"
 
 echo  Starting Frontend on port 5173...
-start "School Frontend" /MIN /B cmd /c "cd /d %FRONTEND_DIR% && npm run dev > "%LOGS_DIR%\frontend.log" 2>&1"
+start "School Frontend" /MIN cmd /c "cd /d %FRONTEND_DIR% && npm run dev > "%LOGS_DIR%\frontend.log" 2>&1"
 
 echo.
 echo  Waiting for services to start...
