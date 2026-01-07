@@ -122,6 +122,9 @@ JWT_SECRET="dev-jwt-secret-change-in-production"
 PORT=3001
 EOF
 
+# Create frontend .env file
+echo "VITE_API_URL=http://localhost:3001" > "$FRONTEND_DIR/.env"
+
 echo " [OK] Environment configured"
 
 # ============================================
@@ -147,6 +150,9 @@ echo " Running database migrations..."
 cd "$API_DIR"
 npx prisma generate --schema=prisma/schema.prisma 2>/dev/null
 npx prisma db push --accept-data-loss 2>/dev/null
+
+echo " Seeding database with default data..."
+npx prisma db seed 2>/dev/null || npm run seed 2>/dev/null || echo " [WARN] Seeding skipped (may already exist)"
 
 echo " [OK] Database ready"
 echo ""

@@ -205,17 +205,15 @@ export default function AdmissionList() {
 
   // Try to fetch from API, fallback to IndexedDB if offline
   const { data: response = { data: [], meta: { total: 0 } }, isLoading, refetch } = useQuery({
-    queryKey: ['students', searchTerm, classFilter, sectionFilter, statusFilter, selectedSession?.id, page, rowsPerPage, orderBy, order],
+    queryKey: ['students', searchTerm, classFilter, sectionFilter, statusFilter, page, rowsPerPage, orderBy, order],
     queryFn: async () => {
       if (navigator.onLine) {
         const response = await admissionService.getStudents({
           search: searchTerm,
-          class: classFilter,
+          className: classFilter,
           section: sectionFilter,
           status: statusFilter,
-          sessionId: selectedSession?.id,
           page: page + 1, // API is 1-indexed
-
           limit: rowsPerPage,
           sortBy: orderBy,
           order: order,

@@ -127,16 +127,13 @@ REM ============================================
 REM Configure Environment
 REM ============================================
 
-(
-    echo # Database (Docker MySQL)
-    echo DATABASE_URL="mysql://%MYSQL_USER%:%MYSQL_PASSWORD%@127.0.0.1:%MYSQL_PORT%/%MYSQL_DATABASE%"
-    echo.
-    echo # Authentication
-    echo JWT_SECRET="dev-jwt-secret-change-in-production"
-    echo.
-    echo # Server
-    echo PORT=3001
-) > "%API_DIR%\.env"
+REM Create backend .env file (no quotes around values to avoid parsing issues)
+echo DATABASE_URL=mysql://%MYSQL_USER%:%MYSQL_PASSWORD%@127.0.0.1:%MYSQL_PORT%/%MYSQL_DATABASE%> "%API_DIR%\.env"
+echo JWT_SECRET=dev-jwt-secret-change-in-production>> "%API_DIR%\.env"
+echo PORT=3001>> "%API_DIR%\.env"
+
+REM Create frontend .env file for API URL
+echo VITE_API_URL=http://localhost:3001> "%FRONTEND_DIR%\.env"
 
 echo  [OK] Environment configured
 
@@ -163,6 +160,9 @@ echo  Running database migrations...
 cd /d "%API_DIR%"
 call npx prisma generate --schema=prisma/schema.prisma 2>nul
 call npx prisma db push --accept-data-loss 2>nul
+
+echo  Seeding database with default data...
+call npx prisma db seed 2>nul
 
 echo  [OK] Database ready
 echo.
