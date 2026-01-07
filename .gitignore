@@ -8,11 +8,15 @@ dist/
 build/
 .next/
 out/
+app.js
+server.js
 
 # Environment files
 .env
 .env.local
 .env.*.local
+.env.production
+env.production
 !.env.example
 
 # IDE
