@@ -913,8 +913,11 @@ export class FeesService {
             receiptNo: txn.receiptNo,
             date: txn.date,
             studentId: txn.studentId,
-            studentName: txn.student.name,
-            className: txn.student.className,
+            student: {
+                name: txn.student.name,
+                className: txn.student.className,
+                section: txn.student.section,
+            },
             amount: Number(txn.amount),
             paymentMode: txn.paymentMode,
             description: txn.description,

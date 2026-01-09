@@ -183,6 +183,9 @@ export const promotionService = {
 };
 
 export const feeService = {
+  getStudentDashboard: (studentId: string, sessionId: number) => apiClient.get(`/fees/dashboard/${studentId}/session/${sessionId}`),
+  generateDemandBills: (data: any) => apiClient.post('/fees/demand-bills/generate', data),
+  getStudentStatement: (data: any) => apiClient.post('/fees/statement', data),
   collectFee: (data: any) => apiClient.post('/fees/collect', data),
   getTransactions: (params?: any) => apiClient.get('/fees/transactions', { params }),
   getReceipt: (receiptNo: string) => apiClient.get(`/fees/receipt/${receiptNo}`),
@@ -357,6 +360,10 @@ export const usersService = {
     const { data } = await apiClient.delete(`/users/${id}`);
     return data;
   },
+  getTeachers: async () => {
+    const { data } = await apiClient.get('/users?role=TEACHER');
+    return data.users || [];
+  },
 };
 
 
@@ -381,6 +388,22 @@ export const classService = {
     const { data } = await apiClient.delete(`/classes/${id}`);
     return data;
   },
+  getById: async (id: number) => {
+    const { data } = await apiClient.get(`/classes/${id}`);
+    return data;
+  },
+  getSubjects: async (id: number) => {
+    const { data } = await apiClient.get(`/classes/${id}/subjects`);
+    return data;
+  },
+  assignSubject: async (id: number, data: { subjectId: number; isCompulsory?: boolean; weeklyPeriods?: number; order?: number }) => {
+    const { data: responseData } = await apiClient.post(`/classes/${id}/subjects`, data);
+    return responseData;
+  },
+  removeSubject: async (classId: number, subjectId: number) => {
+    const { data } = await apiClient.delete(`/classes/${classId}/subjects/${subjectId}`);
+    return data;
+  },
 };
 
 export const subjectService = {
@@ -400,4 +423,59 @@ export const subjectService = {
     const { data } = await apiClient.delete(`/subjects/${id}`);
     return data;
   },
+};
+
+export const sectionsService = {
+  create: async (sectionData: { name: string; classId: number; capacity?: number; roomId?: string }) => {
+    const { data } = await apiClient.post('/sections', sectionData);
+    return data;
+  },
+  update: async (id: number, sectionData: any) => {
+    const { data } = await apiClient.patch(`/sections/${id}`, sectionData);
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await apiClient.delete(`/sections/${id}`);
+    return data;
+  },
+  assignTeacher: async (sectionId: number, teacherId: number, sessionId: number) => {
+    const { data } = await apiClient.post(`/sections/${sectionId}/assign-teacher`, { teacherId, sessionId });
+    return data;
+  },
+  assignSubjectTeacher: async (sectionId: number, subjectId: number, teacherId: number, sessionId: number) => {
+    const { data } = await apiClient.post(`/sections/${sectionId}/assign-subject-teacher`, { subjectId, teacherId, sessionId });
+    return data;
+  },
+};
+
+export const routineService = {
+  getAll: async (params: { classId?: number; sectionId?: number; teacherId?: number }) => {
+    const { data } = await apiClient.get('/routines', { params });
+    return data;
+  },
+  getRoutine: async (sectionId?: number, teacherId?: number) => {
+    const { data } = await apiClient.get('/routines', {
+      params: { sectionId, teacherId }
+    });
+    return data;
+  },
+  create: async (routineData: any) => {
+    const { data } = await apiClient.post('/routines', routineData);
+    return data;
+  },
+  update: async (id: number, routineData: any) => {
+    const { data } = await apiClient.patch(`/routines/${id}`, routineData);
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await apiClient.delete(`/routines/${id}`);
+    return data;
+  },
+};
+
+export const studentsService = {
+  assignRollNumbers: async (data: { classId: number; sectionId: number; sortBy: 'NAME' | 'ADMISSION_DATE' }) => {
+    const response = await apiClient.post('/students/assign-roll-numbers', data);
+    return response.data;
+  }
 };

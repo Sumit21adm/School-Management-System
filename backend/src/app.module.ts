@@ -17,6 +17,9 @@ import { PrintSettingsModule } from './print-settings/print-settings.module';
 import { ExaminationModule } from './examination/examination.module';
 import { UsersModule } from './users/users.module';
 import { ClassesModule } from './modules/classes/classes.module';
+import { SectionsModule } from './modules/sections/sections.module';
+import { RoutinesModule } from './modules/routines/routines.module';
+import { StudentsModule } from './modules/students/students.module';
 import { SubjectsModule } from './subjects/subjects.module';
 
 @Module({
@@ -26,6 +29,9 @@ import { SubjectsModule } from './subjects/subjects.module';
     AdmissionsModule,
     FeesModule,
     ClassesModule,
+    SectionsModule,
+    RoutinesModule,
+    StudentsModule,
 
     DashboardModule,
     SessionsModule,

@@ -1,46 +1,33 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-    ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
-import { CreateSubjectDto } from './dto/create-subject.dto';
-import { UpdateSubjectDto } from './dto/update-subject.dto';
+import { CreateSubjectDto, UpdateSubjectDto } from './dto/subject.dto';
 
 @Controller('subjects')
 export class SubjectsController {
     constructor(private readonly subjectsService: SubjectsService) { }
 
-    @Post()
-    create(@Body() createSubjectDto: CreateSubjectDto) {
-        return this.subjectsService.create(createSubjectDto);
-    }
-
     @Get()
-    findAll() {
-        return this.subjectsService.findAll();
+    getAll() {
+        return this.subjectsService.getAll();
     }
 
     @Get(':id')
-    findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.subjectsService.findOne(id);
+    getById(@Param('id', ParseIntPipe) id: number) {
+        return this.subjectsService.getById(id);
     }
 
-    @Patch(':id')
-    update(
-        @Param('id', ParseIntPipe) id: number,
-        @Body() updateSubjectDto: UpdateSubjectDto,
-    ) {
-        return this.subjectsService.update(id, updateSubjectDto);
+    @Post()
+    create(@Body() dto: CreateSubjectDto) {
+        return this.subjectsService.create(dto);
+    }
+
+    @Put(':id')
+    update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSubjectDto) {
+        return this.subjectsService.update(id, dto);
     }
 
     @Delete(':id')
-    remove(@Param('id', ParseIntPipe) id: number) {
-        return this.subjectsService.remove(id);
+    delete(@Param('id', ParseIntPipe) id: number) {
+        return this.subjectsService.delete(id);
     }
 }

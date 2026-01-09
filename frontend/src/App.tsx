@@ -27,8 +27,12 @@ import ExamDetails from './pages/examination/ExamDetails';
 import ExamConfiguration from './pages/examination/ExamConfiguration';
 import UserManagement from './pages/settings/UserManagement';
 import ClassManagement from './pages/settings/ClassManagement';
+import SubjectList from './pages/subjects/SubjectList';
+
+import ClassDetails from './pages/Classes/ClassDetails';
 
 function AppContent() {
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem('authToken');
   });
@@ -111,7 +115,9 @@ function AppContent() {
             <Route path="/settings/print" element={<SchoolSettings />} />
             <Route path="/settings/users" element={<UserManagement />} />
             <Route path="/settings/classes" element={<ClassManagement />} />
+            <Route path="/classes/:id" element={<ClassDetails />} />
             <Route path="/promotions" element={<StudentPromotions />} />
+            <Route path="/settings/subjects" element={<SubjectList />} />
 
             {/* Student Routes */}
             <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />

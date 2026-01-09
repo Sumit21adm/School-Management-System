@@ -12,8 +12,8 @@ export class UsersController {
 
     @Get()
     @Roles('ADMIN') // Admin and above can view users
-    async findAll(@Query('includeInactive') includeInactive?: string) {
-        return this.usersService.findAll(includeInactive === 'true');
+    async findAll(@Query('includeInactive') includeInactive?: string, @Query('role') role?: string) {
+        return this.usersService.findAll(includeInactive === 'true', role);
     }
 
     @Get(':id')

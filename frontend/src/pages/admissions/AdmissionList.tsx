@@ -837,7 +837,7 @@ export default function AdmissionList() {
                       <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                         <IconButton
                           component={Link}
-                          to={`/admissions/${student.id}/edit`}
+                          to={`/admissions/edit/${student.id}`}
                           size="small"
                           color="primary"
                         >
@@ -1499,7 +1499,7 @@ export default function AdmissionList() {
           <Button onClick={handleCloseDialog}>Close</Button>
           <Button
             component={Link}
-            to={`/admissions/${selectedStudent?.id}/edit`}
+            to={`/admissions/edit/${selectedStudent?.id}`}
             variant="contained"
             startIcon={<EditIcon />}
           >

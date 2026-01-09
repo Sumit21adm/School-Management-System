@@ -23,8 +23,11 @@ export class UsersService {
         return JSON.stringify(permissions);
     }
 
-    async findAll(includeInactive: boolean = false) {
-        const where = includeInactive ? {} : { active: true };
+    async findAll(includeInactive: boolean = false, role?: string) {
+        const where: any = includeInactive ? {} : { active: true };
+        if (role) {
+            where.role = role;
+        }
 
         const users = await this.prisma.user.findMany({
             where,

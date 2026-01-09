@@ -1,308 +1,335 @@
-import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { IndianRupee, Receipt } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
+  Grid,
   Paper,
   Typography,
-  Alert,
-  CircularProgress,
-  Grid,
+  TextField,
+  Button,
+  Autocomplete,
   Card,
   CardContent,
-  Stack,
-  InputAdornment,
-  FormHelperText,
+  Tabs,
+  Tab,
+  CircularProgress,
+  Avatar,
   Divider,
-  Avatar
+  Chip,
+  Alert
 } from '@mui/material';
-import { feeService } from '../../lib/api';
-import { db, addToSyncQueue } from '../../lib/db';
+import {
+  Search as SearchIcon,
+  Receipt as ReceiptIcon,
+  History as HistoryIcon,
+  AccountBalance as AccountBalanceIcon,
+  AttachMoney as AttachMoneyIcon
+} from '@mui/icons-material';
+import { admissionService, feeService, sessionService } from '../../lib/api';
+import PendingBillsTable from '../../components/fees/PendingBillsTable';
+import TransactionHistory from '../../components/fees/TransactionHistory';
+import CollectFeeDialog from '../../components/fees/CollectFeeDialog';
 
-const feeSchema = z.object({
-  studentId: z.string().min(1, 'Student ID is required'),
-  amount: z.number().min(1, 'Amount must be greater than 0'),
-  description: z.string().min(1, 'Description is required'),
-  paymentMode: z.enum(['cash', 'cheque', 'online']),
-  receiptNo: z.string().optional(),
-});
+// Debounce helper
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+};
 
-type FeeFormData = z.infer<typeof feeSchema>;
+const FeeCollection = () => {
+  // Search State
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
-export default function FeeCollection() {
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
-  const [duesInfo, setDuesInfo] = useState<any>(null);
+  // Dashboard Data State
+  const [dashboardData, setDashboardData] = useState<any | null>(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<FeeFormData>({
-    resolver: zodResolver(feeSchema),
-    defaultValues: {
-      paymentMode: 'cash',
-      amount: undefined,
-      description: '',
-      receiptNo: '',
-    },
-  });
+  // Session State
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
-  const fetchDues = async (studentId: string) => {
-    if (!studentId) return;
+  // Dialog State
+  const [collectDialogOpen, setCollectDialogOpen] = useState(false);
+  const [selectedBillForPayment, setSelectedBillForPayment] = useState<any | null>(null);
+
+  // Init: Load Active Session
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const session = await sessionService.getActive();
+        if (session) setCurrentSessionId(session.id);
+      } catch (error) {
+        console.error('Failed to load active session', error);
+      }
+    };
+    loadSession();
+  }, []);
+
+  // Search Effect
+  useEffect(() => {
+    if (!debouncedSearch) {
+      setSearchResults([]);
+      return;
+    }
+
+    const handleSearch = async () => {
+      setLoadingSearch(true);
+      try {
+        // Using admissionService.getStudents to search
+        const response = await admissionService.getStudents({ search: debouncedSearch, limit: 10 });
+        setSearchResults(response.data.data || []);
+      } catch (error) {
+        console.error("Search failed", error);
+      } finally {
+        setLoadingSearch(false);
+      }
+    };
+
+    handleSearch();
+  }, [debouncedSearch]);
+
+  // Load Dashboard when student is selected
+  useEffect(() => {
+    if (selectedStudent && currentSessionId) {
+      loadDashboard();
+    } else {
+      setDashboardData(null);
+    }
+  }, [selectedStudent, currentSessionId]);
+
+  const loadDashboard = async () => {
+    if (!selectedStudent || !currentSessionId) return;
+    setLoadingDashboard(true);
     try {
-      const response = await feeService.getDues(studentId);
-      setDuesInfo(response.data);
-    } catch (err) {
-      setDuesInfo(null);
+      const data = await feeService.getStudentDashboard(selectedStudent.studentId, currentSessionId);
+      setDashboardData(data);
+    } catch (error) {
+      console.error("Failed to load dashboard", error);
+    } finally {
+      setLoadingDashboard(false);
     }
   };
 
-  const onSubmit = async (data: FeeFormData) => {
-    setLoading(true);
-    setError('');
-    setSuccess('');
+  const handleOpenCollectDialog = (bill: any = null) => {
+    setSelectedBillForPayment(bill);
+    setCollectDialogOpen(true);
+  };
 
-    try {
-      const transactionData = {
-        ...data,
-        transactionId: `TXN${Date.now()}`,
-        receiptNo: data.receiptNo || `REC${Date.now()}`,
-        date: new Date().toISOString(),
-        yearId: new Date().getFullYear(),
-        synced: false,
-        lastModified: new Date(),
-      };
-
-      if (navigator.onLine) {
-        const response = await feeService.collectFee(transactionData);
-        setSuccess(`Fee collected successfully! Receipt No: ${response.data.receiptNo}`);
-      } else {
-        await db.feeTransactions.add(transactionData);
-        await addToSyncQueue('feeTransactions', 'create', transactionData.transactionId, transactionData);
-        setSuccess('Fee collected (offline). Will sync when online.');
-      }
-
-      reset();
-      setDuesInfo(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to collect fee');
-    } finally {
-      setLoading(false);
-    }
+  const handlePaymentSuccess = () => {
+    loadDashboard(); // Refresh data
+    setCollectDialogOpen(false);
+    setSelectedBillForPayment(null);
   };
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
+    <Box p={3}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
         Fee Collection
       </Typography>
 
-      <Grid container spacing={3}>
-        {/* Fee Collection Form */}
-        <Grid item xs={12} lg={8}>
-          <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
-            <form onSubmit={handleSubmit(onSubmit)}>
-              {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
-                </Alert>
-              )}
-
-              {success && (
-                <Alert severity="success" sx={{ mb: 3 }}>
-                  {success}
-                </Alert>
-              )}
-
-              <Stack spacing={3}>
-                {/* Student ID */}
-                <Controller
-                  name="studentId"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Student ID"
-                      fullWidth
-                      required
-                      onBlur={(e) => {
-                        field.onBlur();
-                        fetchDues(e.target.value);
-                      }}
-                      error={!!errors.studentId}
-                      helperText={errors.studentId?.message}
-                      placeholder="Enter student ID"
-                    />
-                  )}
-                />
-
-                {/* Amount */}
-                <Controller
-                  name="amount"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Amount"
-                      type="number"
-                      fullWidth
-                      required
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-                      }}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                      error={!!errors.amount}
-                      helperText={errors.amount?.message}
-                      placeholder="0.00"
-                    />
-                  )}
-                />
-
-                {/* Description */}
-                <Controller
-                  name="description"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.description}>
-                      <InputLabel>Description *</InputLabel>
-                      <Select
-                        {...field}
-                        label="Description *"
-                      >
-                        <MenuItem value="">Select Fee Type</MenuItem>
-                        <MenuItem value="Tuition Fee">Tuition Fee</MenuItem>
-                        <MenuItem value="Computer Fine Arts">Computer Fine Arts</MenuItem>
-                        <MenuItem value="Smart Class">Smart Class</MenuItem>
-                        <MenuItem value="Generator">Generator</MenuItem>
-                        <MenuItem value="Activity">Activity</MenuItem>
-                        <MenuItem value="Conveyance">Conveyance</MenuItem>
-                        <MenuItem value="Development">Development</MenuItem>
-                        <MenuItem value="Laboratory">Laboratory</MenuItem>
-                        <MenuItem value="Library">Library</MenuItem>
-                        <MenuItem value="Hostel Fee">Hostel Fee</MenuItem>
-                        <MenuItem value="Others">Others</MenuItem>
-                      </Select>
-                      {errors.description && (
-                        <FormHelperText>{errors.description.message}</FormHelperText>
-                      )}
-                    </FormControl>
-                  )}
-                />
-
-                {/* Payment Mode */}
-                <Controller
-                  name="paymentMode"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Payment Mode *</InputLabel>
-                      <Select
-                        {...field}
-                        label="Payment Mode *"
-                      >
-                        <MenuItem value="cash">Cash</MenuItem>
-                        <MenuItem value="cheque">Cheque</MenuItem>
-                        <MenuItem value="online">Online Transfer</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-
-                {/* Receipt Number */}
-                <Controller
-                  name="receiptNo"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Receipt Number (Optional)"
-                      fullWidth
-                      placeholder="Auto-generated if left blank"
-                    />
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  disabled={loading}
-                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <IndianRupee size={20} />}
+      {/* Search Section */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={8}>
+            <Autocomplete
+              freeSolo
+              options={searchResults}
+              getOptionLabel={(option: any) => `${option.name} (${option.studentId}) - Class ${option.className}`}
+              loading={loadingSearch}
+              onInputChange={(event, newInputValue) => {
+                setSearchTerm(newInputValue);
+              }}
+              onChange={(event, newValue: any) => {
+                setSelectedStudent(newValue);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Search Student by Name or Admission No..."
+                  variant="outlined"
                   fullWidth
-                  sx={{ py: 1.5 }}
-                >
-                  {loading ? 'Processing...' : 'Collect Fee'}
-                </Button>
-              </Stack>
-            </form>
-          </Paper>
-        </Grid>
-
-        {/* Sidebar Info */}
-        <Grid item xs={12} lg={4}>
-          <Stack spacing={3}>
-            {/* Dues Information */}
-            <Card elevation={2} sx={{ borderRadius: 3 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Receipt size={20} />
-                  Student Dues
-                </Typography>
-
-                <Divider sx={{ my: 2 }} />
-
-                {duesInfo ? (
-                  <Stack spacing={2}>
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        <SearchIcon color="action" sx={{ mr: 1 }} />
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                    endAdornment: (
+                      <>
+                        {loadingSearch ? <CircularProgress color="inherit" size={20} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, option: any) => (
+                <Box component="li" {...props}>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Avatar src={option.photoUrl} alt={option.name}>
+                      {option.name[0]}
+                    </Avatar>
                     <Box>
-                      <Typography variant="body2" color="text.secondary">Student Name</Typography>
-                      <Typography variant="body1" fontWeight={500}>{duesInfo.name}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Class</Typography>
-                      <Typography variant="body1" fontWeight={500}>{duesInfo.className}</Typography>
-                    </Box>
-                    <Box sx={{ pt: 2, borderTop: '1px solid #eee' }}>
-                      <Typography variant="body2" color="text.secondary">Total Dues</Typography>
-                      <Typography variant="h4" fontWeight={700} color="error.main">
-                        ₹{duesInfo.totalDues?.toLocaleString() || 0}
+                      <Typography variant="body1" fontWeight="bold">
+                        {option.name} <span style={{ opacity: 0.6 }}>({option.studentId})</span>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Class: {option.className}-{option.section} | Father: {option.fatherName}
                       </Typography>
                     </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Last Payment</Typography>
-                      <Typography variant="body1" fontWeight={500}>{duesInfo.lastPayment || 'N/A'}</Typography>
-                    </Box>
-                  </Stack>
-                ) : (
-                  <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                    Enter student ID to view dues
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <Card elevation={0} sx={{ borderRadius: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ opacity: 0.9 }}>
-                  Today's Collection
-                </Typography>
-                <Typography variant="h4" fontWeight={700}>
-                  ₹45,000
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-                  23 transactions
-                </Typography>
-              </CardContent>
-            </Card>
-          </Stack>
+                  </Box>
+                </Box>
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {selectedStudent && (
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                startIcon={<AttachMoneyIcon />}
+                onClick={() => handleOpenCollectDialog(null)} // General payment
+              >
+                Collect Adhoc Payment
+              </Button>
+            )}
+          </Grid>
         </Grid>
-      </Grid>
+      </Paper>
+
+      {selectedStudent && dashboardData && (
+        <>
+          {/* Student Profile & Summary */}
+          <Grid container spacing={3} mb={3}>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%' }}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" gap={2} mb={2}>
+                    <Avatar
+                      src={selectedStudent.photoUrl}
+                      sx={{ width: 64, height: 64, bgcolor: 'primary.main' }}
+                    >
+                      {selectedStudent.name[0]}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" fontWeight="bold">{selectedStudent.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Adm No: {selectedStudent.studentId}
+                      </Typography>
+                      <Chip label={selectedStudent.status} color="success" size="small" variant="outlined" sx={{ mt: 0.5 }} />
+                    </Box>
+                  </Box>
+                  <Divider sx={{ my: 1 }} />
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">Class</Typography>
+                      <Typography variant="body2" fontWeight="bold">{selectedStudent.className} - {selectedStudent.section}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">Roll No</Typography>
+                      <Typography variant="body2" fontWeight="bold">{selectedStudent.rollNumber || 'N/A'}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary">Father's Name</Typography>
+                      <Typography variant="body2">{selectedStudent.fatherName}</Typography>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={8}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <Paper sx={{ p: 2, bgcolor: '#fff3e0', borderLeft: '4px solid #ff9800', height: '100%' }}>
+                    <Typography variant="subtitle2" color="text.secondary">Total Pending Dues</Typography>
+                    <Typography variant="h4" fontWeight="bold" color="#e65100">
+                      ₹{dashboardData.summary.totalDues.toLocaleString()}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Paper sx={{ p: 2, bgcolor: '#e8f5e9', borderLeft: '4px solid #4caf50', height: '100%' }}>
+                    <Typography variant="subtitle2" color="text.secondary">Total Paid (This Session)</Typography>
+                    <Typography variant="h4" fontWeight="bold" color="#1b5e20">
+                      ₹{dashboardData.summary.totalPaid.toLocaleString()}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Paper sx={{ p: 2, bgcolor: '#e3f2fd', borderLeft: '4px solid #2196f3', height: '100%' }}>
+                    <Typography variant="subtitle2" color="text.secondary">Total Demanded</Typography>
+                    <Typography variant="h4" fontWeight="bold" color="#0d47a1">
+                      ₹{dashboardData.summary.totalGross.toLocaleString()}
+                    </Typography>
+                    {dashboardData.summary.totalDiscount > 0 && (
+                      <Typography variant="caption" color="error">
+                        (-₹{dashboardData.summary.totalDiscount.toLocaleString()} Disc.)
+                      </Typography>
+                    )}
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          {/* Tabs Section */}
+          <Paper sx={{ mb: 3 }}>
+            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tab label="Pending Bills" icon={<ReceiptIcon />} iconPosition="start" />
+              <Tab label="Transaction History" icon={<HistoryIcon />} iconPosition="start" />
+              <Tab label="Fee Structure Status" icon={<AccountBalanceIcon />} iconPosition="start" />
+            </Tabs>
+
+            <Box p={3}>
+              {activeTab === 0 && (
+                <PendingBillsTable
+                  bills={dashboardData.pendingBills || []}
+                  onPay={(bill) => handleOpenCollectDialog(bill)}
+                />
+              )}
+
+              {activeTab === 1 && (
+                <TransactionHistory transactions={dashboardData.recentTransactions || []} />
+              )}
+
+              {activeTab === 2 && (
+                <Alert severity="info" variant="outlined">
+                  Detailed Fee Head Breakdown coming soon.
+                </Alert>
+              )}
+            </Box>
+          </Paper>
+        </>
+      )}
+
+      {/* Collect Fee Dialog */}
+      {selectedStudent && currentSessionId && (
+        <CollectFeeDialog
+          open={collectDialogOpen}
+          onClose={() => setCollectDialogOpen(false)}
+          student={selectedStudent}
+          sessionId={currentSessionId}
+          bill={selectedBillForPayment}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </Box>
   );
-}
+};
+
+export default FeeCollection;

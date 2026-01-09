@@ -18,7 +18,8 @@ A comprehensive, full-stack School Management System (ERP) designed for K-12 edu
 ## ✨ Key Features
 
 - 📝 **Admissions**: Streamlined student registration with photo upload & bulk import.
-- 💰 **Fee Management**: Complete financial module for collection, receipts, and demand bills.
+- 💰 **Fee Management**: Enhanced financial module with transaction history, pending bills tracking, and streamlined collection.
+- 🏫 **Class Management**: Efficient handling of class routines, sections, and subject mappings.
 - 📊 **Analytics & Reports**: Real-time dashboards for daily collection, dues, and analysis.
 - 🎓 **Academics**: Exam scheduling, subject management, and grade tracking.
 - 👥 **User Management**: Granular RBAC for Admins, Accountants, and Teachers.

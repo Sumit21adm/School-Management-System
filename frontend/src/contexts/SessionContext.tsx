@@ -17,6 +17,7 @@ interface AcademicSession {
 interface SessionContextType {
     activeSession: AcademicSession | null;
     selectedSession: AcademicSession | null;
+    currentSession: AcademicSession | null; // Alias for selectedSession
     allSessions: AcademicSession[];
     isLoading: boolean;
     switchSession: (sessionId: number) => void;
@@ -47,6 +48,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const selectedSession = selectedSessionId
         ? allSessions.find(s => s.id === selectedSessionId) || activeSession
         : activeSession;
+
+    const currentSession = selectedSession;
 
     // Update selected session when sessions load or when active session changes
     useEffect(() => {
@@ -97,6 +100,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             value={{
                 activeSession,
                 selectedSession,
+                currentSession,
                 allSessions,
                 isLoading,
                 switchSession,

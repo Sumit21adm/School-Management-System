@@ -14,6 +14,12 @@ export class ClassesController {
         return this.classesService.findAll();
     }
 
+    @Get(':id')
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.classesService.findOne(id);
+    }
+
+
     @Post()
     @Roles('ADMIN', 'SUPER_ADMIN')
     create(@Body() createDto: { name: string; displayName: string; order?: number; capacity?: number }) {
@@ -39,5 +45,28 @@ export class ClassesController {
     @Roles('SUPER_ADMIN')
     remove(@Param('id', ParseIntPipe) id: number) {
         return this.classesService.remove(id);
+    }
+
+    @Get(':id/subjects')
+    getSubjects(@Param('id', ParseIntPipe) id: number) {
+        return this.classesService.getSubjects(id);
+    }
+
+    @Post(':id/subjects')
+    @Roles('ADMIN', 'SUPER_ADMIN')
+    assignSubject(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: { subjectId: number; isCompulsory?: boolean; weeklyPeriods?: number; order?: number }
+    ) {
+        return this.classesService.assignSubject(id, dto);
+    }
+
+    @Delete(':id/subjects/:subjectId')
+    @Roles('ADMIN', 'SUPER_ADMIN')
+    removeSubject(
+        @Param('id', ParseIntPipe) classId: number,
+        @Param('subjectId', ParseIntPipe) subjectId: number
+    ) {
+        return this.classesService.removeSubject(classId, subjectId);
     }
 }

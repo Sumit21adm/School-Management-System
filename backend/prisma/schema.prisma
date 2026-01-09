@@ -23,6 +23,7 @@ model SchoolClass {
   updatedAt   DateTime @updatedAt
 
   classSubjects ClassSubject[]
+  sections      Section[]
 
   @@map("school_classes")
 }
@@ -37,6 +38,7 @@ model StudentDetails {
   gender           String    @db.VarChar(10)
   className        String    @db.VarChar(20)
   section          String    @db.VarChar(5)
+  rollNumber       String?   @db.VarChar(10)
   admissionDate    DateTime  @db.Date
   address          String    @db.Text
   phone            String    @db.VarChar(15)
@@ -213,6 +215,10 @@ model AcademicSession {
   @@index([isActive])
   @@index([startDate, endDate])
   @@map("academic_sessions")
+
+  classTeacherAssignments ClassTeacherAssignment[]
+  subjectAllocations      SubjectTeacherAllocation[]
+  routines                ClassRoutine[]
 }
 
 // Fee Management
@@ -339,6 +345,11 @@ model User {
   @@index([role])
   @@index([active])
   @@map("users")
+
+  teacherProfile          TeacherProfile?
+  classTeacherAssignments ClassTeacherAssignment[]
+  subjectAllocations      SubjectTeacherAllocation[]
+  routines                ClassRoutine[]
 }
 
 // Student Academic History
@@ -417,6 +428,8 @@ model Subject {
 
   examSchedules ExamSchedule[]
   classSubjects ClassSubject[]
+  allocations   SubjectTeacherAllocation[]
+  routines      ClassRoutine[]
   
   @@map("subjects")
 }
@@ -477,3 +490,96 @@ model ExamSchedule {
   @@index([subjectId])
   @@map("exam_schedules")
 }
+
+// Class Management Models
+
+model Section {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(10) // "A", "B", "Rose"
+  classId   Int
+  class     SchoolClass @relation(fields: [classId], references: [id])
+  
+  // Section Metadata
+  roomNo    String?  @db.VarChar(20)
+  capacity  Int?
+  
+  // Relations
+  routines            ClassRoutine[]
+  allocations         SubjectTeacherAllocation[]
+  teacherAssignments  ClassTeacherAssignment[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([classId, name])
+  @@map("sections")
+}
+
+model TeacherProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  
+  qualification   String?  @db.VarChar(200)
+  experience      String?  @db.VarChar(100)
+  specialization  String?  @db.VarChar(200) // 'Math', 'Science'
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("teacher_profiles")
+}
+
+model ClassTeacherAssignment {
+  id          Int             @id @default(autoincrement())
+  sectionId   Int
+  teacherId   Int // User ID (Teacher)
+  sessionId   Int
+  isPrimary   Boolean         @default(true) // True = Class Teacher, False = Co-Teacher/Backup
+  
+  section     Section         @relation(fields: [sectionId], references: [id])
+  teacher     User            @relation(fields: [teacherId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  
+  @@unique([sectionId, sessionId, isPrimary])
+  @@map("class_teacher_assignments")
+}
+
+model SubjectTeacherAllocation {
+  id          Int             @id @default(autoincrement())
+  sectionId   Int
+  subjectId   Int
+  teacherId   Int
+  sessionId   Int
+  
+  section     Section         @relation(fields: [sectionId], references: [id])
+  subject     Subject         @relation(fields: [subjectId], references: [id])
+  teacher     User            @relation(fields: [teacherId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  
+  @@unique([sectionId, subjectId, sessionId])
+  @@map("subject_teacher_allocations")
+}
+
+model ClassRoutine {
+  id          Int             @id @default(autoincrement())
+  sectionId   Int
+  sessionId   Int
+  dayOfWeek   String          @db.VarChar(10) // 'MONDAY', 'TUESDAY'...
+  periodNo    Int             // 1, 2, 3...
+  
+  subjectId   Int?            // Nullable for Break/Free period
+  teacherId   Int? 
+  
+  startTime   String?         @db.VarChar(10) // "09:00"
+  endTime     String?         @db.VarChar(10) // "09:45"
+  
+  section     Section         @relation(fields: [sectionId], references: [id])
+  subject     Subject?        @relation(fields: [subjectId], references: [id])
+  teacher     User?           @relation(fields: [teacherId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  
+  @@unique([sectionId, sessionId, dayOfWeek, periodNo])
+  @@map("class_routines")
+}
+

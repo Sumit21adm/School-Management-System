@@ -1,56 +1,68 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { CreateSubjectDto } from './dto/create-subject.dto';
-import { UpdateSubjectDto } from './dto/update-subject.dto';
+import { CreateSubjectDto, UpdateSubjectDto } from './dto/subject.dto';
 
 @Injectable()
 export class SubjectsService {
     constructor(private prisma: PrismaService) { }
 
-    async create(createSubjectDto: CreateSubjectDto) {
-        return this.prisma.subject.create({
-            data: createSubjectDto,
-        });
-    }
-
-    async findAll() {
+    async getAll() {
         return this.prisma.subject.findMany({
-            where: { isActive: true },
             orderBy: { name: 'asc' },
-            include: {
-                classSubjects: {
-                    include: {
-                        class: true,
-                    },
-                },
-            },
         });
     }
 
-    async findOne(id: number) {
-        return this.prisma.subject.findUnique({
+    async getById(id: number) {
+        const subject = await this.prisma.subject.findUnique({
             where: { id },
-            include: {
-                classSubjects: {
-                    include: {
-                        class: true,
-                    },
-                },
-            },
         });
+        if (!subject) throw new NotFoundException('Subject not found');
+        return subject;
     }
 
-    async update(id: number, updateSubjectDto: UpdateSubjectDto) {
-        return this.prisma.subject.update({
-            where: { id },
-            data: updateSubjectDto,
-        });
+    async create(dto: CreateSubjectDto) {
+        try {
+            return await this.prisma.subject.create({
+                data: dto,
+            });
+        } catch (error) {
+            if (error.code === 'P2002') {
+                throw new ConflictException('Subject with this name or code already exists');
+            }
+            throw error;
+        }
     }
 
-    async remove(id: number) {
-        return this.prisma.subject.update({
+    async update(id: number, dto: UpdateSubjectDto) {
+        try {
+            return await this.prisma.subject.update({
+                where: { id },
+                data: dto,
+            });
+        } catch (error) {
+            if (error.code === 'P2002') {
+                throw new ConflictException('Subject with this name or code already exists');
+            }
+            throw error;
+        }
+    }
+
+    async delete(id: number) {
+        // Check if used in ClassSubject or other places
+        const usedInClass = await this.prisma.classSubject.findFirst({
+            where: { subjectId: id }
+        });
+
+        if (usedInClass) {
+            // Soft delete if used
+            return this.prisma.subject.update({
+                where: { id },
+                data: { isActive: false }
+            });
+        }
+
+        return this.prisma.subject.delete({
             where: { id },
-            data: { isActive: false },
         });
     }
 }
