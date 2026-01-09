@@ -135,16 +135,74 @@ echo "VITE_API_URL=http://localhost:3001" > "$FRONTEND_DIR/.env"
 echo " [OK] Environment configured"
 
 # ============================================
-# Install Dependencies
+# Install Dependencies (Clean for Architecture Compatibility)
 # ============================================
+
+# Remove node_modules AND package-lock.json to ensure native modules are 
+# compiled for this architecture. This fixes npm's optional dependency bug
+# (https://github.com/npm/cli/issues/4828) which causes @rollup/rollup-darwin-x64
+# or @rollup/rollup-darwin-arm64 to be missing when switching machines.
+echo " Cleaning dependencies for architecture compatibility..."
+
+# Clean npm cache to ensure fresh downloads
+npm cache clean --force 2>/dev/null
+
+if [ -d "$API_DIR/node_modules" ]; then
+    rm -rf "$API_DIR/node_modules"
+fi
+if [ -f "$API_DIR/package-lock.json" ]; then
+    rm -f "$API_DIR/package-lock.json"
+fi
+
+if [ -d "$FRONTEND_DIR/node_modules" ]; then
+    rm -rf "$FRONTEND_DIR/node_modules"
+fi
+if [ -f "$FRONTEND_DIR/package-lock.json" ]; then
+    rm -f "$FRONTEND_DIR/package-lock.json"
+fi
 
 echo " Installing API dependencies..."
 cd "$API_DIR"
-npm install --silent 2>/dev/null
+npm install
 
 echo " Installing Frontend dependencies..."
 cd "$FRONTEND_DIR"
-npm install --silent 2>/dev/null
+npm install
+
+# Fix for npm optional dependency bug (https://github.com/npm/cli/issues/4828)
+# npm install fails to install platform-specific optional dependencies correctly
+# Workaround: use npm pack to download and manually extract native modules
+ARCH=$(uname -m)
+install_native_module() {
+    local PKG_NAME=$1
+    if [ ! -d "node_modules/$PKG_NAME" ]; then
+        echo "   Installing $PKG_NAME..."
+        npm pack "$PKG_NAME" --silent 2>/dev/null
+        if [ -f "${PKG_NAME}-"*.tgz ]; then
+            tar -xzf "${PKG_NAME}-"*.tgz 2>/dev/null
+            mv package "node_modules/$PKG_NAME"
+            rm -f "${PKG_NAME}-"*.tgz
+        fi
+    fi
+}
+
+if [ "$ARCH" = "x86_64" ]; then
+    echo " Installing native modules for Intel Mac (x64)..."
+    install_native_module "lightningcss-darwin-x64"
+    install_native_module "@tailwindcss/oxide-darwin-x64"
+    install_native_module "@rollup/rollup-darwin-x64"
+    # Create symlinks for fallback resolution
+    ln -sf ../lightningcss-darwin-x64/lightningcss.darwin-x64.node node_modules/lightningcss/lightningcss.darwin-x64.node 2>/dev/null || true
+    ln -sf ../oxide-darwin-x64/tailwindcss-oxide.darwin-x64.node node_modules/@tailwindcss/oxide/tailwindcss-oxide.darwin-x64.node 2>/dev/null || true
+elif [ "$ARCH" = "arm64" ]; then
+    echo " Installing native modules for Apple Silicon (arm64)..."
+    install_native_module "lightningcss-darwin-arm64"
+    install_native_module "@tailwindcss/oxide-darwin-arm64"
+    install_native_module "@rollup/rollup-darwin-arm64"
+    # Create symlinks for fallback resolution
+    ln -sf ../lightningcss-darwin-arm64/lightningcss.darwin-arm64.node node_modules/lightningcss/lightningcss.darwin-arm64.node 2>/dev/null || true
+    ln -sf ../oxide-darwin-arm64/tailwindcss-oxide.darwin-arm64.node node_modules/@tailwindcss/oxide/tailwindcss-oxide.darwin-arm64.node 2>/dev/null || true
+fi
 
 echo " [OK] Dependencies installed"
 echo ""

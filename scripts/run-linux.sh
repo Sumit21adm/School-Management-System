@@ -128,16 +128,73 @@ echo "VITE_API_URL=http://localhost:3001" > "$FRONTEND_DIR/.env"
 echo " [OK] Environment configured"
 
 # ============================================
-# Install Dependencies
+# Install Dependencies (Clean for Compatibility)
 # ============================================
+
+# Remove node_modules AND package-lock.json to ensure native modules are 
+# compiled for this system. This fixes npm's optional dependency bug.
+echo " Cleaning dependencies for compatibility..."
+
+# Clean npm cache to ensure fresh downloads
+npm cache clean --force 2>/dev/null
+
+if [ -d "$API_DIR/node_modules" ]; then
+    rm -rf "$API_DIR/node_modules"
+fi
+if [ -f "$API_DIR/package-lock.json" ]; then
+    rm -f "$API_DIR/package-lock.json"
+fi
+
+if [ -d "$FRONTEND_DIR/node_modules" ]; then
+    rm -rf "$FRONTEND_DIR/node_modules"
+fi
+if [ -f "$FRONTEND_DIR/package-lock.json" ]; then
+    rm -f "$FRONTEND_DIR/package-lock.json"
+fi
 
 echo " Installing API dependencies..."
 cd "$API_DIR"
-npm install --silent 2>/dev/null
+npm install
 
 echo " Installing Frontend dependencies..."
 cd "$FRONTEND_DIR"
-npm install --silent 2>/dev/null
+npm install
+
+# Fix for npm optional dependency bug (https://github.com/npm/cli/issues/4828)
+# npm install fails to install platform-specific optional dependencies correctly
+# Workaround: use npm pack to download and manually extract native modules
+ARCH=$(uname -m)
+install_native_module() {
+    local PKG_NAME=$1
+    if [ ! -d "node_modules/$PKG_NAME" ]; then
+        echo "   Installing $PKG_NAME..."
+        npm pack "$PKG_NAME" --silent 2>/dev/null
+        if [ -f "${PKG_NAME}-"*.tgz ] || [ -f *"$(basename "$PKG_NAME")"*.tgz ]; then
+            tar -xzf *.tgz 2>/dev/null
+            mkdir -p "node_modules/$PKG_NAME"
+            mv package/* "node_modules/$PKG_NAME/" 2>/dev/null || mv package "node_modules/$PKG_NAME"
+            rm -rf package *.tgz
+        fi
+    fi
+}
+
+if [ "$ARCH" = "x86_64" ]; then
+    echo " Installing native modules for Linux x64..."
+    install_native_module "lightningcss-linux-x64-gnu"
+    install_native_module "@tailwindcss/oxide-linux-x64-gnu"
+    install_native_module "@rollup/rollup-linux-x64-gnu"
+    # Create symlinks for fallback resolution
+    ln -sf ../lightningcss-linux-x64-gnu/lightningcss.linux-x64-gnu.node node_modules/lightningcss/lightningcss.linux-x64-gnu.node 2>/dev/null || true
+    ln -sf ../oxide-linux-x64-gnu/tailwindcss-oxide.linux-x64-gnu.node node_modules/@tailwindcss/oxide/tailwindcss-oxide.linux-x64-gnu.node 2>/dev/null || true
+elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    echo " Installing native modules for Linux arm64..."
+    install_native_module "lightningcss-linux-arm64-gnu"
+    install_native_module "@tailwindcss/oxide-linux-arm64-gnu"
+    install_native_module "@rollup/rollup-linux-arm64-gnu"
+    # Create symlinks for fallback resolution
+    ln -sf ../lightningcss-linux-arm64-gnu/lightningcss.linux-arm64-gnu.node node_modules/lightningcss/lightningcss.linux-arm64-gnu.node 2>/dev/null || true
+    ln -sf ../oxide-linux-arm64-gnu/tailwindcss-oxide.linux-arm64-gnu.node node_modules/@tailwindcss/oxide/tailwindcss-oxide.linux-arm64-gnu.node 2>/dev/null || true
+fi
 
 echo " [OK] Dependencies installed"
 echo ""
