@@ -26,11 +26,14 @@ jobs:
         env:
           DATABASE_URL: "file:./dev.db"
 
+      - name: Zip Frontend Build
+        run: zip -r frontend-build.zip frontend/dist
+
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-build
-          path: frontend/dist/
+          name: frontend-build-zip
+          path: frontend-build.zip
 
   build-backend:
     runs-on: ubuntu-latest
@@ -60,8 +63,38 @@ jobs:
         env:
           DATABASE_URL: "file:./dev.db"
 
+      - name: Zip Backend Build
+        run: zip -r backend-build.zip backend/dist
+
       - name: Upload Backend Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-build
-          path: backend/dist/
+          name: backend-build-zip
+          path: backend-build.zip
+
+  create-release:
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Frontend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-zip
+          
+      - name: Download Backend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build-zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          files: |
+            frontend-build.zip
+            backend-build.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
