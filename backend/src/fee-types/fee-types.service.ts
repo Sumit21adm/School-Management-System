@@ -14,6 +14,54 @@ export class FeeTypesService {
         return { feeTypes };
     }
 
+    /**
+     * Get fee types that are defined in Fee Structure for a given session and optional class
+     * If className provided: returns fee types for that specific class
+     * If no className: returns all fee types that have any structure mapping in the session
+     */
+    async getByStructure(sessionId: number, className?: string) {
+        // Build the where clause for fee structure lookup
+        const structureWhere: any = { sessionId };
+        if (className) {
+            structureWhere.className = className;
+        }
+
+        // Find fee structures matching criteria
+        const structures = await this.prisma.feeStructure.findMany({
+            where: structureWhere,
+            include: {
+                feeItems: {
+                    include: {
+                        feeType: true,
+                    },
+                },
+            },
+        });
+
+        // Collect unique fee types from all matching structures
+        const feeTypeMap = new Map<number, any>();
+        for (const structure of structures) {
+            for (const item of structure.feeItems) {
+                if (item.feeType.isActive && !feeTypeMap.has(item.feeType.id)) {
+                    feeTypeMap.set(item.feeType.id, {
+                        id: item.feeType.id,
+                        name: item.feeType.name,
+                        description: item.feeType.description,
+                        frequency: item.frequency,
+                        amount: Number(item.amount),
+                        isOptional: item.isOptional,
+                    });
+                }
+            }
+        }
+
+        const feeTypes = Array.from(feeTypeMap.values()).sort((a, b) =>
+            a.name.localeCompare(b.name)
+        );
+
+        return { feeTypes, structureCount: structures.length };
+    }
+
     async findOne(id: number) {
         const feeType = await this.prisma.feeType.findUnique({
             where: { id },

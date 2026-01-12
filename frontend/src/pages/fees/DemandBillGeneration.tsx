@@ -149,20 +149,55 @@ export default function DemandBillGeneration() {
     }
   }, [watchedMonth, watchedYear, setValue]);
 
-  const location = useLocation();
+  const watchedClassName = watch('className');
+  const watchedStudentId = watch('studentId');
 
-  // Fetch fee types - include location in key to force refetch on navigation
-  const { data: feeTypesData } = useQuery({
+  // Determine the class to use for fee structure lookup
+  // For 'single' type, we need to lookup the student's class (would need student info)
+  // For 'class' type, use the selected class
+  // For 'all' type, show all fee types
+  const effectiveClassName = generationType === 'class' ? watchedClassName :
+    generationType === 'all' ? undefined : undefined;
+
+  // Fetch fee types based on structure (dynamic based on selection)
+  const { data: structureFeeTypesData } = useQuery({
+    queryKey: ['fee-types-by-structure', selectedSession?.id, effectiveClassName, generationType],
+    queryFn: async () => {
+      if (!selectedSession?.id) return { feeTypes: [] };
+
+      // For 'all' students, get all fee types from all structures
+      if (generationType === 'all' || !effectiveClassName) {
+        const response = await apiClient.get('/fee-types/by-structure', {
+          params: { sessionId: selectedSession.id }
+        });
+        return response.data;
+      }
+
+      // For specific class, get fee types for that class structure
+      const response = await apiClient.get('/fee-types/by-structure', {
+        params: { sessionId: selectedSession.id, className: effectiveClassName }
+      });
+      return response.data;
+    },
+    enabled: !!selectedSession?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fallback to all fee types if no structure-based types found
+  const { data: allFeeTypesData } = useQuery({
     queryKey: ['fee-types', location.pathname],
     queryFn: async () => {
       const response = await apiClient.get('/fee-types');
       return response.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: true, // Always refetch when component mounts
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: true,
   });
 
-  const feeTypes = feeTypesData?.feeTypes || [];
+  // Use structure-based fee types if available, otherwise fallback to all
+  const feeTypes = (structureFeeTypesData?.feeTypes?.length > 0)
+    ? structureFeeTypesData.feeTypes
+    : (allFeeTypesData?.feeTypes || []);
 
   const queryClient = useQueryClient();
 

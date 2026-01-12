@@ -12,6 +12,14 @@ export class FeeTypesController {
         return this.feeTypesService.findAll(active);
     }
 
+    @Get('by-structure')
+    getByStructure(
+        @Query('sessionId', ParseIntPipe) sessionId: number,
+        @Query('className') className?: string,
+    ) {
+        return this.feeTypesService.getByStructure(sessionId, className);
+    }
+
     @Get(':id')
     findOne(@Param('id', ParseIntPipe) id: number) {
         return this.feeTypesService.findOne(id);
