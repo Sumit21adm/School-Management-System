@@ -193,67 +193,50 @@ export const feeService = {
   getDues: (studentId: string) => apiClient.get(`/fees/dues/${studentId}`),
   getFeeStructure: (classId: string) => apiClient.get(`/fees/structure/${classId}`),
   getReceiptPdfUrl: (receiptNo: string) => `${API_BASE_URL}/fees/receipt/pdf?receiptNo=${encodeURIComponent(receiptNo)}`,
-  openReceiptPdf: (receiptNo: string) => {
-    // Open PDF in new tab
-    const url = `${API_BASE_URL}/fees/receipt/pdf?receiptNo=${encodeURIComponent(receiptNo)}`;
-    window.open(url, '_blank');
+  openReceiptPdf: async (receiptNo: string) => {
+    try {
+      const response = await apiClient.get(`/fees/receipt/pdf`, {
+        params: { receiptNo },
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error opening receipt PDF:', error);
+      alert('Failed to open receipt. Please try again.');
+    }
   },
   getDemandBillPdfUrl: (billNo: string) => `${API_BASE_URL}/fees/demand-bill/pdf?billNo=${encodeURIComponent(billNo)}`,
-  openDemandBillPdf: (billNo: string) => {
-    // Open PDF in new tab
-    const url = `${API_BASE_URL}/fees/demand-bill/pdf?billNo=${encodeURIComponent(billNo)}`;
-    window.open(url, '_blank');
-  },
-  openBatchDemandBillPdf: (billNumbers: string[], metadata?: { period?: string, billType?: string, classInfo?: string }) => {
-    // Use form submission to trigger browser's native file handling
-    // This preserves the filename from Content-Disposition header
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `${API_BASE_URL}/fees/demand-bills/batch-pdf`;
-    form.target = '_blank'; // Open in new tab
-    form.style.display = 'none';
-
-    // Add bill numbers as array inputs
-    billNumbers.forEach(billNo => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'billNumbers[]'; // express urlencoded extended uses [] for arrays
-      input.value = billNo;
-      form.appendChild(input);
-    });
-
-    // Add metadata fields if provided
-    if (metadata) {
-      if (metadata.period) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'period';
-        input.value = metadata.period;
-        form.appendChild(input);
-      }
-      if (metadata.billType) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'billType';
-        input.value = metadata.billType;
-        form.appendChild(input);
-      }
-      if (metadata.classInfo) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'classInfo';
-        input.value = metadata.classInfo;
-        form.appendChild(input);
-      }
+  openDemandBillPdf: async (billNo: string) => {
+    try {
+      const response = await apiClient.get(`/fees/demand-bill/pdf`, {
+        params: { billNo },
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error opening demand bill PDF:', error);
+      alert('Failed to open demand bill. Please try again.');
     }
-
-    document.body.appendChild(form);
-    form.submit();
-
-    // Clean up
-    setTimeout(() => {
-      document.body.removeChild(form);
-    }, 100);
+  },
+  openBatchDemandBillPdf: async (billNumbers: string[], metadata?: { period?: string, billType?: string, classInfo?: string }) => {
+    try {
+      const response = await apiClient.post('/fees/demand-bills/batch-pdf', {
+        billNumbers,
+        ...metadata,
+      }, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error opening batch demand bill PDF:', error);
+      alert('Failed to open batch demand bills. Please try again.');
+    }
   },
 };
 
