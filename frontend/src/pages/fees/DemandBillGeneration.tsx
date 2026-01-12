@@ -132,6 +132,22 @@ export default function DemandBillGeneration() {
   });
 
   const generationType = watch('generationType');
+  const watchedMonth = watch('month');
+  const watchedYear = watch('year');
+
+  // Auto-update due date when month or year changes
+  useEffect(() => {
+    if (watchedMonth && watchedYear) {
+      let nextMonth = watchedMonth + 1;
+      let nextYear = watchedYear;
+      if (nextMonth > 12) {
+        nextMonth = 1;
+        nextYear += 1;
+      }
+      const mm = String(nextMonth).padStart(2, '0');
+      setValue('dueDate', `${nextYear}-${mm}-10`);
+    }
+  }, [watchedMonth, watchedYear, setValue]);
 
   const location = useLocation();
 
