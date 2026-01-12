@@ -21,6 +21,7 @@ import { SectionsModule } from './modules/sections/sections.module';
 import { RoutinesModule } from './modules/routines/routines.module';
 import { StudentsModule } from './modules/students/students.module';
 import { SubjectsModule } from './subjects/subjects.module';
+import { BackupModule } from './backup/backup.module';
 
 @Module({
   imports: [
@@ -42,7 +43,9 @@ import { SubjectsModule } from './subjects/subjects.module';
     PrintSettingsModule,
     ExaminationModule,
     UsersModule,
+    UsersModule,
     SubjectsModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

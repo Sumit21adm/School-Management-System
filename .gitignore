@@ -48,3 +48,4 @@ backend/uploads/
 Thumbs.db
 *.zip
 /deploy
+backups/

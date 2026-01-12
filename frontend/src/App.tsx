@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
+import { SnackbarProvider } from 'notistack';
 import CssBaseline from '@mui/material/CssBaseline';
 import { getTheme } from './theme';
 import Layout from './components/Layout';
@@ -27,6 +28,7 @@ import ExamDetails from './pages/examination/ExamDetails';
 import ExamConfiguration from './pages/examination/ExamConfiguration';
 import UserManagement from './pages/settings/UserManagement';
 import ClassManagement from './pages/settings/ClassManagement';
+import BackupRestore from './pages/settings/BackupRestore';
 import SubjectList from './pages/subjects/SubjectList';
 
 import ClassDetails from './pages/Classes/ClassDetails';
@@ -79,54 +81,57 @@ function AppContent() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <SessionProvider>
-        <Routes>
-          <Route path="/login" element={
-            !isAuthenticated ? (
-              <Login onLogin={() => setIsAuthenticated(true)} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
+      <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+        <SessionProvider>
+          <Routes>
+            <Route path="/login" element={
+              !isAuthenticated ? (
+                <Login onLogin={() => setIsAuthenticated(true)} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } />
 
-          {/* Protected Routes */}
-          <Route element={isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
-            <Route path="/" element={<Dashboard />} />
+            {/* Protected Routes */}
+            <Route element={isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
+              <Route path="/" element={<Dashboard />} />
 
-            {/* Admissions Routes */}
-            <Route path="/admissions" element={<AdmissionList />} />
-            <Route path="/admissions/new" element={<AdmissionForm />} />
-            <Route path="/admissions/edit/:id" element={<AdmissionForm />} />
+              {/* Admissions Routes */}
+              <Route path="/admissions" element={<AdmissionList />} />
+              <Route path="/admissions/new" element={<AdmissionForm />} />
+              <Route path="/admissions/edit/:id" element={<AdmissionForm />} />
 
-            {/* Fee Management Routes */}
-            <Route path="/fees/collection" element={<FeeCollection />} />
-            <Route path="/fees/reports" element={<FeeReports />} />
-            <Route path="/fees/collection-enhanced" element={<EnhancedFeeCollection />} />
-            <Route path="/fees/demand-bills" element={<DemandBillGeneration />} />
+              {/* Fee Management Routes */}
+              <Route path="/fees/collection" element={<FeeCollection />} />
+              <Route path="/fees/reports" element={<FeeReports />} />
+              <Route path="/fees/collection-enhanced" element={<EnhancedFeeCollection />} />
+              <Route path="/fees/demand-bills" element={<DemandBillGeneration />} />
 
-            {/* Examination Routes */}
-            <Route path="/exams" element={<ExamList />} />
-            <Route path="/exams/:id" element={<ExamDetails />} />
-            <Route path="/examination/configuration" element={<ExamConfiguration />} />
+              {/* Examination Routes */}
+              <Route path="/exams" element={<ExamList />} />
+              <Route path="/exams/:id" element={<ExamDetails />} />
+              <Route path="/examination/configuration" element={<ExamConfiguration />} />
 
-            {/* Settings Routes */}
-            <Route path="/settings/fee-structure" element={<FeeStructure />} />
-            <Route path="/settings/sessions" element={<SessionsManagement />} />
-            <Route path="/settings/print" element={<SchoolSettings />} />
-            <Route path="/settings/users" element={<UserManagement />} />
-            <Route path="/settings/classes" element={<ClassManagement />} />
-            <Route path="/classes/:id" element={<ClassDetails />} />
-            <Route path="/promotions" element={<StudentPromotions />} />
-            <Route path="/settings/subjects" element={<SubjectList />} />
+              {/* Settings Routes */}
+              <Route path="/settings/fee-structure" element={<FeeStructure />} />
+              <Route path="/settings/sessions" element={<SessionsManagement />} />
+              <Route path="/settings/print" element={<SchoolSettings />} />
+              <Route path="/settings/users" element={<UserManagement />} />
+              <Route path="/settings/classes" element={<ClassManagement />} />
+              <Route path="/settings/backup" element={<BackupRestore />} />
+              <Route path="/classes/:id" element={<ClassDetails />} />
+              <Route path="/promotions" element={<StudentPromotions />} />
+              <Route path="/settings/subjects" element={<SubjectList />} />
 
-            {/* Student Routes */}
-            <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
-          </Route>
+              {/* Student Routes */}
+              <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
+            </Route>
 
-          {/* Catch all redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </SessionProvider>
+            {/* Catch all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </SessionProvider>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }

@@ -37,12 +37,12 @@ import {
   School as AlumniIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
+  RestoreFromTrash as BackupIcon,
 } from '@mui/icons-material';
 import { useColorMode } from '../contexts/ThemeContext';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { printSettingsService, dashboardService } from '../lib/api';
 import SessionSelector from './SessionSelector';
-import { formatDistanceToNow } from 'date-fns';
 
 interface LayoutProps {
   children?: ReactNode; // Make children optional
@@ -88,6 +88,7 @@ const menuItems = [
       { path: '/settings/classes', label: 'Class Management', icon: School, requiredPermission: 'school_settings' },
       { path: '/settings/print', label: 'School Settings', icon: Settings, requiredPermission: 'school_settings' },
       { path: '/settings/users', label: 'User Management', icon: Settings, requiredPermission: 'users_manage' },
+      { path: '/settings/backup', label: 'Backup & Restore', icon: BackupIcon, requiredPermission: 'school_settings' },
     ],
   },
 ];
