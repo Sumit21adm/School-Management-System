@@ -34,6 +34,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
 } from '@mui/material';
 import { FileText, Download, Send, Printer } from 'lucide-react';
 import axios from 'axios';
@@ -391,7 +392,7 @@ export default function DemandBillGeneration() {
                 {/* Session, Period and Student ID (all in one row) */}
                 <Grid container spacing={2}>
                   {generationType === 'single' && (
-                    <Grid item xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                       <Controller
                         name="studentId"
                         control={control}
@@ -409,7 +410,7 @@ export default function DemandBillGeneration() {
                       />
                     </Grid>
                   )}
-                  <Grid item xs={12} md={generationType === 'single' ? 3 : 4}>
+                  <Grid size={{ xs: 12, md: generationType === 'single' ? 3 : 4 }}>
                     <TextField
                       label={selectedSession ? `Academic Session (ID: ${selectedSession.id})` : 'Academic Session'}
                       fullWidth
@@ -422,7 +423,7 @@ export default function DemandBillGeneration() {
                       render={({ field }) => <input type="hidden" {...field} />}
                     />
                   </Grid>
-                  <Grid item xs={12} md={generationType === 'single' ? 3 : 4}>
+                  <Grid size={{ xs: 12, md: generationType === 'single' ? 3 : 4 }}>
                     <Controller
                       name="month"
                       control={control}
@@ -440,7 +441,7 @@ export default function DemandBillGeneration() {
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} md={generationType === 'single' ? 3 : 4}>
+                  <Grid size={{ xs: 12, md: generationType === 'single' ? 3 : 4 }}>
                     <Controller
                       name="year"
                       control={control}
@@ -521,7 +522,6 @@ export default function DemandBillGeneration() {
                           return !oneTimeFees.includes(feeType.name);
                         })
                         .map((feeType: any) => {
-                          const isTuitionFee = feeType.name === 'Tuition Fee';
                           return (
                             <FormControlLabel
                               key={feeType.id}
@@ -601,7 +601,7 @@ export default function DemandBillGeneration() {
                 Generation Summary
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
@@ -613,7 +613,7 @@ export default function DemandBillGeneration() {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Card variant="outlined" sx={{ bgcolor: 'success.light' }}>
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
@@ -625,7 +625,7 @@ export default function DemandBillGeneration() {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Card variant="outlined" sx={{ bgcolor: 'warning.light' }}>
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
@@ -637,7 +637,7 @@ export default function DemandBillGeneration() {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Card variant="outlined" sx={{ bgcolor: 'error.light' }}>
                     <CardContent>
                       <Typography variant="body2" color="text.secondary">
@@ -750,7 +750,7 @@ export default function DemandBillGeneration() {
             ) : billHistory && billHistory.length > 0 ? (
               <Stack spacing={2} sx={{ mt: 2 }}>
                 {billHistory.map((batch: any, index: number) => (
-                  <Card key={index} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <Card key={index} variant="outlined" sx={{ borderRadius: 2, position: 'relative' }}>
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                         <Box>
@@ -787,20 +787,22 @@ export default function DemandBillGeneration() {
                       </Box>
 
                       {hasDeletePermission && (
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => setDeleteConfirmBatch(batch)}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            opacity: 0.6,
-                            '&:hover': { opacity: 1, bgcolor: 'error.lighter' }
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </IconButton>
+                        <Tooltip title="Delete Batch (Regenerate to Edit)">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setDeleteConfirmBatch(batch)}
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              opacity: 0.6,
+                              '&:hover': { opacity: 1, bgcolor: 'error.lighter' }
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </Tooltip>
                       )}
 
                       <Stack direction="row" spacing={1}>
@@ -814,7 +816,7 @@ export default function DemandBillGeneration() {
                         </Button>
                         <Button
                           size="small"
-                          variant="soft"
+                          variant="outlined"
                           fullWidth
                           startIcon={<Printer size={14} />}
                           onClick={() => {

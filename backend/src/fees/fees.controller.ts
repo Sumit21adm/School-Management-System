@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Param, ParseIntPipe, Res, NotFoundException, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, ParseIntPipe, Res, NotFoundException, Delete, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { FeesService } from './fees.service';
 import { CollectFeeDto, FeeStatementDto } from './dto/fee-collection.dto';
@@ -6,8 +6,12 @@ import { GenerateDemandBillDto } from './dto/demand-bill.dto';
 import { ReceiptPdfService } from './receipt-pdf.service';
 import { DemandBillPdfService } from './demand-bill-pdf.service';
 import { PrismaService } from '../prisma.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('fees')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class FeesController {
     constructor(
         private readonly feesService: FeesService,
@@ -17,26 +21,31 @@ export class FeesController {
     ) { }
 
     @Post('collect')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN')
     async collectFee(@Body() dto: CollectFeeDto) {
         return this.feesService.collectFee(dto);
     }
 
     @Post('statement')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'RECEPTIONIST')
     async getStudentStatement(@Body() dto: FeeStatementDto) {
         return this.feesService.getStudentStatement(dto);
     }
 
     @Post('demand-bills/generate')
+    @Roles('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT')
     async generateDemandBills(@Body() dto: GenerateDemandBillDto) {
         return this.feesService.generateDemandBills(dto);
     }
 
     @Get('demand-bills/history/:sessionId')
+    @Roles('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT')
     async getBillGenerationHistory(@Param('sessionId', ParseIntPipe) sessionId: number) {
         return this.feesService.getBillGenerationHistory(sessionId);
     }
 
     @Get('dashboard/:studentId/session/:sessionId')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'RECEPTIONIST')
     async getStudentDashboard(
         @Param('studentId') studentId: string,
         @Param('sessionId', ParseIntPipe) sessionId: number
@@ -45,6 +54,7 @@ export class FeesController {
     }
 
     @Get('fee-book/:studentId/session/:sessionId')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'RECEPTIONIST')
     async getYearlyFeeBook(
         @Param('studentId') studentId: string,
         @Param('sessionId', ParseIntPipe) sessionId: number
@@ -53,11 +63,13 @@ export class FeesController {
     }
 
     @Get('transactions')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN')
     async getTransactions(@Query() query: any) {
         return this.feesService.getTransactions(query);
     }
 
     @Get('receipt/pdf')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'RECEPTIONIST')
     async getReceiptPdf(
         @Query('receiptNo') receiptNo: string,
         @Res() res: Response,
@@ -97,6 +109,7 @@ export class FeesController {
     }
 
     @Get('demand-bill/pdf')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'RECEPTIONIST')
     async getDemandBillPdf(
         @Query('billNo') billNo: string,
         @Res() res: Response,
@@ -133,6 +146,7 @@ export class FeesController {
     }
 
     @Post('demand-bills/batch-pdf')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN')
     async getBatchDemandBillPdf(
         @Body() body: {
             billNumbers: string[],
@@ -183,6 +197,7 @@ export class FeesController {
         }
     }
     @Delete('demand-bills/batch')
+    @Roles('ADMIN', 'SUPER_ADMIN')
     async deleteDemandBillBatch(@Body() body: { billNumbers: string[] }) {
         return this.feesService.deleteDemandBillBatch(body.billNumbers);
     }

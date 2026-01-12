@@ -13,11 +13,11 @@ import {
   ListItemText,
   Toolbar,
   Typography,
-  Divider,
   ListSubheader,
   Avatar,
   Skeleton,
   Button,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -25,7 +25,6 @@ import {
   PersonAdd as PersonAddIcon,
   CurrencyRupee as MoneyIcon,
   Logout as LogoutIcon,
-  ChevronLeft as ChevronLeftIcon,
   School,
   Receipt,
   TrendingUp,
@@ -42,6 +41,8 @@ import {
 import { useColorMode } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
 import { printSettingsService, dashboardService } from '../lib/api';
+import { backupService } from '../lib/backup-service';
+import { format } from 'date-fns';
 import SessionSelector from './SessionSelector';
 
 interface LayoutProps {
@@ -88,7 +89,6 @@ const menuItems = [
       { path: '/settings/classes', label: 'Class Management', icon: School, requiredPermission: 'school_settings' },
       { path: '/settings/print', label: 'School Settings', icon: Settings, requiredPermission: 'school_settings' },
       { path: '/settings/users', label: 'User Management', icon: Settings, requiredPermission: 'users_manage' },
-      { path: '/settings/backup', label: 'Backup & Restore', icon: BackupIcon, requiredPermission: 'school_settings' },
     ],
   },
 ];
@@ -158,140 +158,126 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   };
 
   const drawer = (
-    <Box>
-      {/* Drawer Header - matches AppBar height */}
-      <Toolbar
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Spacer for Fixed AppBar */}
+      <Toolbar />
+
+      {/* Scrollable Navigation Items */}
+      <Box
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          minHeight: 64,
-          px: 2,
+          flexGrow: 1,
+          overflowY: 'auto',
+          px: 1.5,
+          py: 2,
+          '&::-webkit-scrollbar': {
+            width: '4px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(0,0,0,0.1)',
+            borderRadius: '4px',
+          },
+          '&:hover::-webkit-scrollbar-thumb': {
+            background: 'rgba(0,0,0,0.2)',
+          },
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          {isLoadingSettings ? (
-            <Skeleton variant="rectangular" width={36} height={36} sx={{ borderRadius: 1 }} />
-          ) : printSettings?.logoUrl ? (
-            <Box
-              component="img"
-              src={`${import.meta.env.VITE_API_URL}${printSettings.logoUrl}`}
-              alt={printSettings?.schoolName || 'School'}
-              sx={{
-                width: 36,
-                height: 36,
-                objectFit: 'contain',
-                borderRadius: 1,
-              }}
-            />
-          ) : (
-            <School sx={{ fontSize: 28, color: 'primary.main' }} />
-          )}
-          {isLoadingSettings ? (
-            <Skeleton variant="text" width={100} height={24} />
-          ) : (
-            <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }} noWrap>
-              {printSettings?.schoolName || 'School ERP'}
-            </Typography>
-          )}
-        </Box>
-        <IconButton
-          onClick={handleDrawerToggle}
-          sx={{ display: { sm: 'none' } }}
-        >
-          <ChevronLeftIcon />
-        </IconButton>
-      </Toolbar>
+        <List sx={{ p: 0 }}>
+          {menuItems.map((section, index) => {
+            // Get user permissions
+            const { role: userRole, permissions: userPermissions } = getCurrentUserPermissions();
 
-      <Divider />
+            // Filter items based on permissions
+            const visibleItems = section.items.filter(item =>
+              hasPermission(item.requiredPermission, userRole, userPermissions)
+            );
 
-      {/* Navigation Menu */}
-      <List sx={{ px: 1.5, py: 2 }}>
-        {menuItems.map((section, index) => {
-          // Get user permissions
-          const { role: userRole, permissions: userPermissions } = getCurrentUserPermissions();
+            // Don't render section if no visible items
+            if (visibleItems.length === 0) return null;
 
-          // Filter items based on permissions
-          const visibleItems = section.items.filter(item =>
-            hasPermission(item.requiredPermission, userRole, userPermissions)
-          );
+            return (
+              <Box key={section.title || index} sx={{ mb: 0 }}>
+                {section.title && (
+                  <ListSubheader
+                    disableSticky={false}
+                    sx={{
+                      bgcolor: 'background.paper',
+                      backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.09))', // Light overlay for depth in dark mode
+                      zIndex: 2,
+                      position: 'sticky',
+                      top: 0,
+                      color: 'primary.main',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      py: 1,
+                      lineHeight: '2',
+                      mb: 0.5,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)', // Subtle separator
+                    }}
+                  >
+                    {section.title}
+                  </ListSubheader>
+                )}
+                {visibleItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    location.pathname === item.path ||
+                    (item.path !== '/' && location.pathname.startsWith(item.path));
 
-          // Don't render section if no visible items
-          if (visibleItems.length === 0) return null;
-
-          return (
-            <Box key={section.title || index} sx={{ mb: 2 }}>
-              {section.title && (
-                <ListSubheader
-                  sx={{
-                    bgcolor: 'transparent',
-                    color: 'text.secondary',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    lineHeight: '20px',
-                    mb: 1,
-                  }}
-                >
-                  {section.title}
-                </ListSubheader>
-              )}
-              {visibleItems.map((item) => {
-                const Icon = item.icon;
-                const isActive =
-                  location.pathname === item.path ||
-                  (item.path !== '/' && location.pathname.startsWith(item.path));
-
-                return (
-                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                    <ListItemButton
-                      component={Link}
-                      to={item.path}
-                      onClick={() => setMobileOpen(false)}
-                      selected={isActive}
-                      sx={{
-                        borderRadius: 2,
-                        py: 1.5,
-                        px: 2,
-                        '&.Mui-selected': {
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                          '&:hover': {
-                            bgcolor: 'primary.dark',
-                          },
-                          '& .MuiListItemIcon-root': {
-                            color: 'primary.contrastText',
-                          },
-                        },
-                        '&:hover': {
-                          bgcolor: isActive ? 'primary.dark' : 'action.hover',
-                        },
-                      }}
-                    >
-                      <ListItemIcon
+                  return (
+                    <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                      <ListItemButton
+                        component={Link}
+                        to={item.path}
+                        onClick={() => setMobileOpen(false)}
+                        selected={isActive}
                         sx={{
-                          minWidth: 40,
-                          color: isActive ? 'inherit' : 'text.secondary',
+                          borderRadius: 2,
+                          py: 1.5,
+                          px: 2,
+                          '&.Mui-selected': {
+                            bgcolor: 'primary.main',
+                            color: 'primary.contrastText',
+                            '&:hover': {
+                              bgcolor: 'primary.dark',
+                            },
+                            '& .MuiListItemIcon-root': {
+                              color: 'primary.contrastText',
+                            },
+                          },
+                          '&:hover': {
+                            bgcolor: isActive ? 'primary.dark' : 'action.hover',
+                          },
                         }}
                       >
-                        <Icon />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={item.label}
-                        primaryTypographyProps={{
-                          fontWeight: isActive ? 600 : 500,
-                          fontSize: '0.95rem',
-                        }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </Box>
-          );
-        })}
-      </List>
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 40,
+                            color: isActive ? 'inherit' : 'text.secondary',
+                          }}
+                        >
+                          <Icon />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.label}
+                          primaryTypographyProps={{
+                            fontWeight: isActive ? 600 : 500,
+                            fontSize: '0.95rem',
+                          }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  );
+                })}
+              </Box>
+            );
+          })}
+        </List>
+      </Box>
     </Box>
   );
 
@@ -299,15 +285,15 @@ export default function Layout({ children, onLogout }: LayoutProps) {
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
 
-      {/* AppBar and Drawer code remains same ... */}
       <AppBar
         position="fixed"
         elevation={1}
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          zIndex: (theme) => theme.zIndex.drawer + 1,
           bgcolor: 'background.paper',
           color: 'text.primary',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
         }}
       >
         <Toolbar sx={{ minHeight: 64 }}>
@@ -319,6 +305,39 @@ export default function Layout({ children, onLogout }: LayoutProps) {
           >
             <MenuIcon />
           </IconButton>
+
+          {/* Logo & School Name (Moved here from Drawer) */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mr: 4, minWidth: 'fit-content' }}>
+            {isLoadingSettings ? (
+              <Skeleton variant="rectangular" width={36} height={36} sx={{ borderRadius: 1 }} />
+            ) : printSettings?.logoUrl ? (
+              <Box
+                component="img"
+                src={`${import.meta.env.VITE_API_URL}${printSettings.logoUrl}`}
+                alt={printSettings?.schoolName || 'School'}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  objectFit: 'contain',
+                  borderRadius: 1,
+                }}
+              />
+            ) : (
+              <School sx={{ fontSize: 28, color: 'primary.main' }} />
+            )}
+            {isLoadingSettings ? (
+              <Skeleton variant="text" width={100} height={24} />
+            ) : (
+              <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                {printSettings?.schoolName || 'School ERP'}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Session Selector (Moved here) */}
+          <SessionSelector />
+
+          <Box sx={{ flexGrow: 1 }} />
 
           {/* Theme Toggle */}
           <IconButton
@@ -386,10 +405,45 @@ export default function Layout({ children, onLogout }: LayoutProps) {
             </Button>
           </Box>
 
-          <Box sx={{ flexGrow: 1 }} />
+          {/* Backup & Restore Action */}
+          {(() => {
+            const { role, permissions } = getCurrentUserPermissions();
+            if (hasPermission('school_settings', role, permissions)) {
+              // Fetch latest backup info
+              const { data: backups } = useQuery({
+                queryKey: ['backups'],
+                queryFn: backupService.list,
+                staleTime: 60 * 1000,
+              });
 
-          {/* Session Selector */}
-          <SessionSelector />
+              const lastBackup = backups?.database?.[0]?.date;
+
+              return (
+                <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                  {lastBackup && (
+                    <Box sx={{ textAlign: 'right', mr: 1, display: { xs: 'none', md: 'block' } }}>
+                      <Typography variant="caption" display="block" sx={{ lineHeight: 1, color: 'text.secondary', fontSize: '0.65rem' }}>
+                        Last Backup
+                      </Typography>
+                      <Typography variant="caption" display="block" sx={{ lineHeight: 1, fontWeight: 600, fontSize: '0.7rem' }}>
+                        {format(new Date(lastBackup), 'dd MMM, HH:mm')}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Tooltip title={lastBackup ? `Last Backup: ${format(new Date(lastBackup), 'PPpp')}` : "Backup & Restore"}>
+                    <IconButton
+                      component={Link}
+                      to="/settings/backup"
+                      color="inherit"
+                    >
+                      <BackupIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              );
+            }
+            return null;
+          })()}
 
           {/* User Info */}
           {(() => {
@@ -491,7 +545,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         sx={{
           flexGrow: 1,
           p: { xs: 1.5, sm: 2, md: 3 },
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          // width: { sm: `calc(100% - ${drawerWidth}px)` }, // No longer needed as flex takes remaining space
           minHeight: '100vh',
           bgcolor: 'background.default',
         }}
