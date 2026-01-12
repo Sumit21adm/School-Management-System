@@ -469,7 +469,20 @@ export class FeesService {
             reason?: string;
         }> = [];
         const billDate = new Date();
-        const dueDate = dto.dueDate ? new Date(dto.dueDate) : new Date(billDate.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days from now
+        // Due date: 10th of the month following the bill month
+        let dueDate: Date;
+        if (dto.dueDate) {
+            dueDate = new Date(dto.dueDate);
+        } else {
+            // Calculate next month from bill month/year
+            let dueMonth = dto.month + 1;
+            let dueYear = dto.year;
+            if (dueMonth > 12) {
+                dueMonth = 1;
+                dueYear += 1;
+            }
+            dueDate = new Date(dueYear, dueMonth - 1, 10); // 10th of next month
+        }
 
         for (const student of students) {
             try {

@@ -116,7 +116,18 @@ export default function DemandBillGeneration() {
       sessionId: selectedSession?.id || 1,
       month: currentMonth,
       year: currentYear,
-      dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      // Default due date: 10th of next month
+      dueDate: (() => {
+        let nextMonth = currentMonth + 1;
+        let nextYear = currentYear;
+        if (nextMonth > 12) {
+          nextMonth = 1;
+          nextYear += 1;
+        }
+        // Format as YYYY-MM-DD without timezone conversion
+        const mm = String(nextMonth).padStart(2, '0');
+        return `${nextYear}-${mm}-10`;
+      })(),
     },
   });
 
