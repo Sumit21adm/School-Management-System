@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to see all tags for version calculation
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,6 +48,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -84,6 +88,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download Frontend Artifact
         uses: actions/download-artifact@v4
         with:
@@ -98,9 +107,23 @@ jobs:
         id: names
         run: |
           if [ "${{ inputs.is_production }}" == "true" ]; then
-            echo "TAG_NAME=prod_v${{ github.run_number }}" >> $GITHUB_ENV
-            echo "RELEASE_NAME=Production v${{ github.run_number }}" >> $GITHUB_ENV
+            # Fetch tags to find the latest prod_v release
+            git fetch --tags
+            # Find max version number (default to 0 if none)
+            LAST_TAG=$(git tag -l "prod_v*" | sort -V | tail -n1)
+            
+            if [ -z "$LAST_TAG" ]; then
+              NEXT_VER="1"
+            else
+              # Extract the number part: prod_v15 -> 15
+              VERSION_NUM=${LAST_TAG#prod_v}
+              NEXT_VER=$((VERSION_NUM + 1))
+            fi
+            
+            echo "TAG_NAME=prod_v$NEXT_VER" >> $GITHUB_ENV
+            echo "RELEASE_NAME=Production v$NEXT_VER" >> $GITHUB_ENV
           else
+            # For test, use run number to ensure uniqueness
             echo "TAG_NAME=test_v${{ github.run_number }}" >> $GITHUB_ENV
             echo "RELEASE_NAME=Test v${{ github.run_number }}" >> $GITHUB_ENV
           fi
