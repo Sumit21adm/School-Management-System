@@ -57,7 +57,7 @@ const feeCollectionSchema = z.object({
   studentId: z.string().min(1, 'Student ID is required'),
   sessionId: z.number().min(1),
   feeDetails: z.array(feeDetailSchema).min(1, 'Add at least one fee item'),
-  paymentMode: z.enum(['cash', 'cheque', 'online', 'card', 'upi']),
+  paymentMode: z.enum(['cash', 'cheque', 'online', 'card', 'upi', 'advance']),
   receiptNo: z.string().optional(),
   remarks: z.string().optional(),
   collectedBy: z.string().optional(),
@@ -914,6 +914,7 @@ export default function EnhancedFeeCollection() {
                             <MenuItem value="online">Online Transfer</MenuItem>
                             <MenuItem value="card">Card</MenuItem>
                             <MenuItem value="upi">UPI</MenuItem>
+                            <MenuItem value="advance">💰 Advance Payment</MenuItem>
                           </Select>
                         </FormControl>
                       )}

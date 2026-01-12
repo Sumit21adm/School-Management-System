@@ -6,7 +6,8 @@ export enum PaymentMode {
     CHEQUE = 'cheque',
     ONLINE = 'online',
     CARD = 'card',
-    UPI = 'upi'
+    UPI = 'upi',
+    ADVANCE = 'advance'
 }
 
 export class FeePaymentDetailDto {

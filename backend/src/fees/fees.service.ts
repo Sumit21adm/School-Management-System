@@ -25,6 +25,23 @@ export class FeesService {
             throw new NotFoundException('Student not found');
         }
 
+        // Check if any pending bills exist for this student
+        const hasPendingBills = await this.prisma.demandBill.findFirst({
+            where: {
+                studentId: dto.studentId,
+                sessionId: dto.sessionId,
+                status: { in: ['PENDING', 'SENT', 'PARTIALLY_PAID', 'OVERDUE'] },
+            },
+        });
+
+        // If no pending bills and payment is not 'advance', reject the payment
+        const isAdvancePayment = dto.paymentMode === 'advance';
+        if (!hasPendingBills && !isAdvancePayment) {
+            throw new BadRequestException(
+                'No pending bills exist for this student. Please use "Advance" payment type for advance payments.'
+            );
+        }
+
         // Calculate total amount
         const totalAmount = dto.feeDetails.reduce((sum, detail) => {
             const netAmount = detail.amount - (detail.discountAmount || 0);
@@ -48,11 +65,11 @@ export class FeesService {
                 sessionId: dto.sessionId,
                 receiptNo,
                 amount: new Decimal(totalAmount),
-                description: dto.feeDetails.map(d => `Fee payment`).join(', '),
+                description: isAdvancePayment ? 'Advance payment' : dto.feeDetails.map(d => `Fee payment`).join(', '),
                 paymentMode: dto.paymentMode,
                 date: dto.date ? new Date(dto.date) : new Date(),
                 yearId: new Date().getFullYear(),
-                remarks: dto.remarks,
+                remarks: isAdvancePayment ? (dto.remarks || 'Advance payment - will be adjusted against future bills') : dto.remarks,
                 collectedBy: dto.collectedBy,
                 paymentDetails: {
                     create: dto.feeDetails.map(detail => ({
@@ -72,6 +89,28 @@ export class FeesService {
                 student: true,
             },
         });
+
+        // Skip bill linking for advance payments
+        if (isAdvancePayment) {
+            return {
+                receiptNo: transaction.receiptNo,
+                transactionId: transaction.transactionId,
+                amount: Number(transaction.amount),
+                date: transaction.date,
+                isAdvance: true,
+                student: {
+                    studentId: transaction.student.studentId,
+                    name: transaction.student.name,
+                    className: transaction.student.className,
+                },
+                paymentDetails: transaction.paymentDetails.map(pd => ({
+                    feeType: pd.feeType.name,
+                    amount: Number(pd.amount),
+                    discount: Number(pd.discountAmount),
+                    netAmount: Number(pd.netAmount),
+                })),
+            };
+        }
 
         // Update demand bill if payment is against a specific bill
         // Priority: 1) dto.billNo, 2) Parse from remarks (legacy), 3) Auto-link to oldest pending bill
