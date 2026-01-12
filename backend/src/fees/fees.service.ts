@@ -25,20 +25,25 @@ export class FeesService {
             throw new NotFoundException('Student not found');
         }
 
-        // Check if any pending bills exist for this student
-        const hasPendingBills = await this.prisma.demandBill.findFirst({
+        // Calculate outstanding dues for this student
+        const allBills = await this.prisma.demandBill.findMany({
             where: {
                 studentId: dto.studentId,
                 sessionId: dto.sessionId,
-                status: { in: ['PENDING', 'SENT', 'PARTIALLY_PAID', 'OVERDUE'] },
             },
         });
 
-        // If no pending bills and payment is not 'advance', reject the payment
+        // Calculate total outstanding balance (net amount - paid amount for all bills)
+        const outstandingDues = allBills.reduce((sum, bill) => {
+            const balance = Number(bill.netAmount) - Number(bill.paidAmount);
+            return sum + Math.max(0, balance);
+        }, 0);
+
+        // If no outstanding dues and payment is not 'advance', reject the payment
         const isAdvancePayment = dto.paymentMode === 'advance';
-        if (!hasPendingBills && !isAdvancePayment) {
+        if (outstandingDues <= 0 && !isAdvancePayment) {
             throw new BadRequestException(
-                'No pending bills exist for this student. Please use "Advance" payment type for advance payments.'
+                'No outstanding dues for this student. Please use "Advance" payment type for advance payments.'
             );
         }
 
