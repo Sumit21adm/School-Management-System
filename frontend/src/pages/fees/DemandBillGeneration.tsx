@@ -762,12 +762,26 @@ export default function DemandBillGeneration() {
                             })}
                           </Typography>
                         </Box>
-                        <Chip
-                          label={batch.billType === 'Single Student' ? 'Single' : batch.billType === 'Entire Class' ? 'Class' : 'All'}
-                          size="small"
-                          color={batch.billType === 'Entire Class' ? 'secondary' : 'default'}
-                          sx={{ height: 20, fontSize: '0.7rem' }}
-                        />
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Chip
+                            label={batch.billType === 'Single Student' ? 'Single' : batch.billType === 'Entire Class' ? 'Class' : 'All'}
+                            size="small"
+                            color={batch.billType === 'Entire Class' ? 'secondary' : 'default'}
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                          {hasDeletePermission && (
+                            <Tooltip title="Delete Batch">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setDeleteConfirmBatch(batch)}
+                                sx={{ p: 0.5 }}
+                              >
+                                <Trash2 size={14} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Stack>
                       </Box>
 
                       <Box sx={{ mb: 1.5 }}>
@@ -784,25 +798,6 @@ export default function DemandBillGeneration() {
                           </Typography>
                         </Box>
                       </Box>
-
-                      {hasDeletePermission && (
-                        <Tooltip title="Delete Batch (Regenerate to Edit)">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => setDeleteConfirmBatch(batch)}
-                            sx={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
-                              opacity: 0.6,
-                              '&:hover': { opacity: 1, bgcolor: 'error.lighter' }
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
 
                       <Stack direction="row" spacing={1}>
                         <Button
