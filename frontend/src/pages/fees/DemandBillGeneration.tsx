@@ -769,7 +769,7 @@ export default function DemandBillGeneration() {
                             color={batch.billType === 'Entire Class' ? 'secondary' : 'default'}
                             sx={{ height: 20, fontSize: '0.7rem' }}
                           />
-                          {hasDeletePermission && (
+                          {hasDeletePermission && !batch.hasPayments && (
                             <Tooltip title="Delete Batch">
                               <IconButton
                                 size="small"
@@ -779,6 +779,16 @@ export default function DemandBillGeneration() {
                               >
                                 <Trash2 size={14} />
                               </IconButton>
+                            </Tooltip>
+                          )}
+                          {batch.hasPayments && (
+                            <Tooltip title="Cannot delete - has linked payments">
+                              <Chip
+                                label="Paid"
+                                size="small"
+                                color="success"
+                                sx={{ height: 20, fontSize: '0.65rem', ml: 0.5 }}
+                              />
                             </Tooltip>
                           )}
                         </Stack>

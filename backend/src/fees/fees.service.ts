@@ -1045,6 +1045,9 @@ export class FeesService {
                 }
             }
 
+            // Check if any bill in the batch has payments
+            const hasPayments = batch.bills.some(b => Number(b.paidAmount) > 0);
+
             return {
                 timestamp: batch.timestamp,
                 billType,
@@ -1055,6 +1058,7 @@ export class FeesService {
                 feeTypes: Array.from(batch.feeTypes),
                 studentCount: batch.bills.length,
                 totalAmount: batch.bills.reduce((sum, b) => sum + Number(b.totalAmount), 0),
+                hasPayments, // True if any bill has linked payments - cannot be deleted
                 bills: batch.bills.map(b => ({
                     billNo: b.billNo,
                     studentId: b.student.studentId,
@@ -1062,6 +1066,7 @@ export class FeesService {
                     className: b.student.className,
                     section: b.student.section,
                     amount: Number(b.totalAmount),
+                    paidAmount: Number(b.paidAmount),
                     previousDues: Number(b.previousDues),
                     advanceUsed: Number(b.advanceUsed),
                     status: b.status,
