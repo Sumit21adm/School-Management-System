@@ -86,7 +86,7 @@ const CollectFeeDialog: React.FC<CollectFeeDialogProps> = ({
                 feeDetails: [{
                     // For now, we put it as a generic "Fee Payment" since frontend doesn't split heads yet
                     // In a more advanced version, we'd allocate to specific heads.
-                    feeTypeId: 1, // Using ID 1 (Tuition Fee usually) as default placeholder or we need a proper split UI.
+                    // feeTypeId: 1, // Using ID 1 (Tuition Fee usually) as default placeholder or we need a proper split UI.
                     // Wait, using feeTypeId 1 is risky if it doesn't exist.
                     // The backend `collectFee` expects `feeDetails` array.
                     // Let's check `collectFee` implementation in `dts` or service.
