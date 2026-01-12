@@ -8,10 +8,6 @@ on:
         type: boolean
         required: true
         default: false
-      version:
-        description: 'Version Number'
-        required: true
-        default: '0.1.0'
 
 jobs:
   build-frontend:
@@ -102,11 +98,11 @@ jobs:
         id: names
         run: |
           if [ "${{ inputs.is_production }}" == "true" ]; then
-            echo "TAG_NAME=Release_v${{ inputs.version }}" >> $GITHUB_ENV
-            echo "RELEASE_NAME=Release v${{ inputs.version }}" >> $GITHUB_ENV
+            echo "TAG_NAME=prod_v${{ github.run_number }}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=Production v${{ github.run_number }}" >> $GITHUB_ENV
           else
-            echo "TAG_NAME=Test-${{ inputs.version }}-Build-${{ github.run_number }}" >> $GITHUB_ENV
-            echo "RELEASE_NAME=Test ${{ inputs.version }} (Build ${{ github.run_number }})" >> $GITHUB_ENV
+            echo "TAG_NAME=test_v${{ github.run_number }}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=Test v${{ github.run_number }}" >> $GITHUB_ENV
           fi
 
       - name: Create Release
