@@ -60,9 +60,5 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-darwin-x64": "^4.54.0",
-    "lightningcss-darwin-x64": "^1.30.2"
   }
 }
