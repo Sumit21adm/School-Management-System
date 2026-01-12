@@ -49,3 +49,7 @@ Thumbs.db
 *.zip
 /deploy
 backups/
+
+# Backup directories
+**/uploads_backup_*/
+*.tgz
