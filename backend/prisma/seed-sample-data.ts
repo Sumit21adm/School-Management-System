@@ -32,7 +32,7 @@ async function main() {
   // ============================================
   console.log('👤 Creating users with different roles...');
   const hashedPassword = await bcrypt.hash('password123', 10);
-  
+
   const users = [
     { username: 'superadmin', name: 'Super Administrator', email: 'superadmin@school.com', role: UserRole.SUPER_ADMIN },
     { username: 'admin', name: 'School Admin', email: 'admin@school.com', role: UserRole.ADMIN },
@@ -263,7 +263,7 @@ async function main() {
   // 8. STUDENTS WITH DIVERSE SCENARIOS
   // ============================================
   console.log('🎓 Creating students with diverse scenarios...');
-  
+
   const indianFirstNames = ['Aarav', 'Vivaan', 'Aditya', 'Ananya', 'Diya', 'Ishaan', 'Kavya', 'Arjun', 'Priya', 'Rohan', 'Sanya', 'Vihaan', 'Isha', 'Reyansh', 'Kiara', 'Arnav', 'Myra', 'Krishna', 'Aadhya', 'Dhruv'];
   const indianLastNames = ['Sharma', 'Patel', 'Singh', 'Kumar', 'Gupta', 'Verma', 'Joshi', 'Mishra', 'Agarwal', 'Yadav', 'Mehta', 'Saxena', 'Kapoor', 'Chauhan', 'Reddy'];
   const categories = ['General', 'OBC', 'SC', 'ST', 'EWS'];
@@ -272,16 +272,16 @@ async function main() {
   const studentsToCreate: any[] = [];
   let studentIndex = 1;
 
-  // Create students for each class (5-10 per class)
+  // Create students for each class (fixed 5 per class for consistency)
   for (const className of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']) {
-    const studentsPerClass = Math.floor(Math.random() * 6) + 5; // 5-10 students
-    
+    const studentsPerClass = 5; // Fixed count for consistent data across machines
+
     for (let i = 0; i < studentsPerClass; i++) {
       const firstName = randomItem(indianFirstNames);
       const lastName = randomItem(indianLastNames);
       const gender = Math.random() > 0.5 ? 'Male' : 'Female';
       const section = Math.random() > 0.5 ? 'A' : 'B';
-      
+
       studentsToCreate.push({
         studentId: generateStudentId(studentIndex++),
         name: `${firstName} ${lastName}`,
@@ -360,16 +360,18 @@ async function main() {
   // 9. STUDENT FEE DISCOUNTS
   // ============================================
   console.log('🎁 Creating student discounts...');
-  
+
   // Give discounts to some students
   const discountStudents = allStudents.slice(0, 10);
   for (const student of discountStudents) {
     await prisma.studentFeeDiscount.upsert({
-      where: { studentId_feeTypeId_sessionId: { 
-        studentId: student.studentId, 
-        feeTypeId: createdFeeTypes['Tuition Fee'].id, 
-        sessionId: activeSession.id 
-      }},
+      where: {
+        studentId_feeTypeId_sessionId: {
+          studentId: student.studentId,
+          feeTypeId: createdFeeTypes['Tuition Fee'].id,
+          sessionId: activeSession.id
+        }
+      },
       update: {},
       create: {
         studentId: student.studentId,
@@ -388,7 +390,7 @@ async function main() {
   // 10. FEE TRANSACTIONS (PAYMENTS)
   // ============================================
   console.log('💳 Creating fee transactions...');
-  
+
   let transactionIndex = 1;
   const paymentModes = ['Cash', 'UPI', 'Card', 'NetBanking', 'Cheque'];
   const collectors = ['Rajesh Kumar', 'Anita Sharma', 'Pooja Yadav'];
@@ -397,7 +399,7 @@ async function main() {
   for (const student of allStudents.slice(0, Math.floor(allStudents.length * 0.8))) {
     // Create 2-4 transactions per student for different months
     const numTransactions = Math.floor(Math.random() * 3) + 2;
-    
+
     for (let month = 4; month < 4 + numTransactions && month <= 12; month++) {
       const transaction = await prisma.feeTransaction.create({
         data: {
@@ -433,21 +435,23 @@ async function main() {
   // 11. DEMAND BILLS
   // ============================================
   console.log('📄 Creating demand bills...');
-  
+
   let billIndex = 1;
   for (const student of allStudents.slice(0, 30)) {
     // Create bills for past months
     for (let month = 4; month <= 10; month++) {
       const isPaid = Math.random() > 0.3;
       const totalAmount = 3500 + Math.floor(Math.random() * 1500);
-      
+
       await prisma.demandBill.upsert({
-        where: { studentId_sessionId_month_year: {
-          studentId: student.studentId,
-          sessionId: activeSession.id,
-          month,
-          year: 2024
-        }},
+        where: {
+          studentId_sessionId_month_year: {
+            studentId: student.studentId,
+            sessionId: activeSession.id,
+            month,
+            year: 2024
+          }
+        },
         update: {},
         create: {
           billNo: generateBillNo(student.studentId, month, 2024),
@@ -476,7 +480,7 @@ async function main() {
   // 12. EXAM TYPES AND EXAMS
   // ============================================
   console.log('📝 Creating exam types and exams...');
-  
+
   const examTypes = [
     { name: 'Unit Test', description: 'Monthly unit tests' },
     { name: 'Half Yearly', description: 'Half yearly examination' },
@@ -514,7 +518,7 @@ async function main() {
   // 13. PRINT SETTINGS
   // ============================================
   console.log('🖨️ Creating print settings...');
-  
+
   await prisma.printSettings.upsert({
     where: { id: 1 },
     update: {},
@@ -537,7 +541,7 @@ async function main() {
   // 14. CLASS TEACHER ASSIGNMENTS
   // ============================================
   console.log('👨‍🏫 Creating class teacher assignments...');
-  
+
   const teacherIds = [
     createdUsers['teacher1'].id,
     createdUsers['teacher2'].id,
