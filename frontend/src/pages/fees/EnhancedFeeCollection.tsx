@@ -33,8 +33,7 @@ import {
   Autocomplete,
 } from '@mui/material';
 import { Plus, Trash2, IndianRupee, Clock, Printer, Search } from 'lucide-react';
-import axios from 'axios';
-import { feeService, admissionService } from '../../lib/api';
+import { feeService, admissionService, apiClient } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import { hasPermission, getCurrentUserPermissions } from '../../utils/permissions';
 
@@ -47,8 +46,6 @@ function debounce<T extends (...args: any[]) => any>(func: T, wait: number) {
     timeout = setTimeout(() => func.apply(context, args), wait);
   };
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const feeDetailSchema = z.object({
   feeTypeId: z.number().min(1, 'Select fee type'),
@@ -129,7 +126,7 @@ export default function EnhancedFeeCollection() {
   const { data: feeTypes } = useQuery({
     queryKey: ['fee-types'],
     queryFn: async () => {
-      const response = await axios.get(`${API_URL}/fee-types`);
+      const response = await apiClient.get('/fee-types');
       return response.data.feeTypes;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -140,7 +137,7 @@ export default function EnhancedFeeCollection() {
   const { data: recentTransactions } = useQuery({
     queryKey: ['recent-transactions'],
     queryFn: async () => {
-      const response = await axios.get(`${API_URL}/fees/transactions`, {
+      const response = await apiClient.get('/fees/transactions', {
         params: { limit: 10, sortBy: 'date', sortOrder: 'desc' }
       });
       return response.data.transactions || response.data;
@@ -153,8 +150,8 @@ export default function EnhancedFeeCollection() {
   const { data: dashboard, isLoading: loadingStudent } = useQuery({
     queryKey: ['student-dashboard', studentId, sessionId],
     queryFn: async () => {
-      const response = await axios.get(
-        `${API_URL}/fees/dashboard/${studentId}/session/${sessionId}`
+      const response = await apiClient.get(
+        `/fees/dashboard/${studentId}/session/${sessionId}`
       );
       return response.data;
     },
@@ -306,7 +303,7 @@ export default function EnhancedFeeCollection() {
   // Collect fee mutation
   const collectFeeMutation = useMutation({
     mutationFn: async (data: FeeCollectionFormData) => {
-      const response = await axios.post(`${API_URL}/fees/collect`, data);
+      const response = await apiClient.post('/fees/collect', data);
       return response.data;
     },
     onSuccess: (data, variables) => {

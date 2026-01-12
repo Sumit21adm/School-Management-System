@@ -1169,9 +1169,9 @@ export default function AdmissionList() {
                       <CircularProgress size={40} sx={{ mb: 2 }} />
                       <Typography color="text.secondary">Loading fee status...</Typography>
                     </Box>
-                  ) : !feeStatus ? (
+                  ) : !feeStatus || !feeStatus.summary ? (
                     <Box sx={{ p: 3, textAlign: 'center' }}>
-                      <Typography color="text.secondary">No fee data available.</Typography>
+                      <Typography color="text.secondary">No fee data available for this session.</Typography>
                     </Box>
                   ) : (
                     <>
