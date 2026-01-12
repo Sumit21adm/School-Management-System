@@ -72,7 +72,7 @@ import {
   Download,
   Printer,
 } from 'lucide-react';
-import { admissionService, feeService, classService } from '../../lib/api';
+import { admissionService, feeService, classService, apiClient } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import { db } from '../../lib/db';
 import { useSession } from '../../contexts/SessionContext';
@@ -146,14 +146,13 @@ export default function AdmissionList() {
   });
 
   // Fetch fee status for selected student
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const { data: feeStatus, isLoading: loadingFees } = useQuery({
     queryKey: ['student-fee-status', selectedStudent?.studentId, selectedSession?.id],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/fees/dashboard/${selectedStudent?.studentId}/session/${selectedSession?.id}`
+      const response = await apiClient.get(
+        `/fees/dashboard/${selectedStudent?.studentId}/session/${selectedSession?.id}`
       );
-      return response.json();
+      return response.data;
     },
     enabled: !!selectedStudent && !!selectedSession && tabValue === 2,
   });
@@ -161,10 +160,10 @@ export default function AdmissionList() {
   const { data: feeBook } = useQuery({
     queryKey: ['fee-book', selectedStudent?.studentId, selectedSession?.id],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/fees/fee-book/${selectedStudent?.studentId}/session/${selectedSession?.id}`
+      const response = await apiClient.get(
+        `/fees/fee-book/${selectedStudent?.studentId}/session/${selectedSession?.id}`
       );
-      return response.json();
+      return response.data;
     },
     enabled: showFeeBook && !!selectedStudent?.studentId && !!selectedSession,
   });
