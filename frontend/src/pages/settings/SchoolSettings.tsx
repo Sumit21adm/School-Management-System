@@ -12,6 +12,7 @@ import {
     CircularProgress,
     Avatar,
     Divider,
+    MenuItem,
 } from '@mui/material';
 import {
     Save as SaveIcon,
@@ -19,6 +20,7 @@ import {
     Business as BusinessIcon,
     Badge as BadgeIcon,
     Description as DocumentIcon,
+    Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { printSettingsService, apiClient } from '../../lib/api';
 import ImageCropDialog from '../../components/ImageCropDialog';
@@ -43,6 +45,8 @@ interface SchoolSettingsData {
     admitCardNote: string;
     transferCertNote: string;
     idCardNote: string;
+    // Regional Settings
+    timezone: string;
 }
 
 const defaultSettings: SchoolSettingsData = {
@@ -62,6 +66,7 @@ const defaultSettings: SchoolSettingsData = {
     admitCardNote: '',
     transferCertNote: '',
     idCardNote: '',
+    timezone: 'Asia/Kolkata',
 };
 
 export default function SchoolSettings() {
@@ -335,6 +340,39 @@ export default function SchoolSettings() {
                                     placeholder="e.g. Affiliated to CBSE, New Delhi (Affiliation No: 3430123)"
                                     helperText="This note appears on official documents"
                                 />
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    {/* Regional Settings Section */}
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <SettingsIcon color="primary" />
+                            <Typography variant="h6">Regional Settings</Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Configure timezone and regional preferences for date/time handling
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    select
+                                    label="Timezone"
+                                    name="timezone"
+                                    value={formData.timezone}
+                                    onChange={handleChange}
+                                    helperText="Used for date calculations and display"
+                                >
+                                    <MenuItem value="Asia/Kolkata">🇮🇳 India (IST) - Asia/Kolkata</MenuItem>
+                                    <MenuItem value="Asia/Dubai">🇦🇪 UAE (GST) - Asia/Dubai</MenuItem>
+                                    <MenuItem value="Asia/Singapore">🇸🇬 Singapore (SGT) - Asia/Singapore</MenuItem>
+                                    <MenuItem value="Asia/Tokyo">🇯🇵 Japan (JST) - Asia/Tokyo</MenuItem>
+                                    <MenuItem value="Europe/London">🇬🇧 UK (GMT/BST) - Europe/London</MenuItem>
+                                    <MenuItem value="America/New_York">🇺🇸 US East (EST) - America/New_York</MenuItem>
+                                    <MenuItem value="America/Los_Angeles">🇺🇸 US West (PST) - America/Los_Angeles</MenuItem>
+                                </TextField>
                             </Grid>
                         </Grid>
                     </Paper>
