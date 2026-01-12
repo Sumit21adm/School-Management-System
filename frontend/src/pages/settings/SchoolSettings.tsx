@@ -1,34 +1,28 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Container,
     Paper,
     Typography,
     Box,
     TextField,
     Button,
     Grid,
-    Card,
-    CardContent,
     Alert,
     Snackbar,
     CircularProgress,
     Avatar,
     Divider,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
 } from '@mui/material';
 import {
     Save as SaveIcon,
     CloudUpload as UploadIcon,
     Business as BusinessIcon,
-    ExpandMore as ExpandMoreIcon,
     Badge as BadgeIcon,
     Description as DocumentIcon,
 } from '@mui/icons-material';
 import { printSettingsService, apiClient } from '../../lib/api';
 import ImageCropDialog from '../../components/ImageCropDialog';
+import PageHeader from '../../components/PageHeader';
 
 interface SchoolSettingsData {
     id: number | null;
@@ -199,22 +193,20 @@ export default function SchoolSettings() {
 
     if (isLoading) {
         return (
-            <Container maxWidth="lg" sx={{ py: 4 }}>
+            <Box sx={{ py: 4 }}>
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
                     <CircularProgress />
                 </Box>
-            </Container>
+            </Box>
         );
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                School Configuration
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Configure your school's identity, affiliations, and document notes for receipts, bills, and reports.
-            </Typography>
+        <Box>
+            <PageHeader
+                title="School Configuration"
+                subtitle="Configure your school's identity, affiliations, and document notes for receipts, bills, and reports."
+            />
 
             <Grid container spacing={3}>
                 {/* Main Settings Form */}
@@ -688,6 +680,6 @@ export default function SchoolSettings() {
                 aspectRatio={1}
                 title="Crop School Logo"
             />
-        </Container>
+        </Box>
     );
 }

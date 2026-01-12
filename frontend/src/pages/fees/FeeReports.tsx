@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Container,
   Paper,
-  Typography,
   Box,
   Tabs,
   Tab,
@@ -21,6 +20,7 @@ import DailyCollectionReport from '../../components/fees/DailyCollectionReport';
 import ClassOutstandingReport from '../../components/fees/ClassOutstandingReport';
 import BillHistoryReport from '../../components/fees/BillHistoryReport';
 import FeeTypeAnalysis from '../../components/fees/FeeTypeAnalysis';
+import PageHeader from '../../components/PageHeader';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -74,15 +74,11 @@ export default function FeeReports() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" fontWeight={600}>
-          Fee Reports
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Session: {selectedSession.name}
-        </Typography>
-      </Box>
+    <Box>
+      <PageHeader
+        title="Fee Reports"
+        subtitle={`Session: ${selectedSession.name}`}
+      />
 
       <Paper sx={{ borderRadius: 3 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -147,6 +143,6 @@ export default function FeeReports() {
           </TabPanel>
         </Box>
       </Paper>
-    </Container>
+    </Box>
   );
 }

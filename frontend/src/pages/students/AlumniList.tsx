@@ -41,6 +41,7 @@ import {
 import { admissionService } from '../../lib/api';
 import { db } from '../../lib/db';
 import { useSession } from '../../contexts/SessionContext';
+import PageHeader from '../../components/PageHeader';
 
 export default function AlumniList() {
     const { selectedSession } = useSession();
@@ -158,16 +159,10 @@ export default function AlumniList() {
 
     return (
         <Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2} mb={3}>
-                <Box>
-                    <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
-                        Alumni Management
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        View and manage graduated/passout students
-                    </Typography>
-                </Box>
-            </Stack>
+            <PageHeader
+                title="Alumni Management"
+                subtitle="View and manage graduated/passout students"
+            />
 
             <Card elevation={2} sx={{ mb: 3, borderRadius: 3 }}>
                 <CardContent sx={{ p: 3 }}>

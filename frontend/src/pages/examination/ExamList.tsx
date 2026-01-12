@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { examinationService } from '../../lib/api';
 import type { Exam, ExamType } from '../../types/examination';
 import { useSession } from '../../contexts/SessionContext';
+import PageHeader from '../../components/PageHeader';
 
 export default function ExamList() {
     const navigate = useNavigate();
@@ -81,15 +82,15 @@ export default function ExamList() {
     };
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4">
-                    Examinations
-                </Typography>
-                <Button variant="contained" startIcon={<Add />} onClick={() => setCreateDialogOpen(true)}>
-                    Create Exam
-                </Button>
-            </Box>
+        <Box>
+            <PageHeader
+                title="Examinations"
+                action={
+                    <Button variant="contained" startIcon={<Add />} onClick={() => setCreateDialogOpen(true)}>
+                        Create Exam
+                    </Button>
+                }
+            />
 
             <Paper sx={{ width: '100%', mb: 2, p: 2 }}>
                 {!selectedSession ? (
@@ -224,6 +225,6 @@ export default function ExamList() {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
-        </Container>
+        </Box>
     );
 }

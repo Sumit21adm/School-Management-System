@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Container, Paper, Typography, Box, Tabs, Tab, Table, TableBody, TableCell,
+    Paper, Box, Tabs, Tab, Table, TableBody, TableCell,
     TableHead, TableRow, Button, IconButton, Dialog, DialogTitle,
     DialogContent, DialogActions, TextField, Alert, Snackbar
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import { examinationService } from '../../lib/api';
 import type { ExamType, Subject } from '../../types/examination';
+import PageHeader from '../../components/PageHeader';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -183,10 +184,9 @@ export default function ExamConfiguration() {
 
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" gutterBottom>
-                Examination Configuration
-            </Typography>
+        <Box>
+            <PageHeader title="Examination Configuration" />
+
             <Paper sx={{ width: '100%', mb: 2 }}>
                 <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} indicatorColor="primary" textColor="primary">
                     <Tab label="Exam Types" />
@@ -345,6 +345,6 @@ export default function ExamConfiguration() {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
-        </Container>
+        </Box>
     );
 }

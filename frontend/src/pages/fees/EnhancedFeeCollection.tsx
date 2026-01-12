@@ -30,10 +30,22 @@ import {
   TableHead,
   TableRow,
   Divider,
+  Autocomplete,
 } from '@mui/material';
-import { Plus, Trash2, IndianRupee, Clock, Printer } from 'lucide-react';
+import { Plus, Trash2, IndianRupee, Clock, Printer, Search } from 'lucide-react';
 import axios from 'axios';
-import { feeService } from '../../lib/api';
+import { feeService, admissionService } from '../../lib/api';
+import PageHeader from '../../components/PageHeader';
+
+// Simple debounce implementation
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number) {
+  let timeout: ReturnType<typeof setTimeout>;
+  return function (this: any, ...args: Parameters<T>) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -366,9 +378,15 @@ export default function EnhancedFeeCollection() {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
-        Fee Collection
-      </Typography>
+      <PageHeader
+        title="Fee Collection"
+        quickTips={[
+          { text: 'Use "Auto-Fill" to populate outstanding dues', highlight: '"Auto-Fill"' },
+          { text: 'You can collect multiple fee types in one receipt', highlight: 'multiple fee types' },
+          { text: 'Discounts are applied per fee type', highlight: 'Discounts' },
+          { text: 'Receipt will be auto-generated and can be printed', highlight: 'auto-generated' },
+        ]}
+      />
 
       <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
         {/* Main Collection Form */}
@@ -390,35 +408,8 @@ export default function EnhancedFeeCollection() {
               <Stack spacing={3}>
                 {/* Student Selection */}
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={8}>
-                    <Controller
-                      name="studentId"
-                      control={control}
-                      render={({ field }) => {
-                        const inputProps = useMemo(() => ({
-                          endAdornment: loadingStudent && (
-                            <InputAdornment position="end">
-                              <CircularProgress size={20} />
-                            </InputAdornment>
-                          ),
-                        }), [loadingStudent]);
-
-                        return (
-                          <TextField
-                            {...field}
-                            label="Student ID"
-                            fullWidth
-                            required
-                            error={!!errors.studentId}
-                            helperText={errors.studentId?.message}
-                            placeholder="Enter student ID"
-                            InputProps={inputProps}
-                          />
-                        );
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
+                  {/* 1. Academic Session */}
+                  <Grid size={{ xs: 12, md: 3 }}>
                     <TextField
                       label="Academic Session"
                       fullWidth
@@ -430,6 +421,264 @@ export default function EnhancedFeeCollection() {
                       name="sessionId"
                       control={control}
                       render={({ field }) => <input type="hidden" {...field} />}
+                    />
+                  </Grid>
+
+                  {/* 2. Student ID Search */}
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Controller
+                      name="studentId"
+                      control={control}
+                      render={({ field }) => {
+                        const [open, setOpen] = useState(false);
+                        const [options, setOptions] = useState<any[]>([]);
+                        const [loading, setLoading] = useState(false);
+                        const [inputValue, setInputValue] = useState('');
+
+                        const searchStudents = useMemo(
+                          () =>
+                            debounce(async (query: string) => {
+                              if (!query || query.length < 1) {
+                                setOptions([]);
+                                return;
+                              }
+                              setLoading(true);
+                              try {
+                                const response = await admissionService.getStudents({
+                                  search: query,
+                                  limit: 10,
+                                  status: 'active'
+                                });
+                                setOptions(response.data.data || []);
+                              } catch (err) {
+                                console.error('Error searching students:', err);
+                              } finally {
+                                setLoading(false);
+                              }
+                            }, 500),
+                          []
+                        );
+
+                        useEffect(() => {
+                          searchStudents(inputValue);
+                        }, [inputValue, searchStudents]);
+
+                        // Determine selected value object for Autocomplete from field.value (studentId) string
+                        // We need to keep track of the selected student object to show correct label
+                        const [selectedOpt, setSelectedOpt] = useState<any>(null);
+
+                        // If studentId changes externally (e.g. URL), try to fetch basic info if not already set
+                        useEffect(() => {
+                          if (field.value && !selectedOpt) {
+                            if (studentInfo && studentInfo.studentId === field.value) {
+                              setSelectedOpt(studentInfo);
+                            }
+                          } else if (field.value && selectedOpt && selectedOpt.studentId !== field.value) {
+                            // Sync handling if needed, usually managed by onChange
+                            if (studentInfo && studentInfo.studentId === field.value) {
+                              setSelectedOpt(studentInfo);
+                            }
+                          } else if (!field.value) {
+                            // Cleared by the other autocomplete, sync this one
+                            setSelectedOpt(null);
+                            setInputValue('');
+                          }
+                        }, [field.value, studentInfo, selectedOpt]);
+
+                        return (
+                          <Autocomplete
+                            fullWidth
+                            value={selectedOpt}
+                            open={open}
+                            onOpen={() => setOpen(true)}
+                            onClose={() => setOpen(false)}
+                            isOptionEqualToValue={(option, value) => option.studentId === value.studentId}
+                            getOptionLabel={(option) => option.studentId || ''}
+                            filterOptions={(x) => x}
+                            forcePopupIcon={false}
+                            options={options}
+                            loading={loading}
+                            inputValue={inputValue}
+                            onInputChange={(event, newInputValue) => {
+                              setInputValue(newInputValue);
+                            }}
+                            onChange={(event, newValue: any) => {
+                              if (newValue) {
+                                field.onChange(newValue.studentId);
+                                setSelectedOpt(newValue);
+                                setStudentInfo(newValue);
+                              } else {
+                                field.onChange('');
+                                setSelectedOpt(null);
+                                setStudentInfo(null);
+                              }
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                fullWidth
+                                label="Student ID"
+                                placeholder="Enter ID..."
+                                required={!selectedOpt}
+                                error={!!errors.studentId}
+                                InputProps={{
+                                  ...params.InputProps,
+                                  endAdornment: (
+                                    <>
+                                      {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
+                              />
+                            )}
+                            renderOption={(props, option) => (
+                              <li {...props} key={option.id}>
+                                <Box>
+                                  <Typography variant="subtitle2">
+                                    {option.name} <span style={{ color: 'gray' }}>({option.studentId})</span>
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Class: {option.className}-{option.section} | Father: {option.fatherName}
+                                  </Typography>
+                                  {option.address && (
+                                    <Typography variant="caption" display="block" color="text.secondary">
+                                      Address: {option.address}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </li>
+                            )}
+                          />
+                        );
+                      }}
+                    />
+                  </Grid>
+
+                  {/* 3. Student Name Search */}
+                  <Grid size={{ xs: 12, md: 5 }}>
+                    <Controller
+                      name="studentId"
+                      control={control}
+                      render={({ field }) => {
+                        const [open, setOpen] = useState(false);
+                        const [options, setOptions] = useState<any[]>([]);
+                        const [loading, setLoading] = useState(false);
+                        const [inputValue, setInputValue] = useState('');
+
+                        const searchStudents = useMemo(
+                          () =>
+                            debounce(async (query: string) => {
+                              if (!query || query.length < 2) {
+                                setOptions([]);
+                                return;
+                              }
+                              setLoading(true);
+                              try {
+                                const response = await admissionService.getStudents({
+                                  search: query,
+                                  limit: 10,
+                                  status: 'active'
+                                });
+                                setOptions(response.data.data || []);
+                              } catch (err) {
+                                console.error('Error searching students:', err);
+                              } finally {
+                                setLoading(false);
+                              }
+                            }, 500),
+                          []
+                        );
+
+                        useEffect(() => {
+                          searchStudents(inputValue);
+                        }, [inputValue, searchStudents]);
+
+                        // Sync with parent state logic (simplified duplication for now to ensure both work)
+                        // In a refactor, we should hoist this state up, but for now we rely on the form field value + studentInfo
+                        const [selectedOpt, setSelectedOpt] = useState<any>(null);
+
+                        useEffect(() => {
+                          // Use studentInfo as the source of truth for the 'selected object' when it changes
+                          if (studentInfo && studentInfo.studentId === field.value) {
+                            setSelectedOpt(studentInfo);
+                          } else if (!field.value) {
+                            // Cleared by the other autocomplete, sync this one
+                            setSelectedOpt(null);
+                            setInputValue('');
+                          }
+                        }, [field.value, studentInfo]);
+
+                        return (
+                          <Autocomplete
+                            fullWidth
+                            value={selectedOpt}
+                            open={open}
+                            onOpen={() => setOpen(true)}
+                            onClose={() => setOpen(false)}
+                            isOptionEqualToValue={(option, value) => option.studentId === value.studentId}
+                            getOptionLabel={(option) => option.name || ''}
+                            filterOptions={(x) => x}
+                            forcePopupIcon={false}
+                            options={options}
+                            loading={loading}
+                            inputValue={inputValue}
+                            onInputChange={(event, newInputValue) => {
+                              setInputValue(newInputValue);
+                            }}
+                            onChange={(event, newValue: any) => {
+                              if (newValue) {
+                                field.onChange(newValue.studentId);
+                                setSelectedOpt(newValue);
+                                setStudentInfo(newValue);
+                              } else {
+                                field.onChange('');
+                                setSelectedOpt(null);
+                                setStudentInfo(null);
+                              }
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                fullWidth
+                                label="Student Name"
+                                placeholder="Enter Name..."
+                                InputProps={{
+                                  ...params.InputProps,
+                                  startAdornment: (
+                                    <InputAdornment position="start">
+                                      <Search size={20} color="gray" />
+                                    </InputAdornment>
+                                  ),
+                                  endAdornment: (
+                                    <>
+                                      {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
+                              />
+                            )}
+                            renderOption={(props, option) => (
+                              <li {...props} key={option.id}>
+                                <Box>
+                                  <Typography variant="subtitle2">
+                                    {option.name} <span style={{ color: 'gray' }}>({option.studentId})</span>
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Class: {option.className}-{option.section} | Father: {option.fatherName}
+                                  </Typography>
+                                  {option.address && (
+                                    <Typography variant="caption" display="block" color="text.secondary">
+                                      Address: {option.address}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </li>
+                            )}
+                          />
+                        );
+                      }}
                     />
                   </Grid>
                 </Grid>
@@ -638,7 +887,7 @@ export default function EnhancedFeeCollection() {
 
                 {/* Payment Details */}
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Controller
                       name="paymentMode"
                       control={control}
@@ -656,7 +905,7 @@ export default function EnhancedFeeCollection() {
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Controller
                       name="date"
                       control={control}
@@ -671,7 +920,7 @@ export default function EnhancedFeeCollection() {
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Controller
                       name="receiptNo"
                       control={control}
@@ -685,7 +934,7 @@ export default function EnhancedFeeCollection() {
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Controller
                       name="collectedBy"
                       control={control}
@@ -694,7 +943,7 @@ export default function EnhancedFeeCollection() {
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Controller
                       name="remarks"
                       control={control}
@@ -887,22 +1136,6 @@ export default function EnhancedFeeCollection() {
                     No recent transactions
                   </Typography>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card elevation={0} sx={{ borderRadius: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ opacity: 0.9 }}>
-                  Quick Tips
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  • Use "Auto-Fill" to populate outstanding dues
-                  <br />
-                  • You can collect multiple fee types in one receipt
-                  <br />
-                  • Discounts are applied per fee type
-                  <br />• Receipt will be auto-generated and can be printed
-                </Typography>
               </CardContent>
             </Card>
           </Stack>

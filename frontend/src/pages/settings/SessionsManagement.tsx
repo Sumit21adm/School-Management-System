@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Container,
     Paper,
     Typography,
     Box,
@@ -32,6 +31,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { sessionService } from '../../lib/api';
 import { format, parse } from 'date-fns';
+import PageHeader from '../../components/PageHeader';
 
 export default function SessionsManagement() {
     const [openDialog, setOpenDialog] = useState(false);
@@ -176,10 +176,10 @@ export default function SessionsManagement() {
     };
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Paper sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h5">Academic Sessions Management</Typography>
+        <Box>
+            <PageHeader
+                title="Academic Sessions Management"
+                action={
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
@@ -187,7 +187,10 @@ export default function SessionsManagement() {
                     >
                         Add New Session
                     </Button>
-                </Box>
+                }
+            />
+
+            <Paper sx={{ p: 3 }}>
 
                 {isLoading ? (
                     <Typography>Loading...</Typography>
@@ -350,6 +353,6 @@ export default function SessionsManagement() {
                 onClose={() => setError('')}
                 message={error}
             />
-        </Container>
+        </Box>
     );
 }

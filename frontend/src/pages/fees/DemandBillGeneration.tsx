@@ -38,6 +38,7 @@ import {
 import { FileText, Download, Send, Printer } from 'lucide-react';
 import axios from 'axios';
 import { feeService, classService } from '../../lib/api';
+import PageHeader from '../../components/PageHeader';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -207,9 +208,17 @@ export default function DemandBillGeneration() {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
-        Demand Bill Generation
-      </Typography>
+      <PageHeader
+        title="Demand Bill Generation"
+        quickTips={[
+          { text: 'Select fee types applicable for the billing period' },
+          { text: 'Bills are generated once per student per month' },
+          { text: 'Previous dues are automatically added' },
+          { text: 'Late fees are auto-calculated if enabled' },
+          { text: 'Demand bills are monthly fee invoices that include selected fee types, discounts, and due dates' },
+          { text: 'Bills are generated for the selected Academic Session shown in the top-right corner' },
+        ]}
+      />
 
       <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
         {/* Left Side - Generation Form + Result + History */}
@@ -759,15 +768,15 @@ export default function DemandBillGeneration() {
         </Box>
 
         {/* Right Sidebar - Quick Tips & Info */}
-        <Box sx={{ width: { xs: '100%', sm: 400 }, flexShrink: 0 }}>
-          <Stack spacing={3}>
-            {/* Quick Tips - Same style as Fee Collection */}
+        <Box sx={{ width: { xs: '100%', sm: 320 }, flexShrink: 0 }}>
+          <Stack spacing={2}>
+            {/* Quick Tips */}
             <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'primary.main', color: 'white' }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                   💡 Quick Tips
                 </Typography>
-                <Stack spacing={1}>
+                <Stack spacing={0.5}>
                   <Typography variant="body2">• Select fee types applicable for the billing period</Typography>
                   <Typography variant="body2">• Bills are generated once per student per month</Typography>
                   <Typography variant="body2">• Previous dues are automatically added</Typography>
@@ -776,85 +785,42 @@ export default function DemandBillGeneration() {
               </CardContent>
             </Card>
 
+            {/* About Demand Bills */}
             <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'info.light' }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                   About Demand Bills
                 </Typography>
-                <Typography variant="body2" paragraph>
+                <Typography variant="body2" sx={{ mb: 1 }}>
                   Demand bills are monthly fee invoices generated for students. They include:
                 </Typography>
-                <Stack spacing={1}>
+                <Stack spacing={0.5}>
                   <Typography variant="body2">✓ Selected fee types for the month</Typography>
                   <Typography variant="body2">✓ Previous month's outstanding dues</Typography>
                   <Typography variant="body2">✓ Applicable discounts</Typography>
                   <Typography variant="body2">✓ Late fees (auto-calculated if enabled)</Typography>
                   <Typography variant="body2">✓ Due date for payment</Typography>
-                  <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic', color: 'text.secondary' }}>
-                    Bills are generated for the selected Academic Session shown in the top-right corner.
-                  </Typography>
                 </Stack>
               </CardContent>
             </Card>
 
-            <Card elevation={2} sx={{ borderRadius: 3 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom>
-                  Generation Options
-                </Typography>
-                <Stack spacing={2} sx={{ mt: 2 }}>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Monthly Demand Bills
-                    </Typography>
-                    <Typography variant="body2" paragraph>
-                      Monthly demand bills can be generated for individual students, entire
-                      classes, or all students at once. Each bill includes:
-                    </Typography>
-                    <Box component="ul" sx={{ pl: 3, mt: 0 }}>
-                      <li>
-                        <Typography variant="body2">Selected fee types for the month</Typography>
-                      </li>
-                      <li>
-                        <Typography variant="body2">
-                          Late fees (auto-added from fee structure if enabled and student has
-                          outstanding dues)
-                        </Typography>
-                      </li>
-                      <li>
-                        <Typography variant="body2">Any applicable discounts</Typography>
-                      </li>
-                      <li>
-                        <Typography variant="body2">Due date for payment</Typography>
-                      </li>
-                    </Box>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-
+            {/* Important Notes */}
             <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'warning.light' }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom color="warning.dark">
-                  Important Notes
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom color="warning.dark">
+                  ⚠️ Important Notes
                 </Typography>
-                <Stack spacing={1}>
-                  <Typography variant="body2">
-                    • Bills are generated based on the fee structure set for each class
-                  </Typography>
-                  <Typography variant="body2">
-                    • Existing bills for the same month will be skipped
-                  </Typography>
+                <Stack spacing={0.5}>
+                  <Typography variant="body2">• Bills are generated based on the fee structure set for each class</Typography>
+                  <Typography variant="body2">• Existing bills for the same month will be skipped</Typography>
                   <Typography variant="body2">• Previous dues are automatically carried forward</Typography>
-                  <Typography variant="body2">
-                    • Student-specific discounts are applied automatically
-                  </Typography>
+                  <Typography variant="body2">• Student-specific discounts are applied automatically</Typography>
                 </Stack>
               </CardContent>
             </Card>
           </Stack>
         </Box>
       </Box>
-    </Box>
+    </Box >
   );
 }

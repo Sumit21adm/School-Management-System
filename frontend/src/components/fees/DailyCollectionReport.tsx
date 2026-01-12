@@ -176,8 +176,7 @@ export default function DailyCollectionReport({ sessionId, classes }: DailyColle
     };
 
     const handlePrintReceipt = (receiptNo: string) => {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-        window.open(`${API_BASE_URL}/fees/receipt/${receiptNo}/pdf`, '_blank');
+        feeService.openReceiptPdf(receiptNo);
     };
 
     const clearFilters = () => {

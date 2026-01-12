@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Box,
@@ -26,13 +26,21 @@ import {
 } from '@mui/material';
 import { promotionService, classService } from '../../lib/api';
 import { useSession } from '../../contexts/SessionContext';
+import PageHeader from '../../components/PageHeader';
 
 export default function StudentPromotions() {
-    const { allSessions } = useSession();
+    const { allSessions, currentSession } = useSession();
     const queryClient = useQueryClient();
 
     // Filters
     const [currentSessionId, setCurrentSessionId] = useState<number>(0);
+
+    // Initialize with current session
+    useEffect(() => {
+        if (currentSession?.id && !currentSessionId) {
+            setCurrentSessionId(currentSession.id);
+        }
+    }, [currentSession, currentSessionId]);
     const [className, setClassName] = useState('');
     const [section, setSection] = useState('');
 
@@ -138,13 +146,11 @@ export default function StudentPromotions() {
     });
 
     return (
-        <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
-            <Typography variant="h4" gutterBottom>
-                Student Promotions
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Promote students to the next class or mark them as passed out (Class 10 & 12 only)
-            </Typography>
+        <Box>
+            <PageHeader
+                title="Student Promotions"
+                subtitle="Promote students to the next class or mark them as passed out (Class 10 & 12 only)"
+            />
 
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Typography variant="h6" gutterBottom>

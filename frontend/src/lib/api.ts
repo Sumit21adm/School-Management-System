@@ -191,15 +191,17 @@ export const feeService = {
   getReceipt: (receiptNo: string) => apiClient.get(`/fees/receipt/${receiptNo}`),
   getDues: (studentId: string) => apiClient.get(`/fees/dues/${studentId}`),
   getFeeStructure: (classId: string) => apiClient.get(`/fees/structure/${classId}`),
-  getReceiptPdfUrl: (receiptNo: string) => `${API_BASE_URL}/fees/receipt/${receiptNo}/pdf`,
+  getReceiptPdfUrl: (receiptNo: string) => `${API_BASE_URL}/fees/receipt/pdf?receiptNo=${encodeURIComponent(receiptNo)}`,
   openReceiptPdf: (receiptNo: string) => {
     // Open PDF in new tab
-    window.open(`${API_BASE_URL}/fees/receipt/${receiptNo}/pdf`, '_blank');
+    const url = `${API_BASE_URL}/fees/receipt/pdf?receiptNo=${encodeURIComponent(receiptNo)}`;
+    window.open(url, '_blank');
   },
-  getDemandBillPdfUrl: (billNo: string) => `${API_BASE_URL}/fees/demand-bill/${billNo}/pdf`,
+  getDemandBillPdfUrl: (billNo: string) => `${API_BASE_URL}/fees/demand-bill/pdf?billNo=${encodeURIComponent(billNo)}`,
   openDemandBillPdf: (billNo: string) => {
     // Open PDF in new tab
-    window.open(`${API_BASE_URL}/fees/demand-bill/${billNo}/pdf`, '_blank');
+    const url = `${API_BASE_URL}/fees/demand-bill/pdf?billNo=${encodeURIComponent(billNo)}`;
+    window.open(url, '_blank');
   },
   openBatchDemandBillPdf: (billNumbers: string[], metadata?: { period?: string, billType?: string, classInfo?: string }) => {
     // Use form submission to trigger browser's native file handling

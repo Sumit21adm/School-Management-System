@@ -108,7 +108,7 @@ const SubjectList = () => {
     };
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Box display="flex" alignItems="center" gap={2}>
                     <Button
@@ -256,7 +256,7 @@ const SubjectList = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+        </Box>
     );
 };
 

@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { useSession } from '../../contexts/SessionContext';
 import { feeTypeService, feeStructureService, classService } from '../../lib/api';
+import PageHeader from '../../components/PageHeader';
 
 const FREQUENCIES = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'One-time', 'Refundable', 'Not Set'];
 
@@ -465,11 +466,10 @@ export default function FeeStructure() {
     }
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box>
+            <PageHeader title="Fee Structure Management" />
+
             <Paper sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom>
-                    Fee Structure Management
-                </Typography>
 
                 {/* Fee Types Management Accordion */}
                 <Accordion
@@ -933,6 +933,6 @@ export default function FeeStructure() {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
-        </Container>
+        </Box>
     );
 }

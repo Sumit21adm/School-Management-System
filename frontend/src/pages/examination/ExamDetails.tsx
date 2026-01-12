@@ -90,7 +90,7 @@ export default function ExamDetails() {
     if (!exam) return <Container sx={{ mt: 4 }}><Alert severity="error">Exam not found</Alert></Container>;
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box>
             <Button startIcon={<ArrowBack />} onClick={() => navigate('/exams')} sx={{ mb: 2 }}>
                 Back to Exams
             </Button>
@@ -240,6 +240,6 @@ export default function ExamDetails() {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
-        </Container>
+        </Box>
     );
 }

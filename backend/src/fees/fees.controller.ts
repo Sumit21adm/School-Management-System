@@ -57,12 +57,16 @@ export class FeesController {
         return this.feesService.getTransactions(query);
     }
 
-    @Get('receipt/:receiptNo/pdf')
+    @Get('receipt/pdf')
     async getReceiptPdf(
-        @Param('receiptNo') receiptNo: string,
+        @Query('receiptNo') receiptNo: string,
         @Res() res: Response,
     ) {
         try {
+            if (!receiptNo) {
+                 throw new NotFoundException('Receipt number is required');
+            }
+
             // Fetch receipt metadata for better filename
             const transaction = await this.prisma.feeTransaction.findUnique({
                 where: { receiptNo },
@@ -87,16 +91,21 @@ export class FeesController {
 
             res.send(pdfBuffer);
         } catch (error) {
-            throw new NotFoundException('Receipt not found');
+            console.error('[FeesController] Error generating Receipt PDF:', error);
+            throw new NotFoundException('Receipt not found or error generating PDF');
         }
     }
 
-    @Get('demand-bill/:billNo/pdf')
+    @Get('demand-bill/pdf')
     async getDemandBillPdf(
-        @Param('billNo') billNo: string,
+        @Query('billNo') billNo: string,
         @Res() res: Response,
     ) {
         try {
+            if (!billNo) {
+                 throw new NotFoundException('Bill number is required');
+            }
+
             // Fetch bill metadata for better filename
             const bill = await this.prisma.demandBill.findUnique({
                 where: { billNo },

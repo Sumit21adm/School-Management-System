@@ -1,14 +1,15 @@
 import React from 'react';
 import ClassGrid from '../../components/classes/ClassGrid';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
+import PageHeader from '../../components/PageHeader';
 
 const ClassList: React.FC = () => {
     return (
-        <Box p={3}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                All Classes
-            </Typography>
-            <ClassGrid />
+        <Box>
+            <PageHeader title="All Classes" />
+            <Box p={3}>
+                <ClassGrid />
+            </Box>
         </Box>
     );
 };

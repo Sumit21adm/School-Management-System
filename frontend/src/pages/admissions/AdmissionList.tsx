@@ -73,6 +73,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { admissionService, feeService, classService } from '../../lib/api';
+import PageHeader from '../../components/PageHeader';
 import { db } from '../../lib/db';
 import { useSession } from '../../contexts/SessionContext';
 
@@ -444,48 +445,44 @@ export default function AdmissionList() {
   return (
     <Box>
       {/* Header */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2} mb={3}>
-        <Box>
-          <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
-            Student Admissions
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage student admissions and records
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={2}>
-          <Button
-            variant="outlined"
-            startIcon={<UploadIcon />}
-            onClick={() => setImportDialogOpen(true)}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            Import
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={() => setExportDialogOpen(true)}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            Export
-          </Button>
-          <Button
-            component={Link}
-            to="/admissions/new"
-            variant="contained"
-            startIcon={<AddIcon />}
-            size="large"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
-            }}
-          >
-            New Admission
-          </Button>
-        </Stack>
-      </Stack>
+      <PageHeader
+        title="Student Admissions"
+        subtitle="Manage student admissions and records"
+        action={
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              startIcon={<UploadIcon />}
+              onClick={() => setImportDialogOpen(true)}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
+              Import
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={() => setExportDialogOpen(true)}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
+              Export
+            </Button>
+            <Button
+              component={Link}
+              to="/admissions/new"
+              variant="contained"
+              startIcon={<AddIcon />}
+              size="large"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3,
+              }}
+            >
+              New Admission
+            </Button>
+          </Stack>
+        }
+      />
 
       {/* Stats Cards */}
       {statsData && (

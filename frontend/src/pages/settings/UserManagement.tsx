@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Container,
     Paper,
     Typography,
     Box,
@@ -45,6 +44,7 @@ import {
 } from '@mui/icons-material';
 import { usersService } from '../../lib/api';
 import { format } from 'date-fns';
+import PageHeader from '../../components/PageHeader';
 
 const USER_ROLES = [
     { value: 'SUPER_ADMIN', label: 'Super Admin', color: '#d32f2f' },
@@ -384,13 +384,10 @@ export default function UserManagement() {
     const totalPermissions = PERMISSION_MODULES.flatMap(m => m.permissions).length;
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Paper sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <PersonIcon color="primary" sx={{ fontSize: 32 }} />
-                        <Typography variant="h5">User Management</Typography>
-                    </Box>
+        <Box>
+            <PageHeader
+                title="User Management"
+                action={
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                         <FormControlLabel
                             control={
@@ -409,7 +406,10 @@ export default function UserManagement() {
                             Add New User
                         </Button>
                     </Box>
-                </Box>
+                }
+            />
+
+            <Paper sx={{ p: 3 }}>
 
                 {isLoading ? (
                     <Typography>Loading...</Typography>
@@ -748,6 +748,6 @@ export default function UserManagement() {
                     {error}
                 </Alert>
             </Snackbar>
-        </Container>
+        </Box>
     );
 }
