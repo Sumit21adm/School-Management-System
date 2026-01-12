@@ -37,14 +37,13 @@ import {
   Tooltip,
 } from '@mui/material';
 import { FileText, Download, Send, Printer } from 'lucide-react';
-import axios from 'axios';
-import { feeService, classService } from '../../lib/api';
+import { apiClient, feeService, classService } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import DemandBillCreationList from './DemandBillCreationList';
 import { Dialog, DialogContent, IconButton, DialogActions, DialogTitle, DialogContentText } from '@mui/material';
 import { X, Trash2 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// API_URL no longer needed - using apiClient with baseURL
 
 const demandBillSchema = z.object({
   generationType: z.enum(['single', 'class', 'all']),
@@ -129,7 +128,7 @@ export default function DemandBillGeneration() {
   const { data: feeTypesData } = useQuery({
     queryKey: ['fee-types', location.pathname],
     queryFn: async () => {
-      const response = await axios.get(`${API_URL}/fee-types`);
+      const response = await apiClient.get('/fee-types');
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -145,7 +144,7 @@ export default function DemandBillGeneration() {
     queryKey: ['bill-generation-history', selectedSession?.id],
     queryFn: async () => {
       if (!selectedSession?.id) return [];
-      const response = await axios.get(`${API_URL}/fees/demand-bills/history/${selectedSession.id}`);
+      const response = await apiClient.get(`/fees/demand-bills/history/${selectedSession.id}`);
       return response.data;
     },
     enabled: !!selectedSession?.id,
@@ -190,7 +189,7 @@ export default function DemandBillGeneration() {
         payload.section = data.section;
       }
 
-      const response = await axios.post(`${API_URL}/fees/demand-bills/generate`, payload);
+      const response = await apiClient.post('/fees/demand-bills/generate', payload);
       return response.data;
     },
     onSuccess: (data) => {
@@ -210,7 +209,7 @@ export default function DemandBillGeneration() {
 
     try {
       const billNumbers = deleteConfirmBatch.bills.map((b: any) => b.billNo);
-      await axios.delete(`${API_URL}/fees/demand-bills/batch`, {
+      await apiClient.delete('/fees/demand-bills/batch', {
         data: { billNumbers }
       });
 
