@@ -2,6 +2,16 @@ name: Manual Build
 
 on:
   workflow_dispatch:
+    inputs:
+      is_production:
+        description: 'Production Release?'
+        type: boolean
+        required: true
+        default: false
+      version:
+        description: 'Version Number'
+        required: true
+        default: '0.1.0'
 
 jobs:
   build-frontend:
@@ -88,11 +98,22 @@ jobs:
         with:
           name: backend-build-zip
 
+      - name: Calculate Release Name
+        id: names
+        run: |
+          if [ "${{ inputs.is_production }}" == "true" ]; then
+            echo "TAG_NAME=Release_v${{ inputs.version }}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=Release v${{ inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "TAG_NAME=Test-${{ inputs.version }}-Build-${{ github.run_number }}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=Test ${{ inputs.version }} (Build ${{ github.run_number }})" >> $GITHUB_ENV
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: Build ${{ github.run_number }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.RELEASE_NAME }}
           files: |
             frontend-build.zip
             backend-build.zip
