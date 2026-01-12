@@ -6,6 +6,7 @@ import {
   Tabs,
   Tab,
   Skeleton,
+  Alert,
 } from '@mui/material';
 import {
   Receipt,
@@ -21,6 +22,7 @@ import ClassOutstandingReport from '../../components/fees/ClassOutstandingReport
 import BillHistoryReport from '../../components/fees/BillHistoryReport';
 import FeeTypeAnalysis from '../../components/fees/FeeTypeAnalysis';
 import PageHeader from '../../components/PageHeader';
+import { hasPermission, getCurrentUserPermissions } from '../../utils/permissions';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -63,6 +65,21 @@ export default function FeeReports() {
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
+
+  // Permission check
+  const { role, permissions } = getCurrentUserPermissions();
+  const canViewReports = hasPermission('fees_receipts', role, permissions) || hasPermission('fees_view', role, permissions);
+
+  if (!canViewReports) {
+    return (
+      <Box>
+        <PageHeader title="Fee Reports" />
+        <Alert severity="error" sx={{ mt: 2 }}>
+          You do not have permission to access Fee Reports. Contact your administrator.
+        </Alert>
+      </Box>
+    );
+  }
 
   if (isLoadingClasses || !selectedSession) {
     return (

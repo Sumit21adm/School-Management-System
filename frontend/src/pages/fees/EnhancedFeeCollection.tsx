@@ -36,6 +36,7 @@ import { Plus, Trash2, IndianRupee, Clock, Printer, Search } from 'lucide-react'
 import axios from 'axios';
 import { feeService, admissionService } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
+import { hasPermission, getCurrentUserPermissions } from '../../utils/permissions';
 
 // Simple debounce implementation
 function debounce<T extends (...args: any[]) => any>(func: T, wait: number) {
@@ -76,6 +77,22 @@ export default function EnhancedFeeCollection() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const queryClient = useQueryClient();
+
+  // Permission check
+  const { role, permissions } = getCurrentUserPermissions();
+  const canCollectFees = hasPermission('fees_collect', role, permissions);
+
+  // Early return if user lacks permission
+  if (!canCollectFees) {
+    return (
+      <Box>
+        <PageHeader title="Fee Collection" />
+        <Alert severity="error" sx={{ mt: 2 }}>
+          You do not have permission to access this page. Contact your administrator if you believe this is an error.
+        </Alert>
+      </Box>
+    );
+  }
 
   const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FeeCollectionFormData>({
     resolver: zodResolver(feeCollectionSchema),

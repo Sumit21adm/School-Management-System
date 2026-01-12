@@ -28,6 +28,7 @@ import { admissionService, feeService, sessionService } from '../../lib/api';
 import PendingBillsTable from '../../components/fees/PendingBillsTable';
 import TransactionHistory from '../../components/fees/TransactionHistory';
 import CollectFeeDialog from '../../components/fees/CollectFeeDialog';
+import { hasPermission, getCurrentUserPermissions } from '../../utils/permissions';
 
 // Debounce helper
 const useDebounce = (value: string, delay: number) => {
@@ -44,6 +45,23 @@ const useDebounce = (value: string, delay: number) => {
 };
 
 const FeeCollection = () => {
+  // Permission check
+  const { role, permissions } = getCurrentUserPermissions();
+  const canCollectFees = hasPermission('fees_collect', role, permissions);
+
+  if (!canCollectFees) {
+    return (
+      <Box p={3}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          Fee Collection
+        </Typography>
+        <Alert severity="error">
+          You do not have permission to access this page. Contact your administrator.
+        </Alert>
+      </Box>
+    );
+  }
+
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
