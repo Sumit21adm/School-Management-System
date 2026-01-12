@@ -540,9 +540,18 @@ export default function DemandBillGeneration() {
 
                 {/* Fee Types Selection */}
                 <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                    Select Fee Types to Include
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {structureFeeTypesData?.feeTypes?.length > 0
+                        ? '✅ Applicable Fee Types (from Fee Structure)'
+                        : '⚠️ Fee Structure not configured - Showing all fee types'}
+                    </Typography>
+                  </Box>
+                  {structureFeeTypesData?.structureCount === 0 && generationType === 'class' && watchedClassName && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      No Fee Structure found for Class {watchedClassName}. Please configure Fee Structure first, or select from all available fee types below.
+                    </Alert>
+                  )}
                   <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
                     <Button
                       size="small"
