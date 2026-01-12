@@ -24,7 +24,8 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't redirect if it's a login attempt failure
+    if (error.response?.status === 401 && !error.config.url?.endsWith('/auth/login')) {
       // Handle unauthorized access
       localStorage.removeItem('authToken');
       window.location.href = '/login';

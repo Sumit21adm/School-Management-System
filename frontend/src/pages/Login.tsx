@@ -95,6 +95,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={() => setError('')}
                   required
                   fullWidth
                   autoFocus
@@ -111,6 +112,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={() => setError('')}
                   required
                   fullWidth
                   disabled={loading}

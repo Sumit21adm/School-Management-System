@@ -92,71 +92,7 @@ const menuItems = [
   },
 ];
 
-// Role-based default permissions (fallback when user has no custom permissions)
-const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  SUPER_ADMIN: ['*'], // Has all permissions
-  ADMIN: [
-    'dashboard_view', 'dashboard_stats',
-    'admissions_view', 'admissions_create', 'admissions_edit', 'admissions_delete', 'admissions_import', 'admissions_export', 'promotions_view', 'promotions_execute',
-    'fees_view', 'fees_collect', 'fees_receipts', 'fees_refund',
-    'demand_bills_view', 'demand_bills_generate', 'demand_bills_print',
-    'fee_structure_view', 'fee_structure_edit', 'fee_types_manage',
-    'exams_view', 'exams_create', 'exams_edit', 'exams_schedules', 'exam_config',
-    'sessions_view', 'sessions_manage', 'school_settings', 'users_view',
-  ],
-  ACCOUNTANT: [
-    'dashboard_view',
-    'fees_view', 'fees_collect', 'fees_receipts',
-    'demand_bills_view', 'demand_bills_generate', 'demand_bills_print',
-    'fee_structure_view',
-  ],
-  TEACHER: [
-    'dashboard_view',
-    'admissions_view',
-    'exams_view', 'exams_edit',
-  ],
-  COORDINATOR: [
-    'dashboard_view', 'dashboard_stats',
-    'admissions_view', 'admissions_create', 'admissions_edit', 'promotions_view',
-    'exams_view', 'exams_create', 'exams_edit', 'exams_schedules',
-  ],
-  RECEPTIONIST: [
-    'dashboard_view',
-    'admissions_view', 'admissions_create',
-    'fees_view', 'fees_collect', 'fees_receipts',
-  ],
-};
-
-// Get current user permissions from localStorage
-const getCurrentUserPermissions = (): { role: string; permissions: string[]; name: string } => {
-  try {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      const userRole = (user.role || '').toUpperCase(); // Normalize to uppercase
-      const userPerms = user.permissions || [];
-      // If user has no custom permissions, fall back to role defaults
-      const permissions = userPerms.length > 0
-        ? userPerms
-        : (ROLE_DEFAULT_PERMISSIONS[userRole] || []);
-      return {
-        role: userRole,
-        permissions: permissions,
-        name: user.name || user.username || 'User',
-      };
-    }
-  } catch (e) {
-    console.error('Error parsing user from localStorage', e);
-  }
-  return { role: '', permissions: [], name: 'User' };
-};
-
-// Check if user has permission (SUPER_ADMIN bypasses all checks)
-const hasPermission = (requiredPermission: string, userRole: string, userPermissions: string[]): boolean => {
-  if (userRole === 'SUPER_ADMIN') return true;
-  if (userPermissions.includes('*')) return true; // Wildcard permission
-  return userPermissions.includes(requiredPermission);
-};
+import { getCurrentUserPermissions, hasPermission } from '../utils/permissions';
 
 export default function Layout({ children, onLogout }: LayoutProps) {
   const location = useLocation();

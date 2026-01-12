@@ -39,6 +39,9 @@ import { FileText, Download, Send, Printer } from 'lucide-react';
 import axios from 'axios';
 import { feeService, classService } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
+import DemandBillCreationList from './DemandBillCreationList';
+import { Dialog, DialogContent, IconButton, DialogActions, DialogTitle, DialogContentText } from '@mui/material';
+import { X, Trash2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -78,6 +81,27 @@ export default function DemandBillGeneration() {
   const [error, setError] = useState('');
   const [selectedFeeTypes, setSelectedFeeTypes] = useState<number[]>([]);
   const [autoCalculateLateFees, setAutoCalculateLateFees] = useState(true);
+  const [viewBatch, setViewBatch] = useState<any>(null); // State for viewing creation list
+  const [deleteConfirmBatch, setDeleteConfirmBatch] = useState<any>(null); // State for delete confirmation
+
+  // Get user role and permissions
+  const [userRole, setUserRole] = useState<string>('');
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserRole(user.role || '');
+        setUserPermissions(user.permissions || []);
+      } catch (e) {
+        console.error('Error parsing user data', e);
+      }
+    }
+  }, []);
+
+  const hasDeletePermission = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userPermissions.includes('demand_bills_delete');
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -180,7 +204,26 @@ export default function DemandBillGeneration() {
     },
   });
 
-  const onSubmit = (data: DemandBillFormData) => {
+  const handleDeleteBatch = async () => {
+    if (!deleteConfirmBatch) return;
+
+    try {
+      const billNumbers = deleteConfirmBatch.bills.map((b: any) => b.billNo);
+      await axios.delete(`${API_URL}/fees/demand-bills/batch`, {
+        data: { billNumbers }
+      });
+
+      // Refresh history
+      queryClient.invalidateQueries({ queryKey: ['bill-generation-history', selectedSession?.id] });
+      setDeleteConfirmBatch(null);
+    } catch (err: any) {
+      console.error('Delete error', err);
+      // Optional: show error toast/alert
+      alert(err.response?.data?.message || 'Failed to delete batch');
+    }
+  };
+
+  const onSubmit = async (data: DemandBillFormData) => {
     // Validate that at least one fee type is selected
     console.log('Submitting with selectedFeeTypes:', selectedFeeTypes);
 
@@ -210,14 +253,54 @@ export default function DemandBillGeneration() {
     <Box>
       <PageHeader
         title="Demand Bill Generation"
-        quickTips={[
-          { text: 'Select fee types applicable for the billing period' },
-          { text: 'Bills are generated once per student per month' },
-          { text: 'Previous dues are automatically added' },
-          { text: 'Late fees are auto-calculated if enabled' },
-          { text: 'Demand bills are monthly fee invoices that include selected fee types, discounts, and due dates' },
-          { text: 'Bills are generated for the selected Academic Session shown in the top-right corner' },
-        ]}
+        infoContent={
+          <Stack spacing={2}>
+            {/* Quick Tips */}
+            <Box>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom color="primary.main">
+                💡 Quick Tips
+              </Typography>
+              <Stack spacing={0.5}>
+                <Typography variant="body2">• Select fee types applicable for the billing period</Typography>
+                <Typography variant="body2">• Bills are generated once per student per month</Typography>
+                <Typography variant="body2">• Previous dues are automatically added</Typography>
+                <Typography variant="body2">• Late fees are auto-calculated if enabled</Typography>
+                <Typography variant="body2">• Demand bills are monthly fee invoices that include selected fee types, discounts, and due dates</Typography>
+                <Typography variant="body2">• Bills are generated for the selected Academic Session shown in the top-right corner</Typography>
+              </Stack>
+            </Box>
+
+            {/* About Demand Bills */}
+            <Box>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom color="info.main">
+                About Demand Bills
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Demand bills are monthly fee invoices generated for students. They include:
+              </Typography>
+              <Stack spacing={0.5}>
+                <Typography variant="body2">✓ Selected fee types for the month</Typography>
+                <Typography variant="body2">✓ Previous month's outstanding dues</Typography>
+                <Typography variant="body2">✓ Applicable discounts</Typography>
+                <Typography variant="body2">✓ Late fees (auto-calculated if enabled)</Typography>
+                <Typography variant="body2">✓ Due date for payment</Typography>
+              </Stack>
+            </Box>
+
+            {/* Important Notes */}
+            <Box sx={{ p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom color="warning.dark">
+                ⚠️ Important Notes
+              </Typography>
+              <Stack spacing={0.5}>
+                <Typography variant="body2">• Bills are generated based on the fee structure set for each class</Typography>
+                <Typography variant="body2">• Existing bills for the same month will be skipped</Typography>
+                <Typography variant="body2">• Previous dues are automatically carried forward</Typography>
+                <Typography variant="body2">• Student-specific discounts are applied automatically</Typography>
+              </Stack>
+            </Box>
+          </Stack>
+        }
       />
 
       <Box sx={{ display: 'flex', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
@@ -650,177 +733,167 @@ export default function DemandBillGeneration() {
             </Paper>
           )}
 
-          {/* Bill Generation History */}
-          <Paper elevation={2} sx={{ p: 4, borderRadius: 3, mt: 3 }}>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
-              📜 Bill Generation History
+
+        </Box>
+
+        {/* Right Sidebar - Bill Generation History */}
+        <Box sx={{ width: { xs: '100%', lg: 450 }, flexShrink: 0 }}>
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 3, height: '100%', overflow: 'hidden' }}>
+            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box component="span" sx={{ fontSize: '1.2em' }}>📜</Box> Generation History
             </Typography>
+
             {loadingHistory ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                <CircularProgress />
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress size={30} />
               </Box>
             ) : billHistory && billHistory.length > 0 ? (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: 'grey.100' }}>
-                      <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Bill Type</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Month/Year</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Class(es)</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 600 }}>Students</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Total Amount</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 600 }}>Print</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {billHistory.map((batch: any, index: number) => (
-                      <TableRow key={index} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={500}>
-                            {new Date(batch.timestamp).toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
+              <Stack spacing={2} sx={{ mt: 2 }}>
+                {billHistory.map((batch: any, index: number) => (
+                  <Card key={index} variant="outlined" sx={{ borderRadius: 2 }}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {MONTHS[batch.month - 1]} {batch.year}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {new Date(batch.timestamp).toLocaleTimeString('en-IN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
+                            {new Date(batch.timestamp).toLocaleString('en-IN', {
+                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                             })}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={batch.billType}
-                            size="small"
-                            color={
-                              batch.billType === 'Single Student' ? 'default' :
-                                batch.billType === 'Entire Section' ? 'primary' :
-                                  batch.billType === 'Entire Class' ? 'secondary' : 'info'
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {MONTHS[batch.month - 1]} {batch.year}
-                        </TableCell>
-                        <TableCell>
-                          {batch.classes.map((cls: string) => `Class ${cls}`).join(', ')}
-                          {batch.sections.length > 0 && (
-                            <Typography variant="caption" display="block" color="text.secondary">
-                              Section(s): {batch.sections.join(', ')}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip label={batch.studentCount} size="small" variant="outlined" />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography fontWeight={600} color="success.main">
-                            ₹{batch.totalAmount.toLocaleString()}
+                        </Box>
+                        <Chip
+                          label={batch.billType === 'Single Student' ? 'Single' : batch.billType === 'Entire Class' ? 'Class' : 'All'}
+                          size="small"
+                          color={batch.billType === 'Entire Class' ? 'secondary' : 'default'}
+                          sx={{ height: 20, fontSize: '0.7rem' }}
+                        />
+                      </Box>
+
+                      <Box sx={{ mb: 1.5 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                          {batch.classes.length > 0 ? `Class ${batch.classes.join(', ')}` : 'Single Student'}
+                          {batch.sections.length > 0 && ` (${batch.sections.join(', ')})`}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
+                          <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            👥 {batch.studentCount} Students
                           </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          {batch.bills && batch.bills.length === 1 ? (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<Printer size={14} />}
-                              onClick={() => feeService.openDemandBillPdf(batch.bills[0].billNo)}
-                            >
-                              Print
-                            </Button>
-                          ) : batch.bills && batch.bills.length > 1 ? (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<Printer size={14} />}
-                              onClick={() => {
-                                // Generate single PDF with all bills combined
-                                const billNumbers = batch.bills.map((bill: any) => bill.billNo);
-                                const period = `${MONTHS[batch.month - 1]}${batch.year}`;
-                                const classInfo = batch.classes.map((c: string) => `Class${c}`).join('_');
-                                feeService.openBatchDemandBillPdf(billNumbers, {
-                                  period,
-                                  billType: batch.billType,
-                                  classInfo
-                                });
-                              }}
-                            >
-                              Print All ({batch.bills.length})
-                            </Button>
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">-</Typography>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                          <Typography variant="caption" fontWeight={600} color="success.main">
+                            💰 ₹{batch.totalAmount.toLocaleString()}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {hasDeletePermission && (
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => setDeleteConfirmBatch(batch)}
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            opacity: 0.6,
+                            '&:hover': { opacity: 1, bgcolor: 'error.lighter' }
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </IconButton>
+                      )}
+
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          fullWidth
+                          onClick={() => setViewBatch(batch)}
+                        >
+                          Creation List
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="soft"
+                          fullWidth
+                          startIcon={<Printer size={14} />}
+                          onClick={() => {
+                            if (batch.bills.length === 1) {
+                              feeService.openDemandBillPdf(batch.bills[0].billNo);
+                            } else {
+                              const billNumbers = batch.bills.map((bill: any) => bill.billNo);
+                              const period = `${MONTHS[batch.month - 1]}${batch.year}`;
+                              const classInfo = batch.classes.map((c: string) => `Class${c}`).join('_');
+                              feeService.openBatchDemandBillPdf(billNumbers, {
+                                period,
+                                billType: batch.billType,
+                                classInfo
+                              });
+                            }
+                          }}
+                        >
+                          Print Bills
+                        </Button>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
             ) : (
-              <Alert severity="info">
-                No bills generated yet for this session. Generate demand bills above to see history here.
-              </Alert>
+              <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', bgcolor: 'grey.50', borderRadius: 2 }}>
+                <Typography variant="body2">
+                  No generation history found.
+                </Typography>
+              </Box>
             )}
           </Paper>
         </Box>
-
-        {/* Right Sidebar - Quick Tips & Info */}
-        <Box sx={{ width: { xs: '100%', sm: 320 }, flexShrink: 0 }}>
-          <Stack spacing={2}>
-            {/* Quick Tips */}
-            <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'primary.main', color: 'white' }}>
-              <CardContent sx={{ p: 2.5 }}>
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                  💡 Quick Tips
-                </Typography>
-                <Stack spacing={0.5}>
-                  <Typography variant="body2">• Select fee types applicable for the billing period</Typography>
-                  <Typography variant="body2">• Bills are generated once per student per month</Typography>
-                  <Typography variant="body2">• Previous dues are automatically added</Typography>
-                  <Typography variant="body2">• Late fees are auto-calculated if enabled</Typography>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            {/* About Demand Bills */}
-            <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'info.light' }}>
-              <CardContent sx={{ p: 2.5 }}>
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                  About Demand Bills
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Demand bills are monthly fee invoices generated for students. They include:
-                </Typography>
-                <Stack spacing={0.5}>
-                  <Typography variant="body2">✓ Selected fee types for the month</Typography>
-                  <Typography variant="body2">✓ Previous month's outstanding dues</Typography>
-                  <Typography variant="body2">✓ Applicable discounts</Typography>
-                  <Typography variant="body2">✓ Late fees (auto-calculated if enabled)</Typography>
-                  <Typography variant="body2">✓ Due date for payment</Typography>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            {/* Important Notes */}
-            <Card elevation={2} sx={{ borderRadius: 3, bgcolor: 'warning.light' }}>
-              <CardContent sx={{ p: 2.5 }}>
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom color="warning.dark">
-                  ⚠️ Important Notes
-                </Typography>
-                <Stack spacing={0.5}>
-                  <Typography variant="body2">• Bills are generated based on the fee structure set for each class</Typography>
-                  <Typography variant="body2">• Existing bills for the same month will be skipped</Typography>
-                  <Typography variant="body2">• Previous dues are automatically carried forward</Typography>
-                  <Typography variant="body2">• Student-specific discounts are applied automatically</Typography>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Stack>
-        </Box>
       </Box>
-    </Box >
+
+      {/* Creation List Dialog */}
+      <Dialog
+        open={!!viewBatch}
+        onClose={() => setViewBatch(null)}
+        fullScreen
+        TransitionComponent={undefined} // Optional: Add slide transition if desired
+      >
+        {viewBatch && (
+          <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ p: 1, display: 'flex', justifyContent: 'flex-end' }}>
+              <IconButton onClick={() => setViewBatch(null)}>
+                <X />
+              </IconButton>
+            </Box>
+            <DemandBillCreationList
+              batchId={viewBatch.timestamp}
+              bills={viewBatch.bills}
+            />
+          </Box>
+        )}
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!deleteConfirmBatch}
+        onClose={() => setDeleteConfirmBatch(null)}
+      >
+        <DialogTitle>Delete Bill Batch?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete the bills generated on {deleteConfirmBatch && new Date(deleteConfirmBatch.timestamp).toLocaleString()}?
+            <br /><br />
+            <strong>Note:</strong> This checks if any payments have been received. If payments exist, deletion will be blocked.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmBatch(null)}>Cancel</Button>
+          <Button onClick={handleDeleteBatch} color="error" variant="contained" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+    </Box>
+
   );
 }

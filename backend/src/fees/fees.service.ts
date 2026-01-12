@@ -1023,11 +1023,50 @@ export class FeesService {
                     className: b.student.className,
                     section: b.student.section,
                     amount: Number(b.totalAmount),
+                    previousDues: Number(b.previousDues),
+                    advanceUsed: Number(b.advanceUsed),
                     status: b.status,
+                    items: b.billItems.map(item => ({
+                        feeType: item.feeType.name,
+                        amount: Number(item.amount),
+                        discount: Number(item.discountAmount)
+                    }))
                 })),
             };
         });
 
         return history;
+    }
+
+
+    /**
+     * Delete a batch of demand bills
+     */
+    async deleteDemandBillBatch(billNumbers: string[]) {
+        if (!billNumbers || billNumbers.length === 0) {
+            return { count: 0 };
+        }
+
+        // Verify that bills can be deleted (e.g., not paid)
+        // Ideally, we should check if any bill has payments.
+        // For now, assuming UI handles simple cases, but safety check is good.
+        const paidBills = await this.prisma.demandBill.findMany({
+            where: {
+                billNo: { in: billNumbers },
+                paidAmount: { gt: 0 }
+            }
+        });
+
+        if (paidBills.length > 0) {
+            throw new BadRequestException(`${paidBills.length} bills have already received payments and cannot be deleted.`);
+        }
+
+        const result = await this.prisma.demandBill.deleteMany({
+            where: {
+                billNo: { in: billNumbers }
+            }
+        });
+
+        return { count: result.count };
     }
 }

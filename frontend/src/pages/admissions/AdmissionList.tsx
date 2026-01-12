@@ -77,6 +77,8 @@ import PageHeader from '../../components/PageHeader';
 import { db } from '../../lib/db';
 import { useSession } from '../../contexts/SessionContext';
 
+import { hasPermission } from '../../utils/permissions';
+
 export default function AdmissionList() {
   const { selectedSession } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
@@ -450,36 +452,44 @@ export default function AdmissionList() {
         subtitle="Manage student admissions and records"
         action={
           <Stack direction="row" spacing={2}>
-            <Button
-              variant="outlined"
-              startIcon={<UploadIcon />}
-              onClick={() => setImportDialogOpen(true)}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Import
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={() => setExportDialogOpen(true)}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Export
-            </Button>
-            <Button
-              component={Link}
-              to="/admissions/new"
-              variant="contained"
-              startIcon={<AddIcon />}
-              size="large"
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 3,
-              }}
-            >
-              New Admission
-            </Button>
+            <Stack direction="row" spacing={2}>
+              {hasPermission('admissions_import') && (
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadIcon />}
+                  onClick={() => setImportDialogOpen(true)}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  Import
+                </Button>
+              )}
+              {hasPermission('admissions_export') && (
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={() => setExportDialogOpen(true)}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  Export
+                </Button>
+              )}
+              {hasPermission('admissions_create') && (
+                <Button
+                  component={Link}
+                  to="/admissions/new"
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  size="large"
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 3,
+                  }}
+                >
+                  New Admission
+                </Button>
+              )}
+            </Stack>
           </Stack>
         }
       />
@@ -832,14 +842,16 @@ export default function AdmissionList() {
                     </TableCell>
                     <TableCell align="right">
                       <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                        <IconButton
-                          component={Link}
-                          to={`/admissions/edit/${student.id}`}
-                          size="small"
-                          color="primary"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
+                        {hasPermission('admissions_edit') && (
+                          <IconButton
+                            component={Link}
+                            to={`/admissions/edit/${student.id}`}
+                            size="small"
+                            color="primary"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        )}
                         <IconButton
                           size="small"
                           color="default"
@@ -878,13 +890,15 @@ export default function AdmissionList() {
                             </IconButton>
                           </Tooltip>
                         )}
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteClick(student)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                        {hasPermission('admissions_delete') && (
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteClick(student)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )}
                       </Stack>
                     </TableCell>
                   </TableRow>

@@ -58,113 +58,7 @@ const USER_ROLES = [
     { value: 'STUDENT', label: 'Student', color: '#9e9e9e' },
 ];
 
-// Permission modules and their items
-const PERMISSION_MODULES = [
-    {
-        module: 'Dashboard',
-        permissions: [
-            { key: 'dashboard_view', label: 'View Dashboard' },
-            { key: 'dashboard_stats', label: 'View Statistics' },
-        ],
-    },
-    {
-        module: 'Student Admissions',
-        permissions: [
-            { key: 'admissions_view', label: 'View Students' },
-            { key: 'admissions_create', label: 'Add New Students' },
-            { key: 'admissions_edit', label: 'Edit Students' },
-            { key: 'admissions_delete', label: 'Delete Students' },
-            { key: 'admissions_import', label: 'Import Students' },
-            { key: 'admissions_export', label: 'Export Students' },
-        ],
-    },
-    {
-        module: 'Promotions',
-        permissions: [
-            { key: 'promotions_view', label: 'View Promotions' },
-            { key: 'promotions_execute', label: 'Execute Promotions' },
-        ],
-    },
-    {
-        module: 'Fee Collection',
-        permissions: [
-            { key: 'fees_view', label: 'View Fee Records' },
-            { key: 'fees_collect', label: 'Collect Fees' },
-            { key: 'fees_receipt', label: 'Print Receipts' },
-            { key: 'fees_refund', label: 'Process Refunds' },
-        ],
-    },
-    {
-        module: 'Demand Bills',
-        permissions: [
-            { key: 'demand_bills_view', label: 'View Demand Bills' },
-            { key: 'demand_bills_generate', label: 'Generate Bills' },
-            { key: 'demand_bills_print', label: 'Print Bills' },
-        ],
-    },
-    {
-        module: 'Fee Structure',
-        permissions: [
-            { key: 'fee_structure_view', label: 'View Fee Structure' },
-            { key: 'fee_structure_edit', label: 'Edit Fee Structure' },
-            { key: 'fee_types_manage', label: 'Manage Fee Types' },
-        ],
-    },
-    {
-        module: 'Examinations',
-        permissions: [
-            { key: 'exams_view', label: 'View Exams' },
-            { key: 'exams_create', label: 'Create Exams' },
-            { key: 'exams_edit', label: 'Edit Exams' },
-            { key: 'exams_schedule', label: 'Manage Schedules' },
-            { key: 'exam_config', label: 'Exam Configuration' },
-        ],
-    },
-    {
-        module: 'Settings',
-        permissions: [
-            { key: 'sessions_view', label: 'View Sessions' },
-            { key: 'sessions_manage', label: 'Manage Sessions' },
-            { key: 'school_settings', label: 'School Settings' },
-            { key: 'users_view', label: 'View Users' },
-            { key: 'users_manage', label: 'Manage Users' },
-        ],
-    },
-];
-
-// Default permissions for each role
-const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
-    SUPER_ADMIN: PERMISSION_MODULES.flatMap(m => m.permissions.map(p => p.key)),
-    ADMIN: PERMISSION_MODULES.flatMap(m => m.permissions.map(p => p.key)).filter(p => p !== 'users_manage'),
-    ACCOUNTANT: [
-        'dashboard_view', 'dashboard_stats',
-        'fees_view', 'fees_collect', 'fees_receipt', 'fees_refund',
-        'demand_bills_view', 'demand_bills_generate', 'demand_bills_print',
-        'fee_structure_view',
-    ],
-    TEACHER: [
-        'dashboard_view',
-        'admissions_view',
-        'exams_view', 'exams_create', 'exams_edit', 'exams_schedule',
-    ],
-    COORDINATOR: [
-        'dashboard_view', 'dashboard_stats',
-        'admissions_view', 'admissions_create', 'admissions_edit',
-        'promotions_view', 'promotions_execute',
-        'exams_view', 'exams_create', 'exams_edit', 'exams_schedule', 'exam_config',
-    ],
-    RECEPTIONIST: [
-        'dashboard_view',
-        'admissions_view', 'admissions_create', 'admissions_edit',
-        'fees_view', 'fees_collect', 'fees_receipt',
-    ],
-    SECURITY: [
-        'dashboard_view',
-        'admissions_view',
-    ],
-    PARENT: ['dashboard_view'],
-    STUDENT: ['dashboard_view'],
-};
+import { PERMISSION_MODULES, ROLE_DEFAULT_PERMISSIONS } from '../../utils/permissions';
 
 const getRoleColor = (role: string) => {
     const found = USER_ROLES.find(r => r.value === role);
@@ -561,6 +455,7 @@ export default function UserManagement() {
                                         value={formData.role}
                                         label="Role"
                                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                        disabled={editingUser && (editingUser.role === 'SUPER_ADMIN' || formData.role === 'SUPER_ADMIN')}
                                     >
                                         {USER_ROLES.map((role) => (
                                             <MenuItem key={role.value} value={role.value}>
@@ -605,70 +500,92 @@ export default function UserManagement() {
                                     <Typography variant="subtitle1" fontWeight={600}>
                                         Access Permissions
                                     </Typography>
-                                    <Chip
-                                        label={`${countSelectedPermissions()} / ${totalPermissions} selected`}
-                                        size="small"
-                                        color={countSelectedPermissions() > 0 ? 'primary' : 'default'}
-                                        sx={{ ml: 'auto', mr: 2 }}
-                                    />
+                                    {formData.role === 'SUPER_ADMIN' ? (
+                                        <Chip
+                                            label="Full Access"
+                                            size="small"
+                                            color="success"
+                                            sx={{ ml: 'auto', mr: 2 }}
+                                        />
+                                    ) : (
+                                        <Chip
+                                            label={`${countSelectedPermissions()} / ${totalPermissions} selected`}
+                                            size="small"
+                                            color={countSelectedPermissions() > 0 ? 'primary' : 'default'}
+                                            sx={{ ml: 'auto', mr: 2 }}
+                                        />
+                                    )}
                                 </Box>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <Alert severity="info" sx={{ mb: 2 }}>
-                                    <Typography variant="body2">
-                                        Select a role above to load default permissions, then customize as needed.
-                                    </Typography>
-                                </Alert>
-                                <Grid container spacing={2}>
-                                    {PERMISSION_MODULES.map((module) => {
-                                        const moduleSelected = module.permissions.filter(p => permissions.includes(p.key)).length;
-                                        const allSelected = moduleSelected === module.permissions.length;
-                                        const someSelected = moduleSelected > 0 && !allSelected;
+                                {formData.role === 'SUPER_ADMIN' ? (
+                                    <Alert severity="success" variant="filled">
+                                        <Typography fontWeight={600}>
+                                            Super Admin has full system access.
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            Permissions cannot be modified for this role properly.
+                                        </Typography>
+                                    </Alert>
+                                ) : (
+                                    <>
+                                        <Alert severity="info" sx={{ mb: 2 }}>
+                                            <Typography variant="body2">
+                                                Select a role above to load default permissions, then customize as needed.
+                                            </Typography>
+                                        </Alert>
+                                        <Grid container spacing={2}>
+                                            {PERMISSION_MODULES.map((module) => {
+                                                const moduleSelected = module.permissions.filter(p => permissions.includes(p.key)).length;
+                                                const allSelected = moduleSelected === module.permissions.length;
+                                                const someSelected = moduleSelected > 0 && !allSelected;
 
-                                        return (
-                                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={module.module}>
-                                                <Paper variant="outlined" sx={{ p: 1.5, height: '100%' }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                                        <FormControlLabel
-                                                            control={
-                                                                <Checkbox
-                                                                    checked={allSelected}
-                                                                    indeterminate={someSelected}
-                                                                    onChange={(e) => handleModuleSelectAll(module.permissions, e.target.checked)}
-                                                                    size="small"
+                                                return (
+                                                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={module.module}>
+                                                        <Paper variant="outlined" sx={{ p: 1.5, height: '100%' }}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                                <FormControlLabel
+                                                                    control={
+                                                                        <Checkbox
+                                                                            checked={allSelected}
+                                                                            indeterminate={someSelected}
+                                                                            onChange={(e) => handleModuleSelectAll(module.permissions, e.target.checked)}
+                                                                            size="small"
+                                                                        />
+                                                                    }
+                                                                    label={
+                                                                        <Typography variant="subtitle2" fontWeight={600}>
+                                                                            {module.module}
+                                                                        </Typography>
+                                                                    }
                                                                 />
-                                                            }
-                                                            label={
-                                                                <Typography variant="subtitle2" fontWeight={600}>
-                                                                    {module.module}
-                                                                </Typography>
-                                                            }
-                                                        />
-                                                    </Box>
-                                                    <FormGroup sx={{ pl: 3 }}>
-                                                        {module.permissions.map((perm) => (
-                                                            <FormControlLabel
-                                                                key={perm.key}
-                                                                control={
-                                                                    <Checkbox
-                                                                        checked={permissions.includes(perm.key)}
-                                                                        onChange={(e) => handlePermissionChange(perm.key, e.target.checked)}
-                                                                        size="small"
+                                                            </Box>
+                                                            <FormGroup sx={{ pl: 3 }}>
+                                                                {module.permissions.map((perm) => (
+                                                                    <FormControlLabel
+                                                                        key={perm.key}
+                                                                        control={
+                                                                            <Checkbox
+                                                                                checked={permissions.includes(perm.key)}
+                                                                                onChange={(e) => handlePermissionChange(perm.key, e.target.checked)}
+                                                                                size="small"
+                                                                            />
+                                                                        }
+                                                                        label={
+                                                                            <Typography variant="body2">
+                                                                                {perm.label}
+                                                                            </Typography>
+                                                                        }
                                                                     />
-                                                                }
-                                                                label={
-                                                                    <Typography variant="body2">
-                                                                        {perm.label}
-                                                                    </Typography>
-                                                                }
-                                                            />
-                                                        ))}
-                                                    </FormGroup>
-                                                </Paper>
-                                            </Grid>
-                                        );
-                                    })}
-                                </Grid>
+                                                                ))}
+                                                            </FormGroup>
+                                                        </Paper>
+                                                    </Grid>
+                                                );
+                                            })}
+                                        </Grid>
+                                    </>
+                                )}
                             </AccordionDetails>
                         </Accordion>
 
@@ -678,6 +595,7 @@ export default function UserManagement() {
                                     <Switch
                                         checked={editingUser.active}
                                         onChange={() => handleToggleActive(editingUser)}
+                                        disabled={editingUser.role === 'SUPER_ADMIN'}
                                     />
                                 }
                                 label={editingUser.active ? 'Active' : 'Inactive'}

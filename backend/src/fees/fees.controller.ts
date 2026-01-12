@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Param, ParseIntPipe, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, ParseIntPipe, Res, NotFoundException, Delete } from '@nestjs/common';
 import type { Response } from 'express';
 import { FeesService } from './fees.service';
 import { CollectFeeDto, FeeStatementDto } from './dto/fee-collection.dto';
@@ -64,7 +64,7 @@ export class FeesController {
     ) {
         try {
             if (!receiptNo) {
-                 throw new NotFoundException('Receipt number is required');
+                throw new NotFoundException('Receipt number is required');
             }
 
             // Fetch receipt metadata for better filename
@@ -103,7 +103,7 @@ export class FeesController {
     ) {
         try {
             if (!billNo) {
-                 throw new NotFoundException('Bill number is required');
+                throw new NotFoundException('Bill number is required');
             }
 
             // Fetch bill metadata for better filename
@@ -181,5 +181,9 @@ export class FeesController {
             console.error('Batch PDF Generation Error:', error);
             throw new NotFoundException(error.message || 'Demand bills not found');
         }
+    }
+    @Delete('demand-bills/batch')
+    async deleteDemandBillBatch(@Body() body: { billNumbers: string[] }) {
+        return this.feesService.deleteDemandBillBatch(body.billNumbers);
     }
 }
