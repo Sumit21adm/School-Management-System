@@ -1,4 +1,5 @@
 import { type ReactNode, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   AppBar,
@@ -54,41 +55,41 @@ const drawerWidth = 260;
 
 const menuItems = [
   {
-    title: 'Main',
+    titleKey: 'sidebar.main',
     items: [
-      { path: '/', label: 'Dashboard', icon: DashboardIcon, requiredPermission: 'dashboard_view' },
+      { path: '/', labelKey: 'sidebar.dashboard', icon: DashboardIcon, requiredPermission: 'dashboard_view' },
     ],
   },
   {
-    title: 'Student Info',
+    titleKey: 'sidebar.studentInfo',
     items: [
-      { path: '/admissions', label: 'Admissions', icon: PersonAddIcon, requiredPermission: 'admissions_view' },
-      { path: '/promotions', label: 'Promotions', icon: TrendingUp, requiredPermission: 'promotions_view' },
+      { path: '/admissions', labelKey: 'sidebar.admissions', icon: PersonAddIcon, requiredPermission: 'admissions_view' },
+      { path: '/promotions', labelKey: 'sidebar.promotions', icon: TrendingUp, requiredPermission: 'promotions_view' },
     ],
   },
   {
-    title: 'Fee Management',
+    titleKey: 'sidebar.feeManagement',
     items: [
-      { path: '/fees/collection-enhanced', label: 'Fee Collection', icon: MoneyIcon, requiredPermission: 'fees_collect' },
-      { path: '/fees/demand-bills', label: 'Demand Bills', icon: Description, requiredPermission: 'demand_bills_view' },
-      { path: '/fees/reports', label: 'Fee Receipt', icon: Receipt, requiredPermission: 'fees_receipts' },
-      { path: '/settings/fee-structure', label: 'Fee Structure', icon: AccountBalance, requiredPermission: 'fee_structure_view' },
+      { path: '/fees/collection-enhanced', labelKey: 'sidebar.feeCollection', icon: MoneyIcon, requiredPermission: 'fees_collect' },
+      { path: '/fees/demand-bills', labelKey: 'sidebar.demandBills', icon: Description, requiredPermission: 'demand_bills_view' },
+      { path: '/fees/reports', labelKey: 'sidebar.feeReceipt', icon: Receipt, requiredPermission: 'fees_receipts' },
+      { path: '/settings/fee-structure', labelKey: 'sidebar.feeStructure', icon: AccountBalance, requiredPermission: 'fee_structure_view' },
     ],
   },
   {
-    title: 'Examination',
+    titleKey: 'sidebar.examination',
     items: [
-      { path: '/exams', label: 'Exams', icon: Description, requiredPermission: 'exams_view' },
-      { path: '/examination/configuration', label: 'Configuration', icon: Description, requiredPermission: 'exam_config' },
+      { path: '/exams', labelKey: 'sidebar.exams', icon: Description, requiredPermission: 'exams_view' },
+      { path: '/examination/configuration', labelKey: 'sidebar.configuration', icon: Description, requiredPermission: 'exam_config' },
     ],
   },
   {
-    title: 'Settings',
+    titleKey: 'sidebar.settings',
     items: [
-      { path: '/settings/sessions', label: 'Sessions', icon: CalendarToday, requiredPermission: 'sessions_view' },
-      { path: '/settings/classes', label: 'Class Management', icon: School, requiredPermission: 'school_settings' },
-      { path: '/settings/print', label: 'School Settings', icon: Settings, requiredPermission: 'school_settings' },
-      { path: '/settings/users', label: 'User Management', icon: Settings, requiredPermission: 'users_manage' },
+      { path: '/settings/sessions', labelKey: 'sidebar.sessions', icon: CalendarToday, requiredPermission: 'sessions_view' },
+      { path: '/settings/classes', labelKey: 'sidebar.classManagement', icon: School, requiredPermission: 'school_settings' },
+      { path: '/settings/print', labelKey: 'sidebar.schoolSettings', icon: Settings, requiredPermission: 'school_settings' },
+      { path: '/settings/users', labelKey: 'sidebar.userManagement', icon: Settings, requiredPermission: 'users_manage' },
     ],
   },
 ];
@@ -99,6 +100,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { mode, toggleColorMode } = useColorMode();
+  const { t } = useTranslation('common');
 
   // Fetch school branding from print settings
   const { data: printSettings, isLoading: isLoadingSettings } = useQuery({
@@ -198,8 +200,8 @@ export default function Layout({ children, onLogout }: LayoutProps) {
             if (visibleItems.length === 0) return null;
 
             return (
-              <Box key={section.title || index} sx={{ mb: 0 }}>
-                {section.title && (
+              <Box key={section.titleKey || index} sx={{ mb: 0 }}>
+                {section.titleKey && (
                   <ListSubheader
                     disableSticky={false}
                     sx={{
@@ -219,7 +221,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
                       boxShadow: '0 1px 2px rgba(0,0,0,0.05)', // Subtle separator
                     }}
                   >
-                    {section.title}
+                    {t(section.titleKey)}
                   </ListSubheader>
                 )}
                 {visibleItems.map((item) => {
@@ -263,7 +265,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
                           <Icon />
                         </ListItemIcon>
                         <ListItemText
-                          primary={item.label}
+                          primary={t(item.labelKey)}
                           primaryTypographyProps={{
                             fontWeight: isActive ? 600 : 500,
                             fontSize: '0.95rem',
