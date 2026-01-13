@@ -1,0 +1,27 @@
+{
+    "title": "डैशबोर्ड",
+    "welcome": "वापसी पर स्वागत है! यहां देखें क्या हो रहा है",
+    "period": "अवधि",
+    "today": "आज",
+    "thisWeek": "इस सप्ताह",
+    "thisMonth": "इस महीने",
+    "stats": {
+        "totalStudents": "कुल छात्र",
+        "todayCollection": "आज का संग्रह",
+        "monthlyCollection": "मासिक संग्रह",
+        "activeStudents": "सक्रिय छात्र"
+    },
+    "sections": {
+        "recentAdmissions": "हाल के छात्र प्रवेश",
+        "recentFees": "हाल के शुल्क संग्रह",
+        "recentBills": "हाल के डिमांड बिल",
+        "upcomingExams": "आगामी परीक्षाएं"
+    },
+    "empty": {
+        "noAdmissions": "कोई हाल का प्रवेश नहीं",
+        "noFees": "कोई हाल का शुल्क संग्रह नहीं",
+        "noBills": "कोई हाल का डिमांड बिल नहीं",
+        "noExams": "कोई आगामी परीक्षा नहीं"
+    },
+    "error": "डैशबोर्ड डेटा लोड करने में विफल। कृपया पेज रीफ्रेश करें।"
+}

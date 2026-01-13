@@ -1,5 +1,7 @@
 {
     "title": "शुल्क संग्रह",
+    "pageSubtitle": "छात्रों से शुल्क एकत्र करें",
+    "studentSearch": "छात्र खोज",
     "feeDetails": "शुल्क विवरण",
     "paymentDetails": "भुगतान विवरण",
     "paymentMode": "भुगतान का तरीका",
@@ -7,5 +9,45 @@
     "collectFee": "शुल्क जमा करें",
     "outstandingDues": "बकाया राशि",
     "totalFee": "कुल शुल्क",
-    "totalPaid": "कुल भुगतान"
+    "totalPaid": "कुल भुगतान",
+    "totalDue": "कुल बकाया",
+    "recentCollections": "हाल के संग्रह",
+    "transactionHistory": "लेनदेन इतिहास",
+    "selectPaymentMode": "भुगतान का तरीका चुनें",
+    "enterAmount": "राशि दर्ज करें",
+    "amountToPay": "भुगतान की जाने वाली राशि",
+    "feeBreakdown": "शुल्क विवरण",
+    "demandBills": {
+        "title": "डिमांड बिल जनरेशन",
+        "subtitle": "छात्रों के लिए डिमांड बिल बनाएं",
+        "generationType": "बिल जनरेशन प्रकार",
+        "singleStudent": "एकल छात्र",
+        "entireClass": "पूरी कक्षा",
+        "allStudents": "सभी छात्र",
+        "selectFeeTypes": "शुल्क प्रकार चुनें",
+        "applicableFeeTypes": "लागू शुल्क प्रकार",
+        "generateBills": "डिमांड बिल बनाएं",
+        "history": "जनरेशन इतिहास",
+        "printBills": "बिल प्रिंट करें",
+        "downloadPdf": "पीडीएफ डाउनलोड करें",
+        "creationList": "निर्माण सूची",
+        "batchGenerated": "बैच जनरेट हुआ"
+    },
+    "reports": {
+        "title": "शुल्क रिपोर्ट",
+        "dailyCollection": "दैनिक संग्रह",
+        "outstandingDues": "बकाया राशि",
+        "billHistory": "बिल इतिहास",
+        "feeAnalysis": "शुल्क विश्लेषण"
+    },
+    "structure": {
+        "title": "शुल्क संरचना",
+        "addNew": "नई शुल्क संरचना जोड़ें",
+        "feeType": "शुल्क प्रकार",
+        "frequency": "आवृत्ति",
+        "monthly": "मासिक",
+        "quarterly": "त्रैमासिक",
+        "halfYearly": "अर्धवार्षिक",
+        "yearly": "वार्षिक"
+    }
 }

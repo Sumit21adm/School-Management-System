@@ -1,0 +1,27 @@
+{
+    "title": "Dashboard",
+    "welcome": "Welcome back! Here's what's happening",
+    "period": "Period",
+    "today": "Today",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "stats": {
+        "totalStudents": "Total Students",
+        "todayCollection": "Today's Collection",
+        "monthlyCollection": "Monthly Collection",
+        "activeStudents": "Active Students"
+    },
+    "sections": {
+        "recentAdmissions": "Recent Student Admissions",
+        "recentFees": "Recent Fee Collections",
+        "recentBills": "Recent Demand Bills",
+        "upcomingExams": "Upcoming Exams"
+    },
+    "empty": {
+        "noAdmissions": "No recent admissions",
+        "noFees": "No recent fee collections",
+        "noBills": "No recent demand bills",
+        "noExams": "No upcoming exams"
+    },
+    "error": "Failed to load dashboard data. Please try refreshing the page."
+}

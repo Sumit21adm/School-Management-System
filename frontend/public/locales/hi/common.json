@@ -19,6 +19,17 @@
         "schoolSettings": "स्कूल सेटिंग्स",
         "userManagement": "उपयोगकर्ता प्रबंधन"
     },
+    "pages": {
+        "dashboard": "डैशबोर्ड",
+        "feeCollection": "शुल्क संग्रह",
+        "demandBills": "डिमांड बिल जनरेशन",
+        "feeReports": "शुल्क रिपोर्ट",
+        "admissions": "छात्र प्रवेश",
+        "promotions": "छात्र प्रोन्नति",
+        "exams": "परीक्षाएं",
+        "settings": "सेटिंग्स",
+        "login": "लॉगिन"
+    },
     "buttons": {
         "save": "सहेजें",
         "cancel": "रद्द करें",
@@ -34,7 +45,16 @@
         "back": "वापस",
         "next": "अगला",
         "generate": "उत्पन्न करें",
-        "download": "डाउनलोड करें"
+        "download": "डाउनलोड करें",
+        "selectAll": "सभी चुनें",
+        "deselectAll": "सभी अचयनित करें",
+        "view": "देखें",
+        "collect": "संग्रह करें",
+        "clear": "साफ़ करें",
+        "reset": "रीसेट",
+        "apply": "लागू करें",
+        "login": "लॉगिन",
+        "logout": "लॉगआउट"
     },
     "labels": {
         "studentId": "छात्र आईडी",
@@ -53,7 +73,29 @@
         "amount": "राशि",
         "total": "कुल",
         "status": "स्थिति",
-        "actions": "कार्रवाई"
+        "actions": "कार्रवाई",
+        "month": "महीना",
+        "year": "वर्ष",
+        "dueDate": "देय तिथि",
+        "billNo": "बिल नंबर",
+        "receiptNo": "रसीद नंबर",
+        "paymentMode": "भुगतान का तरीका",
+        "paymentDate": "भुगतान की तारीख",
+        "remarks": "टिप्पणियां",
+        "discount": "छूट",
+        "fine": "जुर्माना",
+        "advance": "अग्रिम",
+        "previousDues": "पिछला बकाया",
+        "netAmount": "शुद्ध राशि",
+        "paidAmount": "भुगतान की गई राशि",
+        "balance": "शेष राशि",
+        "transactionId": "लेनदेन आईडी",
+        "chequeNo": "चेक नंबर",
+        "bankName": "बैंक का नाम",
+        "gender": "लिंग",
+        "dateOfBirth": "जन्म तिथि",
+        "admissionDate": "प्रवेश तिथि",
+        "rollNo": "रोल नंबर"
     },
     "messages": {
         "loading": "लोड हो रहा है...",
@@ -62,7 +104,33 @@
         "error": "एक त्रुटि हुई",
         "confirmDelete": "क्या आप वाकई हटाना चाहते हैं?",
         "savedSuccessfully": "सफलतापूर्वक सहेजा गया",
-        "selectOption": "एक विकल्प चुनें"
+        "selectOption": "एक विकल्प चुनें",
+        "searchPlaceholder": "खोजें...",
+        "noResults": "कोई परिणाम नहीं मिला",
+        "required": "यह फ़ील्ड आवश्यक है",
+        "invalidEmail": "अमान्य ईमेल पता",
+        "invalidPhone": "अमान्य फ़ोन नंबर",
+        "selectStudent": "कृपया एक छात्र चुनें",
+        "selectClass": "कृपया एक कक्षा चुनें",
+        "paymentSuccess": "भुगतान सफलतापूर्वक एकत्र किया गया",
+        "billGenerated": "डिमांड बिल सफलतापूर्वक जनरेट हुआ"
+    },
+    "status": {
+        "active": "सक्रिय",
+        "inactive": "निष्क्रिय",
+        "pending": "लंबित",
+        "paid": "भुगतान किया",
+        "partial": "आंशिक",
+        "overdue": "अतिदेय",
+        "cancelled": "रद्द"
+    },
+    "paymentModes": {
+        "cash": "नकद",
+        "cheque": "चेक",
+        "upi": "यूपीआई",
+        "bankTransfer": "बैंक ट्रांसफर",
+        "card": "कार्ड",
+        "advance": "अग्रिम भुगतान"
     },
     "language": {
         "english": "English",

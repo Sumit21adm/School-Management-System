@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -91,6 +92,7 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation('dashboard');
   // Period state for filtering activity sections
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
 
@@ -105,7 +107,7 @@ export default function Dashboard() {
   if (error) {
     return (
       <Alert severity="error">
-        Failed to load dashboard data. Please try refreshing the page.
+        {t('error')}
       </Alert>
     );
   }

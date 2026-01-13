@@ -19,6 +19,17 @@
         "schoolSettings": "School Settings",
         "userManagement": "User Management"
     },
+    "pages": {
+        "dashboard": "Dashboard",
+        "feeCollection": "Fee Collection",
+        "demandBills": "Demand Bill Generation",
+        "feeReports": "Fee Reports",
+        "admissions": "Student Admissions",
+        "promotions": "Student Promotions",
+        "exams": "Examinations",
+        "settings": "Settings",
+        "login": "Login"
+    },
     "buttons": {
         "save": "Save",
         "cancel": "Cancel",
@@ -34,7 +45,16 @@
         "back": "Back",
         "next": "Next",
         "generate": "Generate",
-        "download": "Download"
+        "download": "Download",
+        "selectAll": "Select All",
+        "deselectAll": "Deselect All",
+        "view": "View",
+        "collect": "Collect",
+        "clear": "Clear",
+        "reset": "Reset",
+        "apply": "Apply",
+        "login": "Login",
+        "logout": "Logout"
     },
     "labels": {
         "studentId": "Student ID",
@@ -53,7 +73,29 @@
         "amount": "Amount",
         "total": "Total",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "month": "Month",
+        "year": "Year",
+        "dueDate": "Due Date",
+        "billNo": "Bill No",
+        "receiptNo": "Receipt No",
+        "paymentMode": "Payment Mode",
+        "paymentDate": "Payment Date",
+        "remarks": "Remarks",
+        "discount": "Discount",
+        "fine": "Fine",
+        "advance": "Advance",
+        "previousDues": "Previous Dues",
+        "netAmount": "Net Amount",
+        "paidAmount": "Paid Amount",
+        "balance": "Balance",
+        "transactionId": "Transaction ID",
+        "chequeNo": "Cheque No",
+        "bankName": "Bank Name",
+        "gender": "Gender",
+        "dateOfBirth": "Date of Birth",
+        "admissionDate": "Admission Date",
+        "rollNo": "Roll No"
     },
     "messages": {
         "loading": "Loading...",
@@ -62,7 +104,33 @@
         "error": "An error occurred",
         "confirmDelete": "Are you sure you want to delete?",
         "savedSuccessfully": "Saved successfully",
-        "selectOption": "Select an option"
+        "selectOption": "Select an option",
+        "searchPlaceholder": "Search...",
+        "noResults": "No results found",
+        "required": "This field is required",
+        "invalidEmail": "Invalid email address",
+        "invalidPhone": "Invalid phone number",
+        "selectStudent": "Please select a student",
+        "selectClass": "Please select a class",
+        "paymentSuccess": "Payment collected successfully",
+        "billGenerated": "Demand bill generated successfully"
+    },
+    "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending": "Pending",
+        "paid": "Paid",
+        "partial": "Partial",
+        "overdue": "Overdue",
+        "cancelled": "Cancelled"
+    },
+    "paymentModes": {
+        "cash": "Cash",
+        "cheque": "Cheque",
+        "upi": "UPI",
+        "bankTransfer": "Bank Transfer",
+        "card": "Card",
+        "advance": "Advance Payment"
     },
     "language": {
         "english": "English",

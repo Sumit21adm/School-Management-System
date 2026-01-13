@@ -1,5 +1,7 @@
 {
     "title": "Fee Collection",
+    "pageSubtitle": "Collect fees from students",
+    "studentSearch": "Student Search",
     "feeDetails": "Fee Details",
     "paymentDetails": "Payment Details",
     "paymentMode": "Payment Mode",
@@ -7,5 +9,45 @@
     "collectFee": "Collect Fee",
     "outstandingDues": "Outstanding Dues",
     "totalFee": "Total Fee",
-    "totalPaid": "Total Paid"
+    "totalPaid": "Total Paid",
+    "totalDue": "Total Due",
+    "recentCollections": "Recent Collections",
+    "transactionHistory": "Transaction History",
+    "selectPaymentMode": "Select Payment Mode",
+    "enterAmount": "Enter Amount",
+    "amountToPay": "Amount to Pay",
+    "feeBreakdown": "Fee Breakdown",
+    "demandBills": {
+        "title": "Demand Bill Generation",
+        "subtitle": "Generate demand bills for students",
+        "generationType": "Bill Generation Type",
+        "singleStudent": "Single Student",
+        "entireClass": "Entire Class",
+        "allStudents": "All Students",
+        "selectFeeTypes": "Select Fee Types",
+        "applicableFeeTypes": "Applicable Fee Types",
+        "generateBills": "Generate Demand Bills",
+        "history": "Generation History",
+        "printBills": "Print Bills",
+        "downloadPdf": "Download PDF",
+        "creationList": "Creation List",
+        "batchGenerated": "Batch Generated"
+    },
+    "reports": {
+        "title": "Fee Reports",
+        "dailyCollection": "Daily Collection",
+        "outstandingDues": "Outstanding Dues",
+        "billHistory": "Bill History",
+        "feeAnalysis": "Fee Analysis"
+    },
+    "structure": {
+        "title": "Fee Structure",
+        "addNew": "Add Fee Structure",
+        "feeType": "Fee Type",
+        "frequency": "Frequency",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "halfYearly": "Half Yearly",
+        "yearly": "Yearly"
+    }
 }
