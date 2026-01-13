@@ -1,0 +1,11 @@
+{
+    "title": "Fee Collection",
+    "feeDetails": "Fee Details",
+    "paymentDetails": "Payment Details",
+    "paymentMode": "Payment Mode",
+    "paymentDate": "Payment Date",
+    "collectFee": "Collect Fee",
+    "outstandingDues": "Outstanding Dues",
+    "totalFee": "Total Fee",
+    "totalPaid": "Total Paid"
+}

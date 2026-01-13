@@ -1,0 +1,71 @@
+{
+    "sidebar": {
+        "main": "MAIN",
+        "dashboard": "Dashboard",
+        "studentInfo": "STUDENT INFO",
+        "admissions": "Admissions",
+        "promotions": "Promotions",
+        "feeManagement": "FEE MANAGEMENT",
+        "feeCollection": "Fee Collection",
+        "demandBills": "Demand Bills",
+        "feeReceipt": "Fee Receipt",
+        "feeStructure": "Fee Structure",
+        "examination": "EXAMINATION",
+        "exams": "Exams",
+        "configuration": "Configuration",
+        "settings": "SETTINGS",
+        "sessions": "Sessions",
+        "classManagement": "Class Management",
+        "schoolSettings": "School Settings",
+        "userManagement": "User Management"
+    },
+    "buttons": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "submit": "Submit",
+        "delete": "Delete",
+        "edit": "Edit",
+        "add": "Add",
+        "search": "Search",
+        "export": "Export",
+        "print": "Print",
+        "refresh": "Refresh",
+        "close": "Close",
+        "back": "Back",
+        "next": "Next",
+        "generate": "Generate",
+        "download": "Download"
+    },
+    "labels": {
+        "studentId": "Student ID",
+        "studentName": "Student Name",
+        "studentIdOrName": "Student ID or Name",
+        "class": "Class",
+        "section": "Section",
+        "session": "Session",
+        "academicSession": "Academic Session",
+        "fatherName": "Father's Name",
+        "motherName": "Mother's Name",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "date": "Date",
+        "amount": "Amount",
+        "total": "Total",
+        "status": "Status",
+        "actions": "Actions"
+    },
+    "messages": {
+        "loading": "Loading...",
+        "noData": "No data available",
+        "success": "Operation successful",
+        "error": "An error occurred",
+        "confirmDelete": "Are you sure you want to delete?",
+        "savedSuccessfully": "Saved successfully",
+        "selectOption": "Select an option"
+    },
+    "language": {
+        "english": "English",
+        "hindi": "हिंदी"
+    }
+}

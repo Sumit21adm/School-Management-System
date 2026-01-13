@@ -1,0 +1,71 @@
+{
+    "sidebar": {
+        "main": "मुख्य",
+        "dashboard": "डैशबोर्ड",
+        "studentInfo": "छात्र जानकारी",
+        "admissions": "प्रवेश",
+        "promotions": "प्रोन्नति",
+        "feeManagement": "शुल्क प्रबंधन",
+        "feeCollection": "शुल्क संग्रह",
+        "demandBills": "डिमांड बिल",
+        "feeReceipt": "शुल्क रसीद",
+        "feeStructure": "शुल्क संरचना",
+        "examination": "परीक्षा",
+        "exams": "परीक्षाएं",
+        "configuration": "कॉन्फ़िगरेशन",
+        "settings": "सेटिंग्स",
+        "sessions": "सत्र",
+        "classManagement": "कक्षा प्रबंधन",
+        "schoolSettings": "स्कूल सेटिंग्स",
+        "userManagement": "उपयोगकर्ता प्रबंधन"
+    },
+    "buttons": {
+        "save": "सहेजें",
+        "cancel": "रद्द करें",
+        "submit": "जमा करें",
+        "delete": "हटाएं",
+        "edit": "संपादित करें",
+        "add": "जोड़ें",
+        "search": "खोजें",
+        "export": "निर्यात करें",
+        "print": "प्रिंट करें",
+        "refresh": "ताज़ा करें",
+        "close": "बंद करें",
+        "back": "वापस",
+        "next": "अगला",
+        "generate": "उत्पन्न करें",
+        "download": "डाउनलोड करें"
+    },
+    "labels": {
+        "studentId": "छात्र आईडी",
+        "studentName": "छात्र का नाम",
+        "studentIdOrName": "छात्र आईडी या नाम",
+        "class": "कक्षा",
+        "section": "अनुभाग",
+        "session": "सत्र",
+        "academicSession": "शैक्षणिक सत्र",
+        "fatherName": "पिता का नाम",
+        "motherName": "माता का नाम",
+        "phone": "फ़ोन",
+        "email": "ईमेल",
+        "address": "पता",
+        "date": "दिनांक",
+        "amount": "राशि",
+        "total": "कुल",
+        "status": "स्थिति",
+        "actions": "कार्रवाई"
+    },
+    "messages": {
+        "loading": "लोड हो रहा है...",
+        "noData": "कोई डेटा उपलब्ध नहीं",
+        "success": "ऑपरेशन सफल",
+        "error": "एक त्रुटि हुई",
+        "confirmDelete": "क्या आप वाकई हटाना चाहते हैं?",
+        "savedSuccessfully": "सफलतापूर्वक सहेजा गया",
+        "selectOption": "एक विकल्प चुनें"
+    },
+    "language": {
+        "english": "English",
+        "hindi": "हिंदी"
+    }
+}

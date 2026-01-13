@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Paper,
@@ -72,6 +73,7 @@ const defaultSettings: SchoolSettingsData = {
 export default function SchoolSettings() {
     const queryClient = useQueryClient();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { t, i18n } = useTranslation(['settings', 'common']);
     const [formData, setFormData] = useState<SchoolSettingsData>(defaultSettings);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
     const [cropDialogOpen, setCropDialogOpen] = useState(false);
@@ -372,6 +374,19 @@ export default function SchoolSettings() {
                                     <MenuItem value="Europe/London">🇬🇧 UK (GMT/BST) - Europe/London</MenuItem>
                                     <MenuItem value="America/New_York">🇺🇸 US East (EST) - America/New_York</MenuItem>
                                     <MenuItem value="America/Los_Angeles">🇺🇸 US West (PST) - America/Los_Angeles</MenuItem>
+                                </TextField>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    select
+                                    label={t('settings:language')}
+                                    value={i18n.language}
+                                    onChange={(e) => i18n.changeLanguage(e.target.value)}
+                                    helperText="Select application language"
+                                >
+                                    <MenuItem value="en">🇺🇸 English</MenuItem>
+                                    <MenuItem value="hi">🇮🇳 हिंदी (Hindi)</MenuItem>
                                 </TextField>
                             </Grid>
                         </Grid>

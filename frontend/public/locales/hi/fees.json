@@ -1,0 +1,11 @@
+{
+    "title": "शुल्क संग्रह",
+    "feeDetails": "शुल्क विवरण",
+    "paymentDetails": "भुगतान विवरण",
+    "paymentMode": "भुगतान का तरीका",
+    "paymentDate": "भुगतान की तारीख",
+    "collectFee": "शुल्क जमा करें",
+    "outstandingDues": "बकाया राशि",
+    "totalFee": "कुल शुल्क",
+    "totalPaid": "कुल भुगतान"
+}
