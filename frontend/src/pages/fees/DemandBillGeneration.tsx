@@ -35,9 +35,10 @@ import {
   TableHead,
   TableRow,
   Tooltip,
+  Autocomplete,
 } from '@mui/material';
 import { FileText, Download, Send, Printer } from 'lucide-react';
-import { apiClient, feeService, classService } from '../../lib/api';
+import { apiClient, feeService, classService, admissionService } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import DemandBillCreationList from './DemandBillCreationList';
 import { Dialog, DialogContent, IconButton, DialogActions, DialogTitle, DialogContentText } from '@mui/material';
@@ -457,17 +458,97 @@ export default function DemandBillGeneration() {
                       <Controller
                         name="studentId"
                         control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Student ID"
-                            fullWidth
-                            required
-                            error={!!errors.studentId}
-                            helperText={errors.studentId?.message}
-                            placeholder="Enter ID"
-                          />
-                        )}
+                        render={({ field }) => {
+                          const [open, setOpen] = useState(false);
+                          const [options, setOptions] = useState<any[]>([]);
+                          const [loading, setLoading] = useState(false);
+                          const [inputValue, setInputValue] = useState(field.value || '');
+                          const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+                          useEffect(() => {
+                            const searchStudents = async () => {
+                              if (!inputValue || inputValue.length < 2) {
+                                setOptions([]);
+                                return;
+                              }
+                              setLoading(true);
+                              try {
+                                const response = await admissionService.getStudents({
+                                  search: inputValue,
+                                  limit: 10,
+                                  status: 'active'
+                                });
+                                setOptions(response.data.data || []);
+                              } catch (err) {
+                                console.error('Error searching students:', err);
+                              } finally {
+                                setLoading(false);
+                              }
+                            };
+                            const timer = setTimeout(searchStudents, 300);
+                            return () => clearTimeout(timer);
+                          }, [inputValue]);
+
+                          return (
+                            <Autocomplete
+                              fullWidth
+                              value={selectedStudent}
+                              open={open}
+                              onOpen={() => setOpen(true)}
+                              onClose={() => setOpen(false)}
+                              isOptionEqualToValue={(option, value) => option.studentId === value?.studentId}
+                              getOptionLabel={(option) => option?.studentId || ''}
+                              filterOptions={(x) => x}
+                              options={options}
+                              loading={loading}
+                              inputValue={inputValue}
+                              onInputChange={(_event, newInputValue) => {
+                                setInputValue(newInputValue);
+                              }}
+                              onChange={(_event, newValue: any) => {
+                                if (newValue) {
+                                  field.onChange(newValue.studentId);
+                                  setSelectedStudent(newValue);
+                                } else {
+                                  field.onChange('');
+                                  setSelectedStudent(null);
+                                }
+                              }}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  fullWidth
+                                  label="Student ID or Name"
+                                  placeholder="Enter ID or Name..."
+                                  required
+                                  error={!!errors.studentId}
+                                  helperText={errors.studentId?.message}
+                                  InputProps={{
+                                    ...params.InputProps,
+                                    endAdornment: (
+                                      <>
+                                        {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                        {params.InputProps.endAdornment}
+                                      </>
+                                    ),
+                                  }}
+                                />
+                              )}
+                              renderOption={(props, option) => (
+                                <li {...props} key={option.id}>
+                                  <Box>
+                                    <Typography variant="subtitle2">
+                                      {option.name} <span style={{ color: 'gray' }}>({option.studentId})</span>
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Class: {option.className}-{option.section} | Father: {option.fatherName}
+                                    </Typography>
+                                  </Box>
+                                </li>
+                              )}
+                            />
+                          );
+                        }}
                       />
                     </Grid>
                   )}
