@@ -5,6 +5,35 @@ Complete attendance management module for marking daily student attendance, trac
 
 ---
 
+## ⚠️ Non-Breaking Changes (Critical)
+
+### Database
+- All new models are **separate tables** - no modification to existing tables
+- Student model gets **optional** relations (nullable)
+- Session model gets **optional** relations (nullable)
+- No changes to existing Fee, Admission, or Exam tables
+
+### Backend
+- New `/attendance/*` endpoints - no changes to existing routes
+- All existing APIs remain unchanged
+- New permissions are additive - existing roles unaffected
+
+### Frontend
+- New pages under `/attendance/*` routes
+- Sidebar gets new section - existing menu items unchanged
+- Student Profile gets new tab - existing tabs unchanged
+- Dashboard gets new widget - existing widgets unchanged
+
+### Testing Checklist Before Deployment
+- [ ] Existing student CRUD works
+- [ ] Fee Collection works normally
+- [ ] Demand Bill generation works normally
+- [ ] Existing Dashboard loads correctly
+- [ ] All existing reports work
+- [ ] Login/Authentication unchanged
+
+---
+
 ## Phase 1: Database Schema
 
 ### New Models (Add to `schema.prisma`)

@@ -5,6 +5,33 @@ Complete transport management module for managing school buses, routes, drivers,
 
 ---
 
+## ⚠️ Non-Breaking Changes (Critical)
+
+### Database
+- All new models are **separate tables** - no modification to existing tables
+- Student model gets **optional** `transport` relation (nullable)
+- No changes to existing Fee, DemandBill, or Transaction tables
+
+### Backend
+- New `/transport/*` endpoints - no changes to existing routes
+- Fee integration is **additive** - adds transport fee as new line item
+- All existing APIs remain unchanged
+
+### Frontend
+- New pages under `/transport/*` routes
+- Sidebar gets new section - existing menu items unchanged
+- Student Profile gets new tab - existing tabs unchanged
+- Admission Form gets optional fields - existing fields unchanged
+
+### Testing Checklist Before Deployment
+- [ ] Existing student CRUD works
+- [ ] Fee Collection works without transport
+- [ ] Demand Bill generation works without transport
+- [ ] All existing reports work
+- [ ] Login/Authentication unchanged
+
+---
+
 ## Phase 1: Database Schema
 
 ### New Models (Add to `schema.prisma`)
