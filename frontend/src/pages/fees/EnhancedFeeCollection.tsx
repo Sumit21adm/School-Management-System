@@ -300,6 +300,13 @@ export default function EnhancedFeeCollection() {
     }
   }, [selectedSession, setValue]);
 
+  // Auto-select Advance payment mode when outstanding dues is zero
+  useEffect(() => {
+    if (dashboard && dashboard.summary.totalDues <= 0) {
+      setValue('paymentMode', 'advance');
+    }
+  }, [dashboard, setValue]);
+
   // Collect fee mutation
   const collectFeeMutation = useMutation({
     mutationFn: async (data: FeeCollectionFormData) => {
@@ -909,13 +916,18 @@ export default function EnhancedFeeCollection() {
                         <FormControl fullWidth>
                           <InputLabel>Payment Mode *</InputLabel>
                           <Select {...field} label="Payment Mode *">
-                            <MenuItem value="cash">Cash</MenuItem>
-                            <MenuItem value="cheque">Cheque</MenuItem>
-                            <MenuItem value="online">Online Transfer</MenuItem>
-                            <MenuItem value="card">Card</MenuItem>
-                            <MenuItem value="upi">UPI</MenuItem>
+                            <MenuItem value="cash" disabled={dashboard?.summary.totalDues <= 0}>Cash</MenuItem>
+                            <MenuItem value="cheque" disabled={dashboard?.summary.totalDues <= 0}>Cheque</MenuItem>
+                            <MenuItem value="online" disabled={dashboard?.summary.totalDues <= 0}>Online Transfer</MenuItem>
+                            <MenuItem value="card" disabled={dashboard?.summary.totalDues <= 0}>Card</MenuItem>
+                            <MenuItem value="upi" disabled={dashboard?.summary.totalDues <= 0}>UPI</MenuItem>
                             <MenuItem value="advance">💰 Advance Payment</MenuItem>
                           </Select>
+                          {dashboard?.summary.totalDues <= 0 && (
+                            <Typography variant="caption" color="info.main" sx={{ mt: 0.5 }}>
+                              ℹ️ Outstanding dues is ₹0. Only Advance Payment is allowed.
+                            </Typography>
+                          )}
                         </FormControl>
                       )}
                     />
