@@ -445,8 +445,8 @@ export default function EnhancedFeeCollection() {
                     />
                   </Grid>
 
-                  {/* 2. Student ID Search */}
-                  <Grid size={{ xs: 12, md: 4 }}>
+                  {/* 2. Student ID or Name Search */}
+                  <Grid size={{ xs: 12, md: 7 }}>
                     <Controller
                       name="studentId"
                       control={control}
@@ -538,139 +538,12 @@ export default function EnhancedFeeCollection() {
                               <TextField
                                 {...params}
                                 fullWidth
-                                label="Student ID"
-                                placeholder="Enter ID..."
+                                label="Student ID or Name"
+                                placeholder="Enter ID or Name..."
                                 required={!selectedOpt}
                                 error={!!errors.studentId}
                                 InputProps={{
                                   ...params.InputProps,
-                                  endAdornment: (
-                                    <>
-                                      {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                                      {params.InputProps.endAdornment}
-                                    </>
-                                  ),
-                                }}
-                              />
-                            )}
-                            renderOption={(props, option) => (
-                              <li {...props} key={option.id}>
-                                <Box>
-                                  <Typography variant="subtitle2">
-                                    {option.name} <span style={{ color: 'gray' }}>({option.studentId})</span>
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Class: {option.className}-{option.section} | Father: {option.fatherName}
-                                  </Typography>
-                                  {option.address && (
-                                    <Typography variant="caption" display="block" color="text.secondary">
-                                      Address: {option.address}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </li>
-                            )}
-                          />
-                        );
-                      }}
-                    />
-                  </Grid>
-
-                  {/* 3. Student Name Search */}
-                  <Grid size={{ xs: 12, md: 5 }}>
-                    <Controller
-                      name="studentId"
-                      control={control}
-                      render={({ field }) => {
-                        const [open, setOpen] = useState(false);
-                        const [options, setOptions] = useState<any[]>([]);
-                        const [loading, setLoading] = useState(false);
-                        const [inputValue, setInputValue] = useState('');
-
-                        const searchStudents = useMemo(
-                          () =>
-                            debounce(async (query: string) => {
-                              if (!query || query.length < 2) {
-                                setOptions([]);
-                                return;
-                              }
-                              setLoading(true);
-                              try {
-                                const response = await admissionService.getStudents({
-                                  search: query,
-                                  limit: 10,
-                                  status: 'active'
-                                });
-                                setOptions(response.data.data || []);
-                              } catch (err) {
-                                console.error('Error searching students:', err);
-                              } finally {
-                                setLoading(false);
-                              }
-                            }, 500),
-                          []
-                        );
-
-                        useEffect(() => {
-                          searchStudents(inputValue);
-                        }, [inputValue, searchStudents]);
-
-                        // Sync with parent state logic (simplified duplication for now to ensure both work)
-                        // In a refactor, we should hoist this state up, but for now we rely on the form field value + studentInfo
-                        const [selectedOpt, setSelectedOpt] = useState<any>(null);
-
-                        useEffect(() => {
-                          // Use studentInfo as the source of truth for the 'selected object' when it changes
-                          if (studentInfo && studentInfo.studentId === field.value) {
-                            setSelectedOpt(studentInfo);
-                          } else if (!field.value) {
-                            // Cleared by the other autocomplete, sync this one
-                            setSelectedOpt(null);
-                            setInputValue('');
-                          }
-                        }, [field.value, studentInfo]);
-
-                        return (
-                          <Autocomplete
-                            fullWidth
-                            value={selectedOpt}
-                            open={open}
-                            onOpen={() => setOpen(true)}
-                            onClose={() => setOpen(false)}
-                            isOptionEqualToValue={(option, value) => option.studentId === value.studentId}
-                            getOptionLabel={(option) => option.name || ''}
-                            filterOptions={(x) => x}
-                            forcePopupIcon={false}
-                            options={options}
-                            loading={loading}
-                            inputValue={inputValue}
-                            onInputChange={(event, newInputValue) => {
-                              setInputValue(newInputValue);
-                            }}
-                            onChange={(event, newValue: any) => {
-                              if (newValue) {
-                                field.onChange(newValue.studentId);
-                                setSelectedOpt(newValue);
-                                setStudentInfo(newValue);
-                              } else {
-                                field.onChange('');
-                                setSelectedOpt(null);
-                                setStudentInfo(null);
-                              }
-                            }}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                fullWidth
-                                label="Student Name"
-                                placeholder="Enter Name..."
-                                InputProps={{
-                                  ...params.InputProps,
-                                  startAdornment: (
-                                    <InputAdornment position="start">
-                                      <Search size={20} color="gray" />
-                                    </InputAdornment>
-                                  ),
                                   endAdornment: (
                                     <>
                                       {loading ? <CircularProgress color="inherit" size={20} /> : null}
