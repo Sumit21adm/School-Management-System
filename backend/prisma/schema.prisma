@@ -650,6 +650,7 @@ model Route {
   routeCode       String    @unique @db.VarChar(20)  // e.g., "R1"
   startPoint      String    @db.VarChar(100)
   endPoint        String    @db.VarChar(100)
+  viaPoints       String?   @db.VarChar(200)         // e.g., "Main Market, Railway Station"
   distance        Decimal?  @db.Decimal(5,2)         // in kilometers
   estimatedTime   Int?                                // in minutes
   morningDeparture String?  @db.VarChar(10)          // "07:30"

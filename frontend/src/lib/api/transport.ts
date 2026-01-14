@@ -37,6 +37,7 @@ export interface Route {
     routeCode: string;
     startPoint: string;
     endPoint: string;
+    viaPoints?: string;
     monthlyFee: number;
     status: string;
     vehicle?: Vehicle;

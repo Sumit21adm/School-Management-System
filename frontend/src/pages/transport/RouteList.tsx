@@ -61,7 +61,9 @@ function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDelete
                     {route.routeName}
                 </TableCell>
                 <TableCell>{route.routeCode}</TableCell>
-                <TableCell>{route.startPoint} → {route.endPoint}</TableCell>
+                <TableCell>
+                    {route.startPoint} → {route.viaPoints && <Typography component="span" color="primary.main">{route.viaPoints} → </Typography>}{route.endPoint}
+                </TableCell>
                 <TableCell>
                     {route.vehicle ? (
                         <Chip label={route.vehicle.vehicleNo} size="small" variant="outlined" />
@@ -176,6 +178,7 @@ export default function RouteList() {
             routeCode: '',
             startPoint: '',
             endPoint: '',
+            viaPoints: '',
             vehicleId: '',
             status: 'active',
         },
@@ -229,6 +232,7 @@ export default function RouteList() {
                 routeCode: route.routeCode,
                 startPoint: route.startPoint,
                 endPoint: route.endPoint,
+                viaPoints: route.viaPoints || '',
                 vehicleId: route.vehicle?.id?.toString() || '',
                 status: route.status,
             });
@@ -239,6 +243,7 @@ export default function RouteList() {
                 routeCode: '',
                 startPoint: '',
                 endPoint: '',
+                viaPoints: '',
                 vehicleId: '',
                 status: 'active',
             });
@@ -445,6 +450,21 @@ export default function RouteList() {
                                     rules={{ required: 'End Point is required' }}
                                     render={({ field, fieldState: { error } }) => (
                                         <TextField {...field} label="End Point" fullWidth error={!!error} helperText={error?.message} />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                                <Controller
+                                    name="viaPoints"
+                                    control={routeControl}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Via (Optional)"
+                                            fullWidth
+                                            placeholder="e.g., Main Market, Railway Station"
+                                            helperText="Comma-separated intermediate points"
+                                        />
                                     )}
                                 />
                             </Grid>

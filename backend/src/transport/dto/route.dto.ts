@@ -47,6 +47,10 @@ export class CreateRouteDto {
     endPoint: string;
 
     @IsOptional()
+    @IsString()
+    viaPoints?: string;
+
+    @IsOptional()
     @IsNumber()
     distance?: number;
 
@@ -96,6 +100,10 @@ export class UpdateRouteDto {
     @IsOptional()
     @IsString()
     endPoint?: string;
+
+    @IsOptional()
+    @IsString()
+    viaPoints?: string;
 
     @IsOptional()
     @IsNumber()
