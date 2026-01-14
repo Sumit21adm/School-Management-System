@@ -30,17 +30,18 @@ import {
     Place as PlaceIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
-import { transportService, type Route, type Vehicle, type RouteStop } from '../../lib/api/transport';
+import { transportService, type Route, type Vehicle, type RouteStop, type FareSlab } from '../../lib/api/transport';
 import PageHeader from '../../components/PageHeader';
 import { useSnackbar } from 'notistack';
 
-function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDeleteStop }: {
+function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDeleteStop, getFareForDistance }: {
     route: Route;
     onEdit: (route: Route) => void;
     onDelete: (id: number) => void;
     onManageStops: (route: Route) => void;
     onEditStop: (route: Route, stop: RouteStop) => void;
     onDeleteStop: (routeId: number, stopId: number) => void;
+    getFareForDistance: (distance: number) => number | null;
 }) {
     const [open, setOpen] = useState(false);
 
@@ -101,6 +102,7 @@ function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDelete
                                         <TableCell>Order</TableCell>
                                         <TableCell>Stop Name</TableCell>
                                         <TableCell>Distance (km)</TableCell>
+                                        <TableCell>Fare</TableCell>
                                         <TableCell>Pickup Time</TableCell>
                                         <TableCell>Drop Time</TableCell>
                                         <TableCell align="right">Actions</TableCell>
@@ -119,6 +121,13 @@ function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDelete
                                             <TableCell>
                                                 {stop.distanceFromSchool ? `${Number(stop.distanceFromSchool)} km` : '-'}
                                             </TableCell>
+                                            <TableCell>
+                                                {stop.distanceFromSchool ? (
+                                                    <Typography color="success.main" fontWeight="bold">
+                                                        ₹{getFareForDistance(Number(stop.distanceFromSchool))?.toLocaleString() || 'N/A'}
+                                                    </Typography>
+                                                ) : '-'}
+                                            </TableCell>
                                             <TableCell>{stop.pickupTime || '-'}</TableCell>
                                             <TableCell>{stop.dropTime || '-'}</TableCell>
                                             <TableCell align="right">
@@ -133,7 +142,7 @@ function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDelete
                                     ))}
                                     {(!route.stops || route.stops.length === 0) && (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center">No stops added yet.</TableCell>
+                                            <TableCell colSpan={7} align="center">No stops added yet.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -150,6 +159,7 @@ export default function RouteList() {
     const { enqueueSnackbar } = useSnackbar();
     const [routes, setRoutes] = useState<Route[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [fareSlabs, setFareSlabs] = useState<FareSlab[]>([]);
 
     // Route Dialog State
     const [openRouteDialog, setOpenRouteDialog] = useState(false);
@@ -183,17 +193,27 @@ export default function RouteList() {
 
     const fetchData = async () => {
         try {
-            const [routesData, vehiclesData] = await Promise.all([
+            const [routesData, vehiclesData, fareSlabsData] = await Promise.all([
                 transportService.getRoutes(),
                 transportService.getVehicles('active'),
+                transportService.getFareSlabs(),
             ]);
             setRoutes(routesData);
             setVehicles(vehiclesData);
+            setFareSlabs(fareSlabsData);
         } catch (error: any) {
             console.error('Fetch error:', error);
             const message = error.response?.data?.message || 'Failed to fetch data';
             enqueueSnackbar(message, { variant: 'error' });
         }
+    };
+
+    // Helper to get fare for a given distance from fare slabs
+    const getFareForDistance = (distance: number): number | null => {
+        const matchingSlab = fareSlabs.find(
+            (slab) => slab.isActive && distance >= slab.minDistance && distance <= slab.maxDistance
+        );
+        return matchingSlab ? matchingSlab.monthlyFee : null;
     };
 
     useEffect(() => {
@@ -366,6 +386,7 @@ export default function RouteList() {
                                 onManageStops={handleManageStops}
                                 onEditStop={handleEditStop}
                                 onDeleteStop={handleDeleteStop}
+                                getFareForDistance={getFareForDistance}
                             />
                         ))}
                         {routes.length === 0 && (
