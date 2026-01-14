@@ -408,28 +408,53 @@ export class TransportService {
     // ============================================
 
     async getRouteWiseReport() {
-        const routes = await this.prisma.route.findMany({
-            where: { status: 'active' },
-            include: {
-                vehicle: { include: { driver: true } },
-                stops: { orderBy: { stopOrder: 'asc' } },
-                studentTransports: {
-                    where: { status: 'active' },
-                    include: {
-                        student: { select: { studentId: true, name: true, className: true, section: true, phone: true } },
-                        pickupStop: true,
-                        dropStop: true
+        const [routes, slabs] = await Promise.all([
+            this.prisma.route.findMany({
+                where: { status: 'active' },
+                include: {
+                    vehicle: { include: { driver: true } },
+                    stops: { orderBy: { stopOrder: 'asc' } },
+                    studentTransports: {
+                        where: { status: 'active' },
+                        include: {
+                            student: { select: { studentId: true, name: true, className: true, section: true, phone: true } },
+                            pickupStop: true,
+                            dropStop: true
+                        }
                     }
-                }
-            },
-            orderBy: { routeCode: 'asc' }
-        });
+                },
+                orderBy: { routeCode: 'asc' }
+            }),
+            this.prisma.transportFareSlab.findMany({ where: { isActive: true } })
+        ]);
 
-        return routes.map(route => ({
-            ...route,
-            studentCount: route.studentTransports.length,
-            totalFee: route.studentTransports.length * Number(route.monthlyFee)
-        }));
+        return routes.map(route => {
+            let routeRevenue = 0;
+
+            route.studentTransports.forEach(st => {
+                let dist = 0;
+                if (st.transportType === 'pickup' && st.pickupStop?.distanceFromSchool) {
+                    dist = Number(st.pickupStop.distanceFromSchool);
+                } else if (st.transportType === 'drop' && st.dropStop?.distanceFromSchool) {
+                    dist = Number(st.dropStop.distanceFromSchool);
+                } else {
+                    const p = Number(st.pickupStop?.distanceFromSchool || 0);
+                    const d = Number(st.dropStop?.distanceFromSchool || 0);
+                    dist = Math.max(p, d);
+                }
+
+                if (dist > 0) {
+                    const slab = slabs.find(s => dist >= Number(s.minDistance) && dist <= Number(s.maxDistance));
+                    if (slab) routeRevenue += Number(slab.monthlyFee);
+                }
+            });
+
+            return {
+                ...route,
+                studentCount: route.studentTransports.length,
+                totalFee: routeRevenue
+            };
+        });
     }
 
     async getStopWiseReport(routeId: number) {

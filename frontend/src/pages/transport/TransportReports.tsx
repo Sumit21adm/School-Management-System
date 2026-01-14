@@ -146,7 +146,6 @@ function RouteRow({ route }: { route: RouteReportData }) {
                         size="small"
                     />
                 </TableCell>
-                <TableCell align="right">₹{Number(route.monthlyFee).toLocaleString()}</TableCell>
                 <TableCell align="right">₹{route.totalFee.toLocaleString()}</TableCell>
             </TableRow>
             <TableRow>
@@ -245,7 +244,7 @@ function RouteWiseReport() {
                         variant="outlined"
                     />
                     <Chip
-                        label={`Total: ₹${totalRevenue.toLocaleString()}/month`}
+                        label={`Total Est. Revenue: ₹${totalRevenue.toLocaleString()}/month`}
                         color="secondary"
                     />
                 </Stack>
@@ -268,8 +267,7 @@ function RouteWiseReport() {
                             <TableCell>Route</TableCell>
                             <TableCell>Vehicle / Driver</TableCell>
                             <TableCell align="center">Students</TableCell>
-                            <TableCell align="right">Fee/Student</TableCell>
-                            <TableCell align="right">Total Fee</TableCell>
+                            <TableCell align="right">Est. Revenue</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>

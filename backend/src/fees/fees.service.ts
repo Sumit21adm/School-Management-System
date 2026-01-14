@@ -637,10 +637,10 @@ export class FeesService {
                             transportAmount = fareSlab ? Number(fareSlab.monthlyFee) : 0;
                         }
 
-                        // Fallback to route's flat monthlyFee if no slab or distance not set
-                        if (transportAmount === 0) {
-                            transportAmount = Number(student.transport.route.monthlyFee);
-                        }
+                        // Removed fallback to route.monthlyFee as we are strictly distance-based now
+                        // if (transportAmount === 0 && student.transport.route.monthlyFee) {
+                        //     transportAmount = Number(student.transport.route.monthlyFee);
+                        // }
 
                         totalAmount += transportAmount;
 

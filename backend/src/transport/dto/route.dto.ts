@@ -66,8 +66,9 @@ export class CreateRouteDto {
     @IsString()
     eveningDeparture?: string;
 
+    @IsOptional()
     @IsNumber()
-    monthlyFee: number;
+    monthlyFee?: number;
 
     @IsOptional()
     @IsString()
