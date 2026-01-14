@@ -56,6 +56,7 @@ Complete transport management module for managing school buses, routes, drivers,
 
 ### New Fields Added (January 14, 2026)
 - `RouteStop.distanceFromSchool` - Distance from school in km (for fare calculation)
+- `Route.viaPoints` - Optional intermediate points (e.g., "Main Market")
 - `TransportFareSlab` - New model for distance-based fare configuration
 
 ---

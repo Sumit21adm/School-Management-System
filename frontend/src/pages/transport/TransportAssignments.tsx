@@ -28,7 +28,7 @@ import {
     Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
-import { transportService, type Route, type StudentTransport } from '../../lib/api/transport';
+import { transportService, type Route, type StudentTransport, type FareSlab } from '../../lib/api/transport';
 import { apiClient } from '../../lib/api'; // Direct api access for student search
 import PageHeader from '../../components/PageHeader';
 import { useSnackbar } from 'notistack';
@@ -47,6 +47,7 @@ export default function TransportAssignments() {
     const { enqueueSnackbar } = useSnackbar();
     const [assignments, setAssignments] = useState<StudentTransport[]>([]);
     const [routes, setRoutes] = useState<Route[]>([]);
+    const [fareSlabs, setFareSlabs] = useState<FareSlab[]>([]);
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -80,12 +81,14 @@ export default function TransportAssignments() {
 
     const fetchData = async () => {
         try {
-            const [assignmentsData, routesData] = await Promise.all([
+            const [assignmentsData, routesData, fareSlabsData] = await Promise.all([
                 transportService.getAssignments(),
                 transportService.getRoutes('active'),
+                transportService.getFareSlabs(),
             ]);
             setAssignments(assignmentsData);
             setRoutes(routesData);
+            setFareSlabs(fareSlabsData);
         } catch (error: any) {
             console.error('Fetch error:', error);
             const message = error.response?.data?.message || 'Failed to fetch data';
@@ -101,17 +104,33 @@ export default function TransportAssignments() {
         if (!query) return;
         setLoadingStudents(true);
         try {
-            // Mock search if admissionService.searchStudents doesn't exist
-            // Or use apiClient directly
-            // Use apiClient to call /admissions (findAll)
             const response = await apiClient.get('/admissions', { params: { search: query } });
-            // The API returns { data: [...], meta: ... }, so we need response.data.data
             setStudentOptions(response.data.data || []);
         } catch (error) {
             console.error(error);
         } finally {
             setLoadingStudents(false);
         }
+    };
+
+    const calculateFare = (assignment: StudentTransport) => {
+        let distance = 0;
+        if (assignment.transportType === 'pickup' && assignment.pickupStop?.distanceFromSchool) {
+            distance = Number(assignment.pickupStop.distanceFromSchool);
+        } else if (assignment.transportType === 'drop' && assignment.dropStop?.distanceFromSchool) {
+            distance = Number(assignment.dropStop.distanceFromSchool);
+        } else {
+            // Both - take max distance
+            const pDist = assignment.pickupStop?.distanceFromSchool ? Number(assignment.pickupStop.distanceFromSchool) : 0;
+            const dDist = assignment.dropStop?.distanceFromSchool ? Number(assignment.dropStop.distanceFromSchool) : 0;
+            distance = Math.max(pDist, dDist);
+        }
+
+        if (distance > 0) {
+            const slab = fareSlabs.find(s => s.isActive && distance >= s.minDistance && distance <= s.maxDistance);
+            if (slab) return slab.monthlyFee;
+        }
+        return 0;
     };
 
     const handleOpen = (assignment?: StudentTransport) => {
@@ -249,7 +268,7 @@ export default function TransportAssignments() {
                                         {!row.pickupStop && !row.dropStop && "-"}
                                     </Box>
                                 </TableCell>
-                                <TableCell>₹{row.route.monthlyFee}</TableCell>
+                                <TableCell>₹{calculateFare(row).toLocaleString()}</TableCell>
                                 <TableCell>
                                     <Chip label={row.transportType} size="small" sx={{ textTransform: 'capitalize' }} />
                                 </TableCell>
@@ -328,7 +347,7 @@ export default function TransportAssignments() {
                                         <TextField {...field} select label="Select Route" fullWidth>
                                             {routes.map((route) => (
                                                 <MenuItem key={route.id} value={route.id}>
-                                                    {route.routeName} (₹{route.monthlyFee})
+                                                    {route.routeName} {route.viaPoints ? `(via ${route.viaPoints})` : ''}
                                                 </MenuItem>
                                             ))}
                                         </TextField>
@@ -411,6 +430,6 @@ export default function TransportAssignments() {
                     </DialogActions>
                 </form>
             </Dialog>
-        </Box>
+        </Box >
     );
 }
