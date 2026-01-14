@@ -82,6 +82,14 @@ export const PERMISSION_MODULES: PermissionModule[] = [
             { key: 'users_manage', label: 'Manage Users' },
         ],
     },
+    {
+        module: 'Transport',
+        permissions: [
+            { key: 'transport_view', label: 'View Transport' },
+            { key: 'transport_manage', label: 'Manage Transport' }, // Vehicles, Drivers, Routes
+            { key: 'transport_assign', label: 'Assign Transport' },
+        ],
+    },
 ];
 
 // Default permissions for each role

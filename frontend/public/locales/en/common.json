@@ -17,7 +17,12 @@
         "sessions": "Sessions",
         "classManagement": "Class Management",
         "schoolSettings": "School Settings",
-        "userManagement": "User Management"
+        "userManagement": "User Management",
+        "transport": "TRANSPORT",
+        "vehicles": "Vehicles",
+        "drivers": "Drivers",
+        "routes": "Routes",
+        "assignments": "Assignments"
     },
     "pages": {
         "dashboard": "Dashboard",
@@ -95,7 +100,27 @@
         "gender": "Gender",
         "dateOfBirth": "Date of Birth",
         "admissionDate": "Admission Date",
-        "rollNo": "Roll No"
+        "rollNo": "Roll No",
+        "vehicleNumber": "Vehicle Number",
+        "licenseNumber": "License Number",
+        "driverName": "Driver Name",
+        "helperName": "Helper Name",
+        "contactNumber": "Contact Number",
+        "capacity": "Capacity",
+        "vehicleType": "Vehicle Type",
+        "routeName": "Route Name",
+        "startPoint": "Start Point",
+        "endPoint": "End Point",
+        "distance": "Distance",
+        "charges": "Charges",
+        "stops": "Stops",
+        "pickupTime": "Pickup Time",
+        "dropTime": "Drop Time",
+        "transportType": "Transport Type",
+        "stopName": "Stop Name",
+        "pickup": "Pickup",
+        "drop": "Drop",
+        "both": "Both"
     },
     "messages": {
         "loading": "Loading...",

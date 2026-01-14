@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, User, School, Phone, Upload, FileText, Users as UsersIcon } from 'lucide-react';
+import { Save, User, School, Phone, Upload, FileText, Users as UsersIcon, Bus } from 'lucide-react';
 import {
   Box,
   Button,
@@ -23,13 +23,15 @@ import {
   Avatar,
   RadioGroup,
   FormControlLabel,
-  Radio
+  Radio,
+  Checkbox,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import StudentDiscounts from '../../components/StudentDiscounts';
 import { admissionService } from '../../lib/api';
+import { transportService } from '../../lib/api/transport';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../utils/cropImage';
 import {
@@ -117,6 +119,13 @@ const admissionSchema = z.object({
     .refine((val) => !val || val === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
       message: 'Please enter a valid email address'
     }),
+
+  // Transport
+  hasTransport: z.boolean().optional(),
+  routeId: z.string().optional(), // Using string for Select compatibility, convert to number on submit
+  pickupStopId: z.string().optional(),
+  dropStopId: z.string().optional(),
+  transportType: z.enum(['pickup', 'drop', 'both']).optional(),
 });
 
 type AdmissionFormData = z.infer<typeof admissionSchema>;
@@ -151,6 +160,11 @@ export default function AdmissionForm() {
 
   const { data: classOptions = [] } = useQuery({ queryKey: ['classes'], queryFn: fetchClasses });
 
+  const { data: routes = [] } = useQuery({
+    queryKey: ['routes', 'active'],
+    queryFn: () => transportService.getRoutes('active')
+  });
+
   const { control, handleSubmit, watch, reset,
     formState: { errors },
   } = useForm<AdmissionFormData>({
@@ -182,6 +196,11 @@ export default function AdmissionForm() {
       aadharCardNo: '',
       whatsAppNo: '',
       subjects: '',
+      hasTransport: false,
+      routeId: '',
+      pickupStopId: '',
+      dropStopId: '',
+      transportType: 'both',
     },
   });
 
@@ -246,6 +265,11 @@ export default function AdmissionForm() {
 
   const selectedClass = watch('className');
   const isSeniorSecondary = selectedClass === '11' || selectedClass === '12';
+
+  const hasTransport = watch('hasTransport');
+  const selectedRouteId = watch('routeId');
+  const selectedRoute = routes.find((r: any) => r.id === Number(selectedRouteId));
+  const stops = selectedRoute?.stops || [];
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -327,6 +351,23 @@ export default function AdmissionForm() {
         } else {
           const response = await admissionService.createStudent(formData);
           const newStudentId = response.data.studentId; // Get the created student's ID
+
+          // Assign Transport if selected
+          if (data.hasTransport && data.routeId) {
+            try {
+              await transportService.assignTransport({
+                studentId: newStudentId,
+                routeId: Number(data.routeId),
+                pickupStopId: data.pickupStopId ? Number(data.pickupStopId) : undefined,
+                dropStopId: data.dropStopId ? Number(data.dropStopId) : undefined,
+                transportType: data.transportType
+              });
+            } catch (err: any) {
+              console.error('Transport assignment failed:', err);
+              alert('Student created, but Transport assignment failed: ' + (err.response?.data?.message || err.message));
+            }
+          }
+
           alert('Student created successfully! You can now add fee discounts below.');
           // Redirect to edit mode so user can add discounts
           navigate(`/admissions/${newStudentId}/edit`, { replace: true });
@@ -1017,13 +1058,13 @@ export default function AdmissionForm() {
                             if (selected === '') {
                               return <Typography color="text.secondary">Select Class</Typography>;
                             }
-                            return classOptions.find(c => c.name === selected)?.displayName || selected;
+                            return classOptions.find((c: any) => c.name === selected)?.displayName || selected;
                           }}
                         >
                           <MenuItem value="" disabled>
                             Select Class
                           </MenuItem>
-                          {classOptions.map((cls) => (
+                          {classOptions.map((cls: any) => (
                             <MenuItem key={cls.id} value={cls.name}>
                               {cls.displayName}
                             </MenuItem>
@@ -1163,6 +1204,118 @@ export default function AdmissionForm() {
                   />
                 </Grid>
               </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Transport Assignment Section */}
+              {!id && (
+                <>
+                  <SectionHeader icon={Bus} title="Transport Assignment" />
+                  <Grid container spacing={3} sx={{ mb: 4 }}>
+                    <Grid size={{ xs: 12 }}>
+                      <FormControlLabel
+                        control={
+                          <Controller
+                            name="hasTransport"
+                            control={control}
+                            render={({ field }) => (
+                              <Checkbox {...field} checked={field.value} />
+                            )}
+                          />
+                        }
+                        label="Assign School Transport"
+                      />
+                    </Grid>
+
+                    {hasTransport && (
+                      <>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="routeId"
+                            control={control}
+                            render={({ field }) => (
+                              <FormControl fullWidth>
+                                <InputLabel id="route-label">Select Route *</InputLabel>
+                                <Select
+                                  {...field}
+                                  labelId="route-label"
+                                  label="Select Route *"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    // Reset stops when route changes
+                                    control._reset({ ...watch(), pickupStopId: '', dropStopId: '' });
+                                  }}
+                                >
+                                  {routes.map((route: any) => (
+                                    <MenuItem key={route.id} value={String(route.id)}>
+                                      {route.routeName} ({route.routeCode}) - ₹{route.monthlyFee}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                        </Grid>
+
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="transportType"
+                            control={control}
+                            render={({ field }) => (
+                              <FormControl fullWidth>
+                                <InputLabel id="type-label">Transport Type</InputLabel>
+                                <Select {...field} labelId="type-label" label="Transport Type">
+                                  <MenuItem value="both">Both Pickup & Drop</MenuItem>
+                                  <MenuItem value="pickup">Pickup Only</MenuItem>
+                                  <MenuItem value="drop">Drop Only</MenuItem>
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                        </Grid>
+
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="pickupStopId"
+                            control={control}
+                            render={({ field }) => (
+                              <FormControl fullWidth disabled={!selectedRouteId}>
+                                <InputLabel id="pickup-label">Pickup Point</InputLabel>
+                                <Select {...field} labelId="pickup-label" label="Pickup Point">
+                                  {stops.map((stop: any) => (
+                                    <MenuItem key={stop.id} value={String(stop.id)}>
+                                      {stop.stopName} {stop.pickupTime ? `(${stop.pickupTime})` : ''}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                        </Grid>
+
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Controller
+                            name="dropStopId"
+                            control={control}
+                            render={({ field }) => (
+                              <FormControl fullWidth disabled={!selectedRouteId}>
+                                <InputLabel id="drop-label">Drop Point</InputLabel>
+                                <Select {...field} labelId="drop-label" label="Drop Point">
+                                  {stops.map((stop: any) => (
+                                    <MenuItem key={stop.id} value={String(stop.id)}>
+                                      {stop.stopName} {stop.dropTime ? `(${stop.dropTime})` : ''}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                        </Grid>
+                      </>
+                    )}
+                  </Grid>
+                </>
+              )}
 
               {/* Fee Discounts Section */}
               <Divider sx={{ my: 4 }} />

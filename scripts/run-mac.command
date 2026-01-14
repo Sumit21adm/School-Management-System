@@ -213,11 +213,11 @@ echo ""
 
 echo " Running database migrations..."
 cd "$API_DIR"
-npx prisma generate --schema=prisma/schema.prisma 2>/dev/null
-npx prisma db push --accept-data-loss 2>/dev/null
+npx prisma generate --schema=prisma/schema.prisma
+npx prisma db push --accept-data-loss
 
 echo " Seeding database with default data..."
-npx prisma db seed 2>/dev/null || npm run seed 2>/dev/null || echo " [WARN] Seeding skipped (may already exist)"
+npx prisma db seed || npm run seed || echo " [WARN] Seeding skipped (may already exist)"
 
 echo " [OK] Database ready"
 echo ""

@@ -31,6 +31,11 @@ import ClassManagement from './pages/settings/ClassManagement';
 import BackupRestore from './pages/settings/BackupRestore';
 import SubjectList from './pages/subjects/SubjectList';
 
+import VehicleList from './pages/transport/VehicleList';
+import DriverList from './pages/transport/DriverList';
+import RouteList from './pages/transport/RouteList';
+import TransportAssignments from './pages/transport/TransportAssignments';
+
 import ClassDetails from './pages/Classes/ClassDetails';
 
 function AppContent() {
@@ -125,6 +130,12 @@ function AppContent() {
 
               {/* Student Routes */}
               <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
+
+              {/* Transport Routes */}
+              <Route path="/transport/vehicles" element={<VehicleList />} />
+              <Route path="/transport/drivers" element={<DriverList />} />
+              <Route path="/transport/routes" element={<RouteList />} />
+              <Route path="/transport/assignments" element={<TransportAssignments />} />
             </Route>
 
             {/* Catch all redirect */}

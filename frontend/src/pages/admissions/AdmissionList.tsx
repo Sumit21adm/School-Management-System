@@ -72,6 +72,7 @@ import {
   Download,
   Printer,
 } from 'lucide-react';
+import StudentTransportDetails from './StudentTransportDetails';
 import { admissionService, feeService, classService, apiClient } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import { db } from '../../lib/db';
@@ -496,7 +497,7 @@ export default function AdmissionList() {
       {/* Stats Cards */}
       {statsData && (
         <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={0} variant="outlined" sx={{ borderRadius: 4, height: '100%', borderColor: 'divider' }}>
               <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -524,7 +525,7 @@ export default function AdmissionList() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={0} variant="outlined" sx={{ borderRadius: 4, height: '100%', borderColor: 'divider' }}>
               <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -552,7 +553,7 @@ export default function AdmissionList() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={0} variant="outlined" sx={{ borderRadius: 4, height: '100%', borderColor: 'divider' }}>
               <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -580,7 +581,7 @@ export default function AdmissionList() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               elevation={0}
               variant="outlined"
@@ -948,6 +949,7 @@ export default function AdmissionList() {
                 <Tab label="Personal Details" />
                 <Tab label="Academic Records" />
                 <Tab label="Fee Status" />
+                {hasPermission('transport_view') && <Tab label="Transport" />}
               </Tabs>
 
               {tabValue === 0 && (
@@ -1500,6 +1502,15 @@ export default function AdmissionList() {
                       )}
                     </>
                   )}
+                </Box>
+              )}
+
+              {tabValue === 3 && (
+                <Box sx={{ mt: 2 }}>
+                  <StudentTransportDetails
+                    studentId={selectedStudent.studentId}
+                    transportData={selectedStudent.transport}
+                  />
                 </Box>
               )}
             </Box>

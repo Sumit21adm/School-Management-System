@@ -80,6 +80,7 @@ model StudentDetails {
   discounts        StudentFeeDiscount[]
   demandBills      DemandBill[]
   academicHistory  StudentAcademicHistory[]
+  transport        StudentTransport?         // Optional transport assignment
 
   @@index([className])
   @@index([section])
@@ -586,3 +587,132 @@ model ClassRoutine {
   @@map("class_routines")
 }
 
+// ============================================
+// TRANSPORT MANAGEMENT MODELS
+// ============================================
+
+model Vehicle {
+  id              Int       @id @default(autoincrement())
+  vehicleNo       String    @unique @db.VarChar(20)  // e.g., "UP32AB1234"
+  vehicleType     String    @db.VarChar(50)          // Bus, Van, Mini Bus
+  capacity        Int                                 // Seating capacity
+  make            String?   @db.VarChar(50)          // Tata, Ashok Leyland
+  model           String?   @db.VarChar(50)
+  year            Int?
+  insuranceNo     String?   @db.VarChar(50)
+  insuranceExpiry DateTime? @db.Date
+  fitnessExpiry   DateTime? @db.Date
+  permitExpiry    DateTime? @db.Date
+  status          String    @default("active") @db.VarChar(20) // active, maintenance, retired
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  driverId        Int?
+  driver          Driver?   @relation(fields: [driverId], references: [id])
+  routes          Route[]
+
+  @@index([status])
+  @@map("vehicles")
+}
+
+model Driver {
+  id              Int       @id @default(autoincrement())
+  name            String    @db.VarChar(100)
+  phone           String    @db.VarChar(15)
+  altPhone        String?   @db.VarChar(15)
+  address         String?   @db.Text
+  licenseNo       String    @unique @db.VarChar(30)
+  licenseType     String    @db.VarChar(20)          // LMV, HMV, Transport
+  licenseExpiry   DateTime  @db.Date
+  dateOfBirth     DateTime? @db.Date
+  dateOfJoining   DateTime  @db.Date
+  aadharNo        String?   @db.VarChar(12)
+  photoUrl        String?   @db.VarChar(500)
+  salary          Decimal?  @db.Decimal(10,2)
+  status          String    @default("active") @db.VarChar(20) // active, inactive, terminated
+  emergencyContact String?  @db.VarChar(100)
+  emergencyPhone  String?   @db.VarChar(15)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  vehicles        Vehicle[]
+
+  @@index([status])
+  @@map("drivers")
+}
+
+model Route {
+  id              Int       @id @default(autoincrement())
+  routeName       String    @db.VarChar(100)         // e.g., "Route 1 - City Center"
+  routeCode       String    @unique @db.VarChar(20)  // e.g., "R1"
+  startPoint      String    @db.VarChar(100)
+  endPoint        String    @db.VarChar(100)
+  distance        Decimal?  @db.Decimal(5,2)         // in kilometers
+  estimatedTime   Int?                                // in minutes
+  morningDeparture String?  @db.VarChar(10)          // "07:30"
+  eveningDeparture String?  @db.VarChar(10)          // "14:30"
+  monthlyFee      Decimal   @db.Decimal(10,2)        // Transport fee for this route
+  status          String    @default("active") @db.VarChar(20) // active, inactive
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  vehicleId       Int?
+  vehicle         Vehicle?  @relation(fields: [vehicleId], references: [id])
+  stops           RouteStop[]
+  studentTransports StudentTransport[]
+
+  @@index([status])
+  @@map("routes")
+}
+
+model RouteStop {
+  id              Int       @id @default(autoincrement())
+  stopName        String    @db.VarChar(100)         // e.g., "Main Market"
+  stopOrder       Int                                 // 1, 2, 3... sequence
+  pickupTime      String?   @db.VarChar(10)          // "07:35"
+  dropTime        String?   @db.VarChar(10)          // "14:45"
+  landmark        String?   @db.VarChar(200)
+  latitude        Decimal?  @db.Decimal(10,8)
+  longitude       Decimal?  @db.Decimal(11,8)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  routeId         Int
+  route           Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  pickupStudents  StudentTransport[] @relation("PickupStop")
+  dropStudents    StudentTransport[] @relation("DropStop")
+
+  @@unique([routeId, stopOrder])
+  @@index([routeId])
+  @@map("route_stops")
+}
+
+model StudentTransport {
+  id              Int       @id @default(autoincrement())
+  transportType   String    @default("both") @db.VarChar(20) // pickup, drop, both
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  status          String    @default("active") @db.VarChar(20) // active, discontinued
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  studentId       String    @unique @db.VarChar(20)  // One transport record per student
+  student         StudentDetails @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  routeId         Int
+  route           Route     @relation(fields: [routeId], references: [id])
+  pickupStopId    Int?
+  pickupStop      RouteStop? @relation("PickupStop", fields: [pickupStopId], references: [id])
+  dropStopId      Int?
+  dropStop        RouteStop? @relation("DropStop", fields: [dropStopId], references: [id])
+
+  @@index([routeId])
+  @@index([status])
+  @@map("student_transports")
+}

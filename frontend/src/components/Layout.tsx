@@ -8,36 +8,49 @@ import {
   Drawer,
   IconButton,
   List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Toolbar,
   Typography,
-  ListSubheader,
-  Avatar,
   Skeleton,
   Button,
   Tooltip,
+  Collapse,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   PersonAdd as PersonAddIcon,
-  CurrencyRupee as MoneyIcon,
+  AccountBalanceWallet as WalletIcon,
   Logout as LogoutIcon,
-  School,
-  Receipt,
   TrendingUp,
   Settings,
-  CalendarToday,
   AccountBalance,
-  Description,
   Sync as SyncIcon,
-  School as AlumniIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   RestoreFromTrash as BackupIcon,
+  DirectionsBus as BusIcon,
+  AltRoute as RouteIcon,
+  AssignmentTurnedIn as AssignmentIcon,
+  ExpandLess,
+  ExpandMore,
+  PushPin as PinIcon,
+  Payments as PaymentsIcon,
+  RequestQuote as BillIcon,
+  HistoryEdu as ExamIcon,
+  Assignment as ExamPaperIcon,
+  SettingsSuggest as ConfigIcon,
+  Commute as TransportIcon,
+  Badge as DriverIcon,
+  Business as SchoolIcon,
+  SupervisedUserCircle as UserIcon,
+  Domain as DomainIcon,
+  Groups as StudentsIcon,
+  LocalPrintshop as PrintIcon,
+  Class as ClassIcon,
+  EventNote as SessionIcon,
 } from '@mui/icons-material';
 import { useColorMode } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
@@ -51,45 +64,68 @@ interface LayoutProps {
   onLogout: () => void;
 }
 
-const drawerWidth = 260;
+const drawerWidth = 280;
+const collapsedDrawerWidth = 72;
 
-const menuItems = [
+interface MenuItem {
+  path?: string;
+  labelKey: string;
+  icon: React.ElementType;
+  requiredPermission?: string;
+  children?: MenuItem[];
+}
+
+const menuItems: MenuItem[] = [
   {
-    titleKey: 'sidebar.main',
-    items: [
-      { path: '/', labelKey: 'sidebar.dashboard', icon: DashboardIcon, requiredPermission: 'dashboard_view' },
-    ],
+    path: '/',
+    labelKey: 'sidebar.dashboard',
+    icon: DashboardIcon,
+    requiredPermission: 'dashboard_view',
   },
   {
-    titleKey: 'sidebar.studentInfo',
-    items: [
+    labelKey: 'sidebar.studentInfo',
+    icon: StudentsIcon,
+    children: [
       { path: '/admissions', labelKey: 'sidebar.admissions', icon: PersonAddIcon, requiredPermission: 'admissions_view' },
       { path: '/promotions', labelKey: 'sidebar.promotions', icon: TrendingUp, requiredPermission: 'promotions_view' },
     ],
   },
   {
-    titleKey: 'sidebar.feeManagement',
-    items: [
-      { path: '/fees/collection-enhanced', labelKey: 'sidebar.feeCollection', icon: MoneyIcon, requiredPermission: 'fees_collect' },
-      { path: '/fees/demand-bills', labelKey: 'sidebar.demandBills', icon: Description, requiredPermission: 'demand_bills_view' },
-      { path: '/fees/reports', labelKey: 'sidebar.feeReceipt', icon: Receipt, requiredPermission: 'fees_receipts' },
+    labelKey: 'sidebar.feeManagement',
+    icon: WalletIcon,
+    children: [
+      { path: '/fees/collection-enhanced', labelKey: 'sidebar.feeCollection', icon: PaymentsIcon, requiredPermission: 'fees_collect' },
+      { path: '/fees/demand-bills', labelKey: 'sidebar.demandBills', icon: BillIcon, requiredPermission: 'demand_bills_view' },
+      { path: '/fees/reports', labelKey: 'sidebar.feeReceipt', icon: PrintIcon, requiredPermission: 'fees_receipts' },
       { path: '/settings/fee-structure', labelKey: 'sidebar.feeStructure', icon: AccountBalance, requiredPermission: 'fee_structure_view' },
     ],
   },
   {
-    titleKey: 'sidebar.examination',
-    items: [
-      { path: '/exams', labelKey: 'sidebar.exams', icon: Description, requiredPermission: 'exams_view' },
-      { path: '/examination/configuration', labelKey: 'sidebar.configuration', icon: Description, requiredPermission: 'exam_config' },
+    labelKey: 'sidebar.examination',
+    icon: ExamIcon,
+    children: [
+      { path: '/exams', labelKey: 'sidebar.exams', icon: ExamPaperIcon, requiredPermission: 'exams_view' },
+      { path: '/examination/configuration', labelKey: 'sidebar.configuration', icon: ConfigIcon, requiredPermission: 'exam_config' },
     ],
   },
   {
-    titleKey: 'sidebar.settings',
-    items: [
-      { path: '/settings/sessions', labelKey: 'sidebar.sessions', icon: CalendarToday, requiredPermission: 'sessions_view' },
-      { path: '/settings/classes', labelKey: 'sidebar.classManagement', icon: School, requiredPermission: 'school_settings' },
-      { path: '/settings/print', labelKey: 'sidebar.schoolSettings', icon: Settings, requiredPermission: 'school_settings' },
-      { path: '/settings/users', labelKey: 'sidebar.userManagement', icon: Settings, requiredPermission: 'users_manage' },
+    labelKey: 'sidebar.transport',
+    icon: TransportIcon,
+    children: [
+      { path: '/transport/vehicles', labelKey: 'sidebar.vehicles', icon: BusIcon, requiredPermission: 'transport_view' },
+      { path: '/transport/drivers', labelKey: 'sidebar.drivers', icon: DriverIcon, requiredPermission: 'transport_view' },
+      { path: '/transport/routes', labelKey: 'sidebar.routes', icon: RouteIcon, requiredPermission: 'transport_view' },
+      { path: '/transport/assignments', labelKey: 'sidebar.assignments', icon: AssignmentIcon, requiredPermission: 'transport_assign' },
+    ],
+  },
+  {
+    labelKey: 'sidebar.settings',
+    icon: Settings,
+    children: [
+      { path: '/settings/sessions', labelKey: 'sidebar.sessions', icon: SessionIcon, requiredPermission: 'sessions_view' },
+      { path: '/settings/classes', labelKey: 'sidebar.classManagement', icon: ClassIcon, requiredPermission: 'school_settings' },
+      { path: '/settings/print', labelKey: 'sidebar.schoolSettings', icon: DomainIcon, requiredPermission: 'school_settings' },
+      { path: '/settings/users', labelKey: 'sidebar.userManagement', icon: UserIcon, requiredPermission: 'users_manage' },
     ],
   },
 ];
@@ -99,8 +135,22 @@ import { getCurrentUserPermissions, hasPermission } from '../utils/permissions';
 export default function Layout({ children, onLogout }: LayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDrawerHovered, setIsDrawerHovered] = useState(false);
+  const [isDrawerPinned, setIsDrawerPinned] = useState(() => {
+    const saved = localStorage.getItem('sidebarPinned');
+    return saved === 'true';
+  });
   const { mode, toggleColorMode } = useColorMode();
   const { t } = useTranslation('common');
+
+  const togglePin = () => {
+    const newValue = !isDrawerPinned;
+    setIsDrawerPinned(newValue);
+    localStorage.setItem('sidebarPinned', String(newValue));
+  };
+
+  // Determine if drawer should be expanded
+  const isDrawerExpanded = isDrawerPinned || isDrawerHovered;
 
   // Fetch school branding from print settings
   const { data: printSettings, isLoading: isLoadingSettings } = useQuery({
@@ -134,6 +184,12 @@ export default function Layout({ children, onLogout }: LayoutProps) {
 
     return () => clearInterval(interval);
   }, [dataUpdatedAt]);
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (labelKey: string) => {
+    setOpenSections((prev) => ({ ...prev, [labelKey]: !prev[labelKey] }));
+  };
 
   // Update Favicon based on Logo
   useEffect(() => {
@@ -169,8 +225,9 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         sx={{
           flexGrow: 1,
           overflowY: 'auto',
-          px: 1.5,
+          px: isDrawerExpanded ? 1.5 : 0,
           py: 2,
+          transition: 'padding 0.2s ease-in-out',
           '&::-webkit-scrollbar': {
             width: '4px',
           },
@@ -187,100 +244,223 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         }}
       >
         <List sx={{ p: 0 }}>
-          {menuItems.map((section, index) => {
-            // Get user permissions
+          {menuItems.map((item) => {
             const { role: userRole, permissions: userPermissions } = getCurrentUserPermissions();
 
-            // Filter items based on permissions
-            const visibleItems = section.items.filter(item =>
-              hasPermission(item.requiredPermission, userRole, userPermissions)
-            );
+            // Check parent permission (if specified)
+            if (item.requiredPermission && !hasPermission(item.requiredPermission, userRole, userPermissions)) {
+              return null;
+            }
 
-            // Don't render section if no visible items
-            if (visibleItems.length === 0) return null;
+            const Icon = item.icon;
 
-            return (
-              <Box key={section.titleKey || index} sx={{ mb: 0 }}>
-                {section.titleKey && (
-                  <ListSubheader
-                    disableSticky={false}
+            // Handle items with children (Collapsible Sections)
+            if (item.children) {
+              const visibleChildren = item.children.filter(child =>
+                !child.requiredPermission || hasPermission(child.requiredPermission, userRole, userPermissions)
+              );
+
+              if (visibleChildren.length === 0) return null;
+
+              const isOpen = openSections[item.labelKey];
+              const isGroupActive = visibleChildren.some(child =>
+                location.pathname === child.path || (child.path !== '/' && location.pathname.startsWith(child.path || ''))
+              );
+
+              return (
+                <Box key={item.labelKey}>
+                  <ListItemButton
+                    onClick={() => toggleSection(item.labelKey)}
                     sx={{
-                      bgcolor: 'background.paper',
-                      backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.09))', // Light overlay for depth in dark mode
-                      zIndex: 2,
-                      position: 'sticky',
-                      top: 0,
-                      color: 'primary.main',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      py: 1,
-                      lineHeight: '2',
+                      borderRadius: 2,
                       mb: 0.5,
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)', // Subtle separator
+                      justifyContent: isDrawerExpanded ? 'flex-start' : 'center',
+                      px: isDrawerExpanded ? 2 : 1,
+                      color: isGroupActive ? 'primary.main' : 'text.primary',
+                      bgcolor: isDrawerExpanded && isGroupActive
+                        ? (theme) => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(25, 118, 210, 0.08)'
+                        : 'transparent',
+                      '&:hover': {
+                        bgcolor: isDrawerExpanded && isGroupActive
+                          ? (theme) => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : 'rgba(25, 118, 210, 0.16)'
+                          : 'action.hover',
+                      }
                     }}
                   >
-                    {t(section.titleKey)}
-                  </ListSubheader>
-                )}
-                {visibleItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    location.pathname === item.path ||
-                    (item.path !== '/' && location.pathname.startsWith(item.path));
-
-                  return (
-                    <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                      <ListItemButton
-                        component={Link}
-                        to={item.path}
-                        onClick={() => setMobileOpen(false)}
-                        selected={isActive}
+                    <ListItemIcon sx={{ minWidth: isDrawerExpanded ? 44 : 'auto' }}>
+                      <Box
                         sx={{
-                          borderRadius: 2,
-                          py: 1.5,
-                          px: 2,
-                          '&.Mui-selected': {
-                            bgcolor: 'primary.main',
-                            color: 'primary.contrastText',
-                            '&:hover': {
-                              bgcolor: 'primary.dark',
-                            },
-                            '& .MuiListItemIcon-root': {
-                              color: 'primary.contrastText',
-                            },
-                          },
-                          '&:hover': {
-                            bgcolor: isActive ? 'primary.dark' : 'action.hover',
-                          },
+                          width: 38,
+                          height: 38,
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: isGroupActive
+                            ? (theme) => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.15)' : 'rgba(25, 118, 210, 0.15)'
+                            : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+                          color: isGroupActive ? 'primary.main' : 'text.secondary',
                         }}
                       >
-                        <ListItemIcon
-                          sx={{
-                            minWidth: 40,
-                            color: isActive ? 'inherit' : 'text.secondary',
-                          }}
-                        >
-                          <Icon />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={t(item.labelKey)}
-                          primaryTypographyProps={{
-                            fontWeight: isActive ? 600 : 500,
-                            fontSize: '0.95rem',
-                          }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  );
-                })}
+                        <Icon sx={{ fontSize: 22 }} />
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={t(item.labelKey)}
+                      primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap' }}
+                      sx={{
+                        opacity: isDrawerExpanded ? 1 : 0,
+                        display: isDrawerExpanded ? 'block' : 'none',
+                        transition: 'opacity 0.2s ease-in-out'
+                      }}
+                    />
+                    {isDrawerExpanded && (
+                      <Box sx={{ transition: 'opacity 0.2s ease-in-out' }}>
+                        {isOpen ? <ExpandLess color={isGroupActive ? 'primary' : 'inherit'} /> : <ExpandMore color={isGroupActive ? 'primary' : 'inherit'} />}
+                      </Box>
+                    )}
+                  </ListItemButton>
+
+                  <Collapse in={isOpen && isDrawerExpanded} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding sx={{ pl: 2 }}>
+                      {visibleChildren.map((child) => {
+                        const ChildIcon = child.icon;
+                        const isActive = location.pathname === child.path || (child.path !== '/' && location.pathname.startsWith(child.path || ''));
+
+                        return (
+                          <ListItemButton
+                            key={child.labelKey}
+                            component={Link}
+                            to={child.path!}
+                            selected={isActive}
+                            onClick={() => setMobileOpen(false)}
+                            sx={{
+                              borderRadius: 2,
+                              mb: 0.5,
+                              pl: 1.5,
+                              '&.Mui-selected': {
+                                bgcolor: 'primary.main',
+                                color: 'primary.contrastText',
+                                '&:hover': { bgcolor: 'primary.dark' },
+                                '& .MuiListItemIcon-root': { color: 'primary.contrastText' },
+                              },
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 44 }}>
+                              <Box
+                                sx={{
+                                  p: 0.5,
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  bgcolor: isActive ? 'transparent' : 'transparent',
+                                  color: isActive ? 'inherit' : 'text.secondary',
+                                }}
+                              >
+                                <ChildIcon sx={{ fontSize: 20 }} />
+                              </Box>
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={t(child.labelKey)}
+                              primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive ? 600 : 500 }}
+                            />
+                          </ListItemButton>
+                        );
+                      })}
+                    </List>
+                  </Collapse>
+                </Box>
+              );
+            }
+
+            // Single Item (Dashboard)
+            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path || ''));
+
+            return (
+              <Box key={item.labelKey}>
+                <ListItemButton
+                  component={Link}
+                  to={item.path!}
+                  onClick={() => setMobileOpen(false)}
+                  sx={{
+                    borderRadius: 2,
+                    mb: 0.5,
+                    justifyContent: isDrawerExpanded ? 'flex-start' : 'center',
+                    px: isDrawerExpanded ? 2 : 1,
+                    color: isActive ? 'primary.main' : 'text.primary',
+                    bgcolor: isDrawerExpanded && isActive
+                      ? (theme) => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(25, 118, 210, 0.08)'
+                      : 'transparent',
+                    '&:hover': {
+                      bgcolor: isDrawerExpanded && isActive
+                        ? (theme) => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : 'rgba(25, 118, 210, 0.16)'
+                        : 'action.hover',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: isDrawerExpanded ? 44 : 'auto' }}>
+                    <Box
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: isActive
+                          ? (theme) => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.15)' : 'rgba(25, 118, 210, 0.15)'
+                          : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+                        color: isActive ? 'primary.main' : 'text.secondary',
+                      }}
+                    >
+                      <Icon sx={{ fontSize: 22 }} />
+                    </Box>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={t(item.labelKey)}
+                    primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, whiteSpace: 'nowrap' }}
+                    sx={{
+                      opacity: isDrawerExpanded ? 1 : 0,
+                      display: isDrawerExpanded ? 'block' : 'none',
+                      transition: 'opacity 0.2s ease-in-out'
+                    }}
+                  />
+                </ListItemButton>
               </Box>
             );
           })}
         </List>
       </Box>
-    </Box>
+
+      {/* Pin Toggle Button - Fixed at bottom */}
+      <Box
+        sx={{
+          display: { xs: 'none', sm: 'flex' },
+          justifyContent: 'center',
+          alignItems: 'center',
+          p: 1.5,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Tooltip title={isDrawerPinned ? 'Unpin sidebar' : 'Pin sidebar open'} placement="right">
+          <IconButton
+            onClick={togglePin}
+            size="small"
+            sx={{
+              color: isDrawerPinned ? 'primary.main' : 'text.secondary',
+              bgcolor: isDrawerPinned ? 'action.selected' : 'transparent',
+              '&:hover': { bgcolor: 'action.hover' },
+              transform: isDrawerPinned ? 'rotate(0deg)' : 'rotate(45deg)',
+              transition: 'transform 0.2s ease-in-out',
+            }}
+          >
+            <PinIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    </Box >
   );
 
   return (
@@ -325,7 +505,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
                 }}
               />
             ) : (
-              <School sx={{ fontSize: 28, color: 'primary.main' }} />
+              <SchoolIcon sx={{ fontSize: 28, color: 'primary.main' }} />
             )}
             {isLoadingSettings ? (
               <Skeleton variant="text" width={100} height={24} />
@@ -502,7 +682,11 @@ export default function Layout({ children, onLogout }: LayoutProps) {
       {/* Drawer */}
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{
+          width: { sm: isDrawerExpanded ? drawerWidth : collapsedDrawerWidth },
+          flexShrink: { sm: 0 },
+          transition: 'width 0.2s ease-in-out',
+        }}
       >
         {/* Mobile drawer */}
         <Drawer
@@ -523,16 +707,20 @@ export default function Layout({ children, onLogout }: LayoutProps) {
           {drawer}
         </Drawer>
 
-        {/* Desktop drawer */}
+        {/* Desktop drawer - Collapsible on hover */}
         <Drawer
           variant="permanent"
+          onMouseEnter={() => setIsDrawerHovered(true)}
+          onMouseLeave={() => setIsDrawerHovered(false)}
           sx={{
             display: { xs: 'none', sm: 'block' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: drawerWidth,
+              width: isDrawerExpanded ? drawerWidth : collapsedDrawerWidth,
               borderRight: '1px solid',
               borderColor: 'divider',
+              transition: 'width 0.2s ease-in-out',
+              overflowX: 'hidden',
             },
           }}
           open

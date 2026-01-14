@@ -446,15 +446,23 @@ export class FeesService {
 
         // Determine which students to generate bills for
         let students: any[] = [];
+        const studentInclude = {
+            transport: {
+                where: { status: 'active' },
+                include: { route: true }
+            }
+        };
 
         if (dto.studentId) {
             const student = await this.prisma.studentDetails.findUnique({
                 where: { studentId: dto.studentId },
+                include: studentInclude,
             });
             if (student) students = [student];
         } else if (dto.studentIds && dto.studentIds.length > 0) {
             students = await this.prisma.studentDetails.findMany({
                 where: { studentId: { in: dto.studentIds } },
+                include: studentInclude,
             });
         } else {
             const whereClause: any = { status: 'active', sessionId: dto.sessionId };
@@ -463,9 +471,16 @@ export class FeesService {
 
             students = await this.prisma.studentDetails.findMany({
                 where: whereClause,
+                include: studentInclude,
             });
         }
 
+        // Fetch Transport Fee Type
+        const transportFeeType = await this.prisma.feeType.findFirst({
+            where: {
+                name: { contains: 'Transport' }, // robust search
+            }
+        });
         const results: Array<{
             studentId: string;
             billNo?: string;
@@ -586,6 +601,27 @@ export class FeesService {
                         amount: new Decimal(amount),
                         discountAmount: new Decimal(itemDiscount),
                     });
+                }
+
+                // Add Transport Fee if applicable
+                // Only if "Transport Fee" type exists and student has transport assigned
+                // And if we are filtering by fee types, only include if Transport Fee is selected
+                if (transportFeeType && student.transport && student.transport.route) {
+                    const shouldIncludeTransport = !dto.selectedFeeTypeIds || dto.selectedFeeTypeIds.includes(transportFeeType.id);
+
+                    if (shouldIncludeTransport) {
+                        const transportAmount = Number(student.transport.route.monthlyFee);
+                        totalAmount += transportAmount;
+
+                        // TODO: Implement Transport Discount if needed
+                        const transportDiscount = 0;
+
+                        billItems.push({
+                            feeTypeId: transportFeeType.id,
+                            amount: new Decimal(transportAmount),
+                            discountAmount: new Decimal(transportDiscount),
+                        });
+                    }
                 }
 
                 // Auto-calculate and add late fees based on NUMBER OF OVERDUE MONTHS

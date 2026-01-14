@@ -74,7 +74,14 @@ export class AdmissionsService {
                         createdAt: 'desc'
                     }
                 },
-                session: true
+                session: true,
+                transport: {
+                    include: {
+                        route: true,
+                        pickupStop: true,
+                        dropStop: true
+                    }
+                }
             },
         });
     }

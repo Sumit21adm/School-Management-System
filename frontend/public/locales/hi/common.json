@@ -17,7 +17,12 @@
         "sessions": "सत्र",
         "classManagement": "कक्षा प्रबंधन",
         "schoolSettings": "स्कूल सेटिंग्स",
-        "userManagement": "उपयोगकर्ता प्रबंधन"
+        "userManagement": "उपयोगकर्ता प्रबंधन",
+        "transport": "परिवहन",
+        "vehicles": "वाहन",
+        "drivers": "चालक",
+        "routes": "मार्ग",
+        "assignments": "असाइनमेंट"
     },
     "pages": {
         "dashboard": "डैशबोर्ड",
@@ -95,7 +100,27 @@
         "gender": "लिंग",
         "dateOfBirth": "जन्म तिथि",
         "admissionDate": "प्रवेश तिथि",
-        "rollNo": "रोल नंबर"
+        "rollNo": "रोल नंबर",
+        "vehicleNumber": "वाहन संख्या",
+        "licenseNumber": "लाइसेंस संख्या",
+        "driverName": "चालक का नाम",
+        "helperName": "सहायक का नाम",
+        "contactNumber": "संपर्क नंबर",
+        "capacity": "क्षमता",
+        "vehicleType": "वाहन का प्रकार",
+        "routeName": "मार्ग का नाम",
+        "startPoint": "आरंभ बिंदु",
+        "endPoint": "गंतव्य बिंदु",
+        "distance": "दूरी",
+        "charges": "शुल्क",
+        "stops": "स्टॉप",
+        "pickupTime": "पिकअप समय",
+        "dropTime": "ड्रॉप समय",
+        "transportType": "परिवहन प्रकार",
+        "stopName": "स्टॉप का नाम",
+        "pickup": "पिकअप",
+        "drop": "ड्रॉप",
+        "both": "दोनों"
     },
     "messages": {
         "loading": "लोड हो रहा है...",

@@ -23,6 +23,8 @@ import { StudentsModule } from './modules/students/students.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { BackupModule } from './backup/backup.module';
 
+import { TransportModule } from './transport/transport.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -43,9 +45,9 @@ import { BackupModule } from './backup/backup.module';
     PrintSettingsModule,
     ExaminationModule,
     UsersModule,
-    UsersModule,
     SubjectsModule,
     BackupModule,
+    TransportModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
