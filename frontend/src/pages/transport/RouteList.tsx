@@ -34,11 +34,13 @@ import { transportService, type Route, type Vehicle, type RouteStop } from '../.
 import PageHeader from '../../components/PageHeader';
 import { useSnackbar } from 'notistack';
 
-function RouteRow({ route, onEdit, onDelete, onManageStops }: {
+function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDeleteStop }: {
     route: Route;
     onEdit: (route: Route) => void;
     onDelete: (id: number) => void;
     onManageStops: (route: Route) => void;
+    onEditStop: (route: Route, stop: RouteStop) => void;
+    onDeleteStop: (routeId: number, stopId: number) => void;
 }) {
     const [open, setOpen] = useState(false);
 
@@ -101,6 +103,7 @@ function RouteRow({ route, onEdit, onDelete, onManageStops }: {
                                         <TableCell>Distance (km)</TableCell>
                                         <TableCell>Pickup Time</TableCell>
                                         <TableCell>Drop Time</TableCell>
+                                        <TableCell align="right">Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -118,11 +121,19 @@ function RouteRow({ route, onEdit, onDelete, onManageStops }: {
                                             </TableCell>
                                             <TableCell>{stop.pickupTime || '-'}</TableCell>
                                             <TableCell>{stop.dropTime || '-'}</TableCell>
+                                            <TableCell align="right">
+                                                <IconButton size="small" onClick={() => onEditStop(route, stop)}>
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton size="small" color="error" onClick={() => onDeleteStop(route.id, stop.id)}>
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                     {(!route.stops || route.stops.length === 0) && (
                                         <TableRow>
-                                            <TableCell colSpan={5} align="center">No stops added yet.</TableCell>
+                                            <TableCell colSpan={6} align="center">No stops added yet.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -263,6 +274,31 @@ export default function RouteList() {
         setOpenStopDialog(true);
     };
 
+    const handleEditStop = (route: Route, stop: RouteStop) => {
+        setSelectedRouteForStops(route);
+        setEditingStop(stop);
+        resetStop({
+            stopName: stop.stopName,
+            stopOrder: stop.stopOrder,
+            pickupTime: stop.pickupTime || '',
+            dropTime: stop.dropTime || '',
+            distanceFromSchool: stop.distanceFromSchool?.toString() || '',
+        });
+        setOpenStopDialog(true);
+    };
+
+    const handleDeleteStop = async (routeId: number, stopId: number) => {
+        if (window.confirm('Are you sure you want to delete this stop?')) {
+            try {
+                await transportService.deleteStop(routeId, stopId);
+                enqueueSnackbar('Stop deleted successfully', { variant: 'success' });
+                fetchData();
+            } catch (error: any) {
+                enqueueSnackbar('Failed to delete stop', { variant: 'error' });
+            }
+        }
+    };
+
     const onStopSubmit = async (data: any) => {
         if (!selectedRouteForStops) return;
 
@@ -328,6 +364,8 @@ export default function RouteList() {
                                 onEdit={handleOpenRouteDialog}
                                 onDelete={handleDeleteRoute}
                                 onManageStops={handleManageStops}
+                                onEditStop={handleEditStop}
+                                onDeleteStop={handleDeleteStop}
                             />
                         ))}
                         {routes.length === 0 && (
@@ -424,13 +462,13 @@ export default function RouteList() {
                 </form>
             </Dialog>
 
-            {/* Stop Dialog (Simplified: Quick Add only) */}
+            {/* Stop Dialog */}
             <Dialog open={openStopDialog} onClose={() => setOpenStopDialog(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Add Stop to {selectedRouteForStops?.routeName}</DialogTitle>
+                <DialogTitle>{editingStop ? 'Edit Stop' : 'Add Stop'} - {selectedRouteForStops?.routeName}</DialogTitle>
                 <form onSubmit={handleStopSubmit(onStopSubmit)}>
                     <DialogContent>
                         <Typography variant="body2" color="text.secondary" paragraph>
-                            Add a new stop to this route. You can view existing stops in the expanded table row.
+                            {editingStop ? 'Update stop details below.' : 'Add a new stop to this route.'}
                         </Typography>
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12 }}>
