@@ -15,6 +15,7 @@ Complete transport management module for managing school buses, routes, drivers,
 | 4 | Fee Integration (Distance-based) | ✅ Complete |
 | 5 | Permissions | ✅ Complete |
 | 6 | Fare Slabs Feature | ✅ Complete |
+| 7 | Sidebar Integration | ✅ Complete |
 
 *Last Updated: January 14, 2026*
 
@@ -34,7 +35,7 @@ Complete transport management module for managing school buses, routes, drivers,
 
 ### Frontend
 - New pages under `/transport/*` routes
-- Sidebar gets new section - existing menu items unchanged
+- Sidebar integrated into **Collapsible Sidebar** with new icons
 - Student Profile gets new tab - existing tabs unchanged
 - Admission Form gets optional fields - existing fields unchanged
 
@@ -97,6 +98,7 @@ Complete transport management module for managing school buses, routes, drivers,
 | **Fare Slabs** | `/transport/fare-slabs` | ✅ |
 
 ### Sidebar Menu
+**Icon**: `DirectionsBus`
 ```
 TRANSPORT
 ├── Vehicles      (transport_view)
@@ -129,8 +131,8 @@ const fareSlab = await this.prisma.transportFareSlab.findFirst({
   }
 });
 
-// Falls back to route.monthlyFee if no slab matches
-const transportAmount = fareSlab ? fareSlab.monthlyFee : route.monthlyFee;
+// Use slab fee or 0 (fallback removed for strict distance-based pricing)
+const transportAmount = fareSlab ? fareSlab.monthlyFee : 0;
 ```
 
 ### 2. Student Profile Tab ✅
@@ -166,7 +168,7 @@ const transportAmount = fareSlab ? fareSlab.monthlyFee : route.monthlyFee;
    - System finds student's pickup/drop stop distances
    - Uses the higher distance for billing
    - Looks up matching fare slab
-   - Falls back to route's flat `monthlyFee` if no slab matches
+   - **Note**: `Route.monthlyFee` is deprecated and no longer used as fallback.
 
 ### Example Fare Slabs
 | Distance Range | Monthly Fee | Description |
@@ -193,16 +195,16 @@ const transportAmount = fareSlab ? fareSlab.monthlyFee : route.monthlyFee;
 | 9 | Transport Reports | 2 hrs | ✅ |
 | 10 | Permissions & Testing | 1 hr | ✅ |
 | 11 | Distance-wise Fare Feature | 2 hrs | ✅ |
+| 12 | Sidebar Integration | 2 hrs | ✅ |
 | **Total** | | **~20 hours** | ✅ Complete |
 
 ---
 
 ## Pending Items
 
-- [ ] Run Prisma migration: `npx prisma migrate dev`
 - [ ] ID Card: Include route/stop on print (future enhancement)
 - [ ] Conductor model (optional)
 
 ---
 
-*Last Updated: January 14, 2026 - 7:30 PM IST*
+*Last Updated: January 14, 2026 - 08:40 PM IST*
