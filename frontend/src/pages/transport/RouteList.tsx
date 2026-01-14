@@ -66,7 +66,9 @@ function RouteRow({ route, onEdit, onDelete, onManageStops }: {
                         <Typography variant="caption" color="text.secondary">Unassigned</Typography>
                     )}
                 </TableCell>
-                <TableCell>₹{route.monthlyFee}</TableCell>
+                <TableCell>
+                    <Chip label="Distance-based" size="small" color="info" variant="outlined" />
+                </TableCell>
                 <TableCell>
                     <Chip label={route.status} color={route.status === 'active' ? 'success' : 'default'} size="small" />
                 </TableCell>
@@ -96,6 +98,7 @@ function RouteRow({ route, onEdit, onDelete, onManageStops }: {
                                     <TableRow>
                                         <TableCell>Order</TableCell>
                                         <TableCell>Stop Name</TableCell>
+                                        <TableCell>Distance (km)</TableCell>
                                         <TableCell>Pickup Time</TableCell>
                                         <TableCell>Drop Time</TableCell>
                                     </TableRow>
@@ -110,13 +113,16 @@ function RouteRow({ route, onEdit, onDelete, onManageStops }: {
                                                     {stop.stopName}
                                                 </Box>
                                             </TableCell>
+                                            <TableCell>
+                                                {stop.distanceFromSchool ? `${Number(stop.distanceFromSchool)} km` : '-'}
+                                            </TableCell>
                                             <TableCell>{stop.pickupTime || '-'}</TableCell>
                                             <TableCell>{stop.dropTime || '-'}</TableCell>
                                         </TableRow>
                                     ))}
                                     {(!route.stops || route.stops.length === 0) && (
                                         <TableRow>
-                                            <TableCell colSpan={4} align="center">No stops added yet.</TableCell>
+                                            <TableCell colSpan={5} align="center">No stops added yet.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -149,7 +155,6 @@ export default function RouteList() {
             routeCode: '',
             startPoint: '',
             endPoint: '',
-            monthlyFee: 0,
             vehicleId: '',
             status: 'active',
         },
@@ -161,6 +166,7 @@ export default function RouteList() {
             stopOrder: 1,
             pickupTime: '',
             dropTime: '',
+            distanceFromSchool: '',
         },
     });
 
@@ -192,7 +198,6 @@ export default function RouteList() {
                 routeCode: route.routeCode,
                 startPoint: route.startPoint,
                 endPoint: route.endPoint,
-                monthlyFee: route.monthlyFee,
                 vehicleId: route.vehicle?.id?.toString() || '',
                 status: route.status,
             });
@@ -203,7 +208,6 @@ export default function RouteList() {
                 routeCode: '',
                 startPoint: '',
                 endPoint: '',
-                monthlyFee: 0,
                 vehicleId: '',
                 status: 'active',
             });
@@ -215,7 +219,7 @@ export default function RouteList() {
         try {
             const payload = {
                 ...data,
-                monthlyFee: Number(data.monthlyFee),
+                monthlyFee: 0, // Not used - fare calculated from stop distance
                 vehicleId: data.vehicleId ? Number(data.vehicleId) : null,
             };
 
@@ -254,6 +258,7 @@ export default function RouteList() {
             stopOrder: (route.stops?.length || 0) + 1,
             pickupTime: '',
             dropTime: '',
+            distanceFromSchool: '',
         });
         setOpenStopDialog(true);
     };
@@ -265,6 +270,7 @@ export default function RouteList() {
             const payload = {
                 ...data,
                 stopOrder: Number(data.stopOrder),
+                distanceFromSchool: data.distanceFromSchool ? Number(data.distanceFromSchool) : null,
             };
 
             if (editingStop) {
@@ -309,7 +315,7 @@ export default function RouteList() {
                             <TableCell>Code</TableCell>
                             <TableCell>Points</TableCell>
                             <TableCell>Vehicle</TableCell>
-                            <TableCell>Fee</TableCell>
+                            <TableCell>Fare Mode</TableCell>
                             <TableCell>Status</TableCell>
                             <TableCell align="right">Actions</TableCell>
                         </TableRow>
@@ -380,16 +386,6 @@ export default function RouteList() {
                                     rules={{ required: 'End Point is required' }}
                                     render={({ field, fieldState: { error } }) => (
                                         <TextField {...field} label="End Point" fullWidth error={!!error} helperText={error?.message} />
-                                    )}
-                                />
-                            </Grid>
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                                <Controller
-                                    name="monthlyFee"
-                                    control={routeControl}
-                                    rules={{ required: 'Fee is required' }}
-                                    render={({ field, fieldState: { error } }) => (
-                                        <TextField {...field} label="Monthly Fee" type="number" fullWidth error={!!error} helperText={error?.message} />
                                     )}
                                 />
                             </Grid>
@@ -472,6 +468,22 @@ export default function RouteList() {
                                     control={stopControl}
                                     render={({ field }) => (
                                         <TextField {...field} label="Drop Time" fullWidth placeholder="HH:MM" />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                                <Controller
+                                    name="distanceFromSchool"
+                                    control={stopControl}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Distance from School (km)"
+                                            type="number"
+                                            fullWidth
+                                            inputProps={{ step: 0.5, min: 0 }}
+                                            helperText="Used for transport fare calculation"
+                                        />
                                     )}
                                 />
                             </Grid>

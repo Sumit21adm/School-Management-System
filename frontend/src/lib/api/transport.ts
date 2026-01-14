@@ -28,6 +28,7 @@ export interface RouteStop {
     stopOrder: number;
     pickupTime?: string;
     dropTime?: string;
+    distanceFromSchool?: number;
 }
 
 export interface Route {
