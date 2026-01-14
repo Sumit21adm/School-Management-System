@@ -22,7 +22,9 @@
         "vehicles": "Vehicles",
         "drivers": "Drivers",
         "routes": "Routes",
-        "assignments": "Assignments"
+        "assignments": "Assignments",
+        "transportReports": "Reports",
+        "fareSlabs": "Fare Slabs"
     },
     "pages": {
         "dashboard": "Dashboard",

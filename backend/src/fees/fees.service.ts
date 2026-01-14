@@ -449,7 +449,11 @@ export class FeesService {
         const studentInclude = {
             transport: {
                 where: { status: 'active' },
-                include: { route: true }
+                include: {
+                    route: true,
+                    pickupStop: true,
+                    dropStop: true
+                }
             }
         };
 
@@ -604,13 +608,40 @@ export class FeesService {
                 }
 
                 // Add Transport Fee if applicable
-                // Only if "Transport Fee" type exists and student has transport assigned
-                // And if we are filtering by fee types, only include if Transport Fee is selected
+                // Calculate based on stop distance using fare slabs
                 if (transportFeeType && student.transport && student.transport.route) {
                     const shouldIncludeTransport = !dto.selectedFeeTypeIds || dto.selectedFeeTypeIds.includes(transportFeeType.id);
 
                     if (shouldIncludeTransport) {
-                        const transportAmount = Number(student.transport.route.monthlyFee);
+                        // Get distances from pickup and drop stops
+                        const pickupDistance = student.transport.pickupStop?.distanceFromSchool
+                            ? Number(student.transport.pickupStop.distanceFromSchool)
+                            : 0;
+                        const dropDistance = student.transport.dropStop?.distanceFromSchool
+                            ? Number(student.transport.dropStop.distanceFromSchool)
+                            : 0;
+
+                        // Use the higher distance for billing (student travels this far)
+                        const maxDistance = Math.max(pickupDistance, dropDistance);
+
+                        // Lookup fare slab for this distance
+                        let transportAmount = 0;
+                        if (maxDistance > 0) {
+                            const fareSlab = await this.prisma.transportFareSlab.findFirst({
+                                where: {
+                                    isActive: true,
+                                    minDistance: { lte: maxDistance },
+                                    maxDistance: { gte: maxDistance }
+                                }
+                            });
+                            transportAmount = fareSlab ? Number(fareSlab.monthlyFee) : 0;
+                        }
+
+                        // Fallback to route's flat monthlyFee if no slab or distance not set
+                        if (transportAmount === 0) {
+                            transportAmount = Number(student.transport.route.monthlyFee);
+                        }
+
                         totalAmount += transportAmount;
 
                         // TODO: Implement Transport Discount if needed

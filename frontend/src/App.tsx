@@ -35,6 +35,8 @@ import VehicleList from './pages/transport/VehicleList';
 import DriverList from './pages/transport/DriverList';
 import RouteList from './pages/transport/RouteList';
 import TransportAssignments from './pages/transport/TransportAssignments';
+import TransportReports from './pages/transport/TransportReports';
+import FareSlabs from './pages/transport/FareSlabs';
 
 import ClassDetails from './pages/Classes/ClassDetails';
 
@@ -136,6 +138,8 @@ function AppContent() {
               <Route path="/transport/drivers" element={<DriverList />} />
               <Route path="/transport/routes" element={<RouteList />} />
               <Route path="/transport/assignments" element={<TransportAssignments />} />
+              <Route path="/transport/reports" element={<TransportReports />} />
+              <Route path="/transport/fare-slabs" element={<FareSlabs />} />
             </Route>
 
             {/* Catch all redirect */}

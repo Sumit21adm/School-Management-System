@@ -462,4 +462,88 @@ export class TransportService {
             stops: stopsWithStudents
         };
     }
+
+    // ============================================
+    // FARE SLAB OPERATIONS
+    // ============================================
+
+    async findAllFareSlabs(activeOnly?: boolean) {
+        return this.prisma.transportFareSlab.findMany({
+            where: activeOnly ? { isActive: true } : undefined,
+            orderBy: { minDistance: 'asc' }
+        });
+    }
+
+    async createFareSlab(dto: { minDistance: number; maxDistance: number; monthlyFee: number; description?: string; isActive?: boolean }) {
+        // Check for overlapping slabs
+        const overlapping = await this.prisma.transportFareSlab.findFirst({
+            where: {
+                isActive: true,
+                OR: [
+                    { minDistance: { lte: dto.maxDistance }, maxDistance: { gte: dto.minDistance } }
+                ]
+            }
+        });
+        if (overlapping) {
+            throw new ConflictException(`Distance range overlaps with existing slab: ${overlapping.description || `${overlapping.minDistance}-${overlapping.maxDistance} km`}`);
+        }
+
+        return this.prisma.transportFareSlab.create({
+            data: {
+                minDistance: dto.minDistance,
+                maxDistance: dto.maxDistance,
+                monthlyFee: dto.monthlyFee,
+                description: dto.description || `${dto.minDistance}-${dto.maxDistance} km`,
+                isActive: dto.isActive ?? true
+            }
+        });
+    }
+
+    async updateFareSlab(id: number, dto: { minDistance?: number; maxDistance?: number; monthlyFee?: number; description?: string; isActive?: boolean }) {
+        const slab = await this.prisma.transportFareSlab.findUnique({ where: { id } });
+        if (!slab) throw new NotFoundException('Fare slab not found');
+
+        // Check for overlapping if distance changed
+        if (dto.minDistance !== undefined || dto.maxDistance !== undefined) {
+            const minDist = dto.minDistance ?? Number(slab.minDistance);
+            const maxDist = dto.maxDistance ?? Number(slab.maxDistance);
+            const overlapping = await this.prisma.transportFareSlab.findFirst({
+                where: {
+                    id: { not: id },
+                    isActive: true,
+                    OR: [
+                        { minDistance: { lte: maxDist }, maxDistance: { gte: minDist } }
+                    ]
+                }
+            });
+            if (overlapping) {
+                throw new ConflictException(`Distance range overlaps with existing slab`);
+            }
+        }
+
+        return this.prisma.transportFareSlab.update({
+            where: { id },
+            data: dto
+        });
+    }
+
+    async deleteFareSlab(id: number) {
+        const slab = await this.prisma.transportFareSlab.findUnique({ where: { id } });
+        if (!slab) throw new NotFoundException('Fare slab not found');
+        return this.prisma.transportFareSlab.delete({ where: { id } });
+    }
+
+    /**
+     * Get fare for a given distance (used for fee calculation)
+     */
+    async getFareForDistance(distance: number): Promise<number> {
+        const slab = await this.prisma.transportFareSlab.findFirst({
+            where: {
+                isActive: true,
+                minDistance: { lte: distance },
+                maxDistance: { gte: distance }
+            }
+        });
+        return slab ? Number(slab.monthlyFee) : 0;
+    }
 }

@@ -129,4 +129,33 @@ export const transportService = {
 
     removeAssignment: (id: number) =>
         apiClient.delete(`/transport/assignments/${id}`).then(res => res.data),
+
+    // Reports
+    getRouteWiseReport: () =>
+        apiClient.get('/transport/reports/route-wise').then(res => res.data),
+
+    getStopWiseReport: (routeId: number) =>
+        apiClient.get(`/transport/reports/stop-wise/${routeId}`).then(res => res.data),
+
+    // Fare Slabs
+    getFareSlabs: (activeOnly?: boolean) =>
+        apiClient.get('/transport/fare-slabs', { params: { activeOnly } }).then(res => res.data),
+
+    createFareSlab: (data: { minDistance: number; maxDistance: number; monthlyFee: number; description?: string }) =>
+        apiClient.post('/transport/fare-slabs', data).then(res => res.data),
+
+    updateFareSlab: (id: number, data: Partial<{ minDistance: number; maxDistance: number; monthlyFee: number; description?: string; isActive: boolean }>) =>
+        apiClient.patch(`/transport/fare-slabs/${id}`, data).then(res => res.data),
+
+    deleteFareSlab: (id: number) =>
+        apiClient.delete(`/transport/fare-slabs/${id}`).then(res => res.data),
 };
+
+export interface FareSlab {
+    id: number;
+    minDistance: number;
+    maxDistance: number;
+    monthlyFee: number;
+    description?: string;
+    isActive: boolean;
+}

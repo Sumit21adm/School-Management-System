@@ -22,7 +22,9 @@
         "vehicles": "वाहन",
         "drivers": "चालक",
         "routes": "मार्ग",
-        "assignments": "असाइनमेंट"
+        "assignments": "असाइनमेंट",
+        "transportReports": "रिपोर्ट",
+        "fareSlabs": "किराया स्लैब"
     },
     "pages": {
         "dashboard": "डैशबोर्ड",

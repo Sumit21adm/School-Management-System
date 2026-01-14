@@ -4,6 +4,7 @@ import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 import { CreateRouteDto, UpdateRouteDto, CreateRouteStopDto, UpdateRouteStopDto } from './dto/route.dto';
 import { AssignTransportDto, UpdateTransportAssignmentDto, BulkAssignTransportDto } from './dto/assignment.dto';
+import { CreateFareSlabDto, UpdateFareSlabDto } from './dto/fare-slab.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -199,5 +200,33 @@ export class TransportController {
     @Roles('COORDINATOR')
     getStopWiseReport(@Param('routeId', ParseIntPipe) routeId: number) {
         return this.transportService.getStopWiseReport(routeId);
+    }
+
+    // ============================================
+    // FARE SLAB ENDPOINTS
+    // ============================================
+
+    @Get('fare-slabs')
+    @Roles('RECEPTIONIST')
+    findAllFareSlabs(@Query('activeOnly') activeOnly?: string) {
+        return this.transportService.findAllFareSlabs(activeOnly === 'true');
+    }
+
+    @Post('fare-slabs')
+    @Roles('ADMIN')
+    createFareSlab(@Body() createFareSlabDto: CreateFareSlabDto) {
+        return this.transportService.createFareSlab(createFareSlabDto);
+    }
+
+    @Patch('fare-slabs/:id')
+    @Roles('ADMIN')
+    updateFareSlab(@Param('id', ParseIntPipe) id: number, @Body() updateFareSlabDto: UpdateFareSlabDto) {
+        return this.transportService.updateFareSlab(id, updateFareSlabDto);
+    }
+
+    @Delete('fare-slabs/:id')
+    @Roles('ADMIN')
+    deleteFareSlab(@Param('id', ParseIntPipe) id: number) {
+        return this.transportService.deleteFareSlab(id);
     }
 }

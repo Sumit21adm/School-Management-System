@@ -116,6 +116,8 @@ const menuItems: MenuItem[] = [
       { path: '/transport/drivers', labelKey: 'sidebar.drivers', icon: DriverIcon, requiredPermission: 'transport_view' },
       { path: '/transport/routes', labelKey: 'sidebar.routes', icon: RouteIcon, requiredPermission: 'transport_view' },
       { path: '/transport/assignments', labelKey: 'sidebar.assignments', icon: AssignmentIcon, requiredPermission: 'transport_assign' },
+      { path: '/transport/reports', labelKey: 'sidebar.transportReports', icon: PrintIcon, requiredPermission: 'transport_reports' },
+      { path: '/transport/fare-slabs', labelKey: 'sidebar.fareSlabs', icon: RouteIcon, requiredPermission: 'transport_manage' },
     ],
   },
   {

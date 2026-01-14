@@ -678,6 +678,7 @@ model RouteStop {
   landmark        String?   @db.VarChar(200)
   latitude        Decimal?  @db.Decimal(10,8)
   longitude       Decimal?  @db.Decimal(11,8)
+  distanceFromSchool Decimal? @db.Decimal(5,2) // Distance from school in km
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -715,4 +716,19 @@ model StudentTransport {
   @@index([routeId])
   @@index([status])
   @@map("student_transports")
+}
+
+// Distance-based Transport Fare Slabs
+model TransportFareSlab {
+  id              Int       @id @default(autoincrement())
+  minDistance     Decimal   @db.Decimal(5,2)  // e.g., 0.00 km
+  maxDistance     Decimal   @db.Decimal(5,2)  // e.g., 3.00 km
+  monthlyFee      Decimal   @db.Decimal(10,2) // e.g., 500.00
+  description     String?   @db.VarChar(100)  // e.g., "0-3 km"
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([minDistance, maxDistance])
+  @@map("transport_fare_slabs")
 }
