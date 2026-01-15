@@ -46,29 +46,41 @@ import { usersService } from '../../lib/api';
 import { format } from 'date-fns';
 import PageHeader from '../../components/PageHeader';
 
-const USER_ROLES = [
-    { value: 'SUPER_ADMIN', label: 'Super Admin', color: '#d32f2f' },
-    { value: 'ADMIN', label: 'Admin', color: '#1976d2' },
-    { value: 'ACCOUNTANT', label: 'Accountant', color: '#388e3c' },
-    { value: 'TEACHER', label: 'Teacher', color: '#7b1fa2' },
-    { value: 'COORDINATOR', label: 'Coordinator', color: '#f57c00' },
-    { value: 'RECEPTIONIST', label: 'Receptionist', color: '#0097a7' },
-    { value: 'SECURITY', label: 'Security', color: '#455a64' },
-    { value: 'PARENT', label: 'Parent', color: '#795548' },
-    { value: 'STUDENT', label: 'Student', color: '#9e9e9e' },
-];
-
+import { roleSettingsService, type RoleSettings, type EnabledRole } from '../../lib/api/roleSettings';
 import { PERMISSION_MODULES, ROLE_DEFAULT_PERMISSIONS } from '../../utils/permissions';
 
-const getRoleColor = (role: string) => {
-    const found = USER_ROLES.find(r => r.value === role);
-    return found?.color || '#9e9e9e';
+
+// Role category colors (matching RoleSettings.tsx)
+const ROLE_COLORS: Record<string, string> = {
+    SUPER_ADMIN: '#d32f2f',
+    PRINCIPAL: '#d32f2f',
+    VICE_PRINCIPAL: '#d32f2f',
+    ADMIN: '#d32f2f',
+    HEAD_OF_DEPARTMENT: '#1976d2',
+    COORDINATOR: '#1976d2',
+    SECTION_INCHARGE: '#1976d2',
+    TEACHER: '#1976d2',
+    ACCOUNTANT: '#2e7d32',
+    RECEPTIONIST: '#2e7d32',
+    LIBRARIAN: '#2e7d32',
+    LAB_ASSISTANT: '#2e7d32',
+    OFFICE_STAFF: '#2e7d32',
+    CLERK: '#2e7d32',
+    DRIVER: '#ed6c02',
+    CONDUCTOR: '#ed6c02',
+    SECURITY: '#ed6c02',
+    PEON: '#ed6c02',
+    PARENT: '#9c27b0',
+    STUDENT: '#9e9e9e',
 };
 
-const getRoleLabel = (role: string) => {
-    const found = USER_ROLES.find(r => r.value === role);
-    return found?.label || role;
+
+
+
+const getRoleColor = (role: string) => {
+    return ROLE_COLORS[role] || '#757575';
 };
+
 
 export default function UserManagement() {
     const [openDialog, setOpenDialog] = useState(false);
@@ -97,10 +109,39 @@ export default function UserManagement() {
         }
     }, [formData.role, editingUser]);
 
+    const [roleDisplayMap, setRoleDisplayMap] = useState<Record<string, string>>({});
+
+    // Fetch all roles to build authorized roles map and display labels
+    const { data: allRoles } = useQuery({
+        queryKey: ['allRoles'],
+        queryFn: roleSettingsService.getAllRoles,
+    });
+
+    // Fetch enabled roles for dropdown
+    const { data: enabledRoles } = useQuery({
+        queryKey: ['enabledRoles'],
+        queryFn: roleSettingsService.getEnabledRoles,
+    });
+
+    // Update display map when roles are fetched
+    useEffect(() => {
+        if (allRoles) {
+            const map: Record<string, string> = {};
+            allRoles.forEach(r => {
+                map[r.role] = r.displayName;
+            });
+            setRoleDisplayMap(map);
+        }
+    }, [allRoles]);
+
     const { data, isLoading } = useQuery({
         queryKey: ['users', showInactive],
         queryFn: () => usersService.getAll(showInactive),
     });
+
+    const getRoleLabel = (role: string) => {
+        return roleDisplayMap[role] || role;
+    };
 
     const createMutation = useMutation({
         mutationFn: usersService.create,
@@ -457,15 +498,36 @@ export default function UserManagement() {
                                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                         disabled={editingUser && (editingUser.role === 'SUPER_ADMIN' || formData.role === 'SUPER_ADMIN')}
                                     >
-                                        {USER_ROLES.map((role) => (
-                                            <MenuItem key={role.value} value={role.value}>
+                                        {/* Filter roles: Show enabled roles, PLUS the current user's role if editing (even if disabled) */}
+                                        {(enabledRoles || [])
+                                            .filter(r =>
+                                                // If editing, always show the user's current role. Otherwise, only show filtered enabled roles.
+                                                // (We also filter out STUDENT/PARENT typically, but Admin might need to create them? Let's hide them for simplified staff creation, or keep them? 
+                                                //  Actually, User Management is generic. Let's keep them if enabled.)
+                                                (editingUser?.role === r.role) || true
+                                            )
+                                            // Deduplicate if needed, though enabledRoles should be unique.
+                                            // Actually, we need to handle the case where editingUser.role is NOT in enabledRoles.
+                                            // The simplest way is to map enabledRoles, and if editingUser.role is missing, append it manually from allRoles or just raw.
+                                            .map((role) => (
+                                                <MenuItem key={role.role} value={role.role}>
+                                                    <Chip
+                                                        label={role.displayName}
+                                                        size="small"
+                                                        sx={{ bgcolor: getRoleColor(role.role), color: 'white', mr: 1 }}
+                                                    />
+                                                </MenuItem>
+                                            ))}
+                                        {/* Handle case where editing user has a disabled role not in enabledRoles */}
+                                        {editingUser && !enabledRoles?.find(r => r.role === editingUser.role) && (
+                                            <MenuItem key={editingUser.role} value={editingUser.role}>
                                                 <Chip
-                                                    label={role.label}
+                                                    label={getRoleLabel(editingUser.role) + " (Disabled)"}
                                                     size="small"
-                                                    sx={{ bgcolor: role.color, color: 'white', mr: 1 }}
+                                                    sx={{ bgcolor: getRoleColor(editingUser.role), color: 'white', mr: 1, opacity: 0.7 }}
                                                 />
                                             </MenuItem>
-                                        ))}
+                                        )}
                                     </Select>
                                 </FormControl>
                             </Grid>
