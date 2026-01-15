@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import { staffService, UserRole, type Staff } from '../../lib/api/staff';
+import { roleSettingsService, type EnabledRole } from '../../lib/api/roleSettings';
 import { useSnackbar } from 'notistack';
 
 interface AddStaffDialogProps {
@@ -20,7 +21,19 @@ const steps = ['Identity & Role', 'HR Details', 'Professional Info', 'Review'];
 export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole }: AddStaffDialogProps) {
     const [activeStep, setActiveStep] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [enabledRoles, setEnabledRoles] = useState<EnabledRole[]>([]);
     const { enqueueSnackbar } = useSnackbar();
+
+    // Fetch enabled roles on mount
+    useEffect(() => {
+        roleSettingsService.getEnabledRoles()
+            .then(roles => {
+                // Filter out STUDENT and PARENT for staff management
+                const staffRoles = roles.filter(r => r.role !== 'STUDENT' && r.role !== 'PARENT');
+                setEnabledRoles(staffRoles);
+            })
+            .catch(err => console.error('Failed to fetch enabled roles:', err));
+    }, []);
 
     // Determine if we are editing
     const isEdit = !!staffToEdit;
@@ -141,11 +154,11 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                                     control={control}
                                     render={({ field }) => (
                                         <TextField {...field} select label="Role" fullWidth required>
-                                            {Object.values(UserRole)
-                                                .filter(role => role !== UserRole.STUDENT && role !== UserRole.PARENT)
-                                                .map((role) => (
-                                                    <MenuItem key={role} value={role}>{role}</MenuItem>
-                                                ))}
+                                            {enabledRoles.map((role) => (
+                                                <MenuItem key={role.role} value={role.role}>
+                                                    {role.displayName}
+                                                </MenuItem>
+                                            ))}
                                         </TextField>
                                     )}
                                 />

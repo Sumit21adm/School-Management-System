@@ -5,7 +5,8 @@ import {
     Tooltip, CircularProgress, TablePagination
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
-import { staffService, type Staff, UserRole } from '../../lib/api/staff';
+import { staffService, type Staff } from '../../lib/api/staff';
+import { roleSettingsService, type EnabledRole } from '../../lib/api/roleSettings';
 import AddStaffDialog from './AddStaffDialog';
 import { useSnackbar } from 'notistack';
 
@@ -17,10 +18,24 @@ const StaffList = () => {
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
     const { enqueueSnackbar } = useSnackbar();
 
+    // Enabled roles from API
+    const [enabledRoles, setEnabledRoles] = useState<EnabledRole[]>([]);
+
     // Pagination State
     const [page, setPage] = useState(0); // MUI uses 0-based index
     const [rowsPerPage, setRowsPerPage] = useState(50);
     const [totalCount, setTotalCount] = useState(0);
+
+    // Fetch enabled roles on mount
+    useEffect(() => {
+        roleSettingsService.getEnabledRoles()
+            .then(roles => {
+                // Filter out STUDENT and PARENT for staff management
+                const staffRoles = roles.filter(r => r.role !== 'STUDENT' && r.role !== 'PARENT');
+                setEnabledRoles(staffRoles);
+            })
+            .catch(err => console.error('Failed to fetch enabled roles:', err));
+    }, []);
 
     const fetchStaff = async () => {
         setLoading(true);
@@ -108,11 +123,11 @@ const StaffList = () => {
                             }}
                         >
                             <MenuItem value="ALL">All Roles (Staff Only)</MenuItem>
-                            {Object.keys(UserRole)
-                                .filter(role => role !== UserRole.STUDENT && role !== UserRole.PARENT)
-                                .map((role) => (
-                                    <MenuItem key={role} value={role}>{role}</MenuItem>
-                                ))}
+                            {enabledRoles.map((role) => (
+                                <MenuItem key={role.role} value={role.role}>
+                                    {role.displayName}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </FormControl>
                     <IconButton onClick={fetchStaff} title="Refresh">
