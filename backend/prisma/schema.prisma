@@ -323,6 +323,10 @@ enum UserRole {
   TEACHER
   COORDINATOR
   RECEPTIONIST
+  LIBRARIAN
+  OFFICE_STAFF
+  DRIVER
+  CONDUCTOR
   SECURITY
   PARENT
   STUDENT
@@ -351,6 +355,73 @@ model User {
   classTeacherAssignments ClassTeacherAssignment[]
   subjectAllocations      SubjectTeacherAllocation[]
   routines                ClassRoutine[]
+  staffDetails            StaffDetails?
+  staffAttendance         StaffAttendance[]
+  driverDetails           DriverDetails?
+  drivenVehicles          Vehicle[]     @relation("DriverVehicles")
+}
+
+// Staff / HR Management
+model StaffDetails {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @unique
+  
+  // HR Info
+  designation   String    @db.VarChar(100) // "Senior Teacher", "Head Guard"
+  department    String?   @db.VarChar(50)  // "Academics", "Security", "Transport"
+  joiningDate   DateTime  @db.Date
+  bloodGroup    String?   @db.VarChar(5)
+  qualification String?   @db.VarChar(200)
+  experience    String?   @db.VarChar(100)
+  
+  // Financial
+  basicSalary   Decimal?  @db.Decimal(10,2)
+  bankName      String?   @db.VarChar(100)
+  accountNo     String?   @db.VarChar(30)
+  ifscCode      String?   @db.VarChar(20)
+  panNo         String?   @db.VarChar(15)
+  aadharNo      String?   @db.VarChar(16)
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("staff_details")
+}
+
+model DriverDetails {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @unique
+  licenseNumber String?   @db.VarChar(50)
+  licenseExpiry DateTime? @db.Date
+  badgeNumber   String?   @db.VarChar(50)
+  
+  user          User      @relation(fields: [userId], references: [id])
+  @@map("driver_details")
+}
+
+model StaffAttendance {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  date        DateTime @db.Date
+  status      AttendanceStatus
+  checkIn     String?  @db.VarChar(10) // "08:00"
+  checkOut    String?  @db.VarChar(10) // "14:00"
+  remarks     String?  @db.VarChar(100)
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, date])
+  @@index([date])
+  @@map("staff_attendance")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALFDAY
+  LEAVE
 }
 
 // Student Academic History
@@ -610,39 +681,14 @@ model Vehicle {
 
   // Relations
   driverId        Int?
-  driver          Driver?   @relation(fields: [driverId], references: [id])
+  driver          User?     @relation("DriverVehicles", fields: [driverId], references: [id])
   routes          Route[]
 
   @@index([status])
   @@map("vehicles")
 }
 
-model Driver {
-  id              Int       @id @default(autoincrement())
-  name            String    @db.VarChar(100)
-  phone           String    @db.VarChar(15)
-  altPhone        String?   @db.VarChar(15)
-  address         String?   @db.Text
-  licenseNo       String    @unique @db.VarChar(30)
-  licenseType     String    @db.VarChar(20)          // LMV, HMV, Transport
-  licenseExpiry   DateTime  @db.Date
-  dateOfBirth     DateTime? @db.Date
-  dateOfJoining   DateTime  @db.Date
-  aadharNo        String?   @db.VarChar(12)
-  photoUrl        String?   @db.VarChar(500)
-  salary          Decimal?  @db.Decimal(10,2)
-  status          String    @default("active") @db.VarChar(20) // active, inactive, terminated
-  emergencyContact String?  @db.VarChar(100)
-  emergencyPhone  String?   @db.VarChar(15)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
 
-  // Relations
-  vehicles        Vehicle[]
-
-  @@index([status])
-  @@map("drivers")
-}
 
 model Route {
   id              Int       @id @default(autoincrement())

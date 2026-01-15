@@ -1509,7 +1509,6 @@ export default function AdmissionList() {
                 <Box sx={{ mt: 2 }}>
                   <StudentTransportDetails
                     studentId={selectedStudent.studentId}
-                    transportData={selectedStudent.transport}
                   />
                 </Box>
               )}

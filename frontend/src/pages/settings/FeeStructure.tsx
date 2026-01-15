@@ -133,6 +133,16 @@ export default function FeeStructure() {
         }
     }, [structureData, feeTypesData]);
 
+    // Effect to handle Transport Fee selection (Auto-set amount to 0)
+    useEffect(() => {
+        if (selectedFeeType && feeTypesData?.feeTypes) {
+            const type = feeTypesData.feeTypes.find((ft: any) => ft.id === selectedFeeType);
+            if (type?.name?.toLowerCase().includes('transport') || type?.name?.toLowerCase().includes('van') || type?.name?.toLowerCase().includes('bus')) {
+                setNewFeeAmount(0);
+            }
+        }
+    }, [selectedFeeType, feeTypesData]);
+
     const handleAddFeeType = async () => {
         if (!selectedFeeType || !feeTypesData || !selectedSession) return;
 
@@ -453,8 +463,11 @@ export default function FeeStructure() {
     };
 
     // Get available fee types (not already added) - only active ones for structure
+    // EXCLUDING 'Transport Fee' as per user request (it is student-specific, not class-wise)
     const availableFeeTypes = feeTypesData?.feeTypes.filter(
-        (ft: any) => ft.isActive !== false && !feeItems.some(item => item.feeTypeId === ft.id)
+        (ft: any) => ft.isActive !== false &&
+            !feeItems.some(item => item.feeTypeId === ft.id) &&
+            !ft.name.toLowerCase().includes('transport')
     ) || [];
 
     if (!selectedSession) {
@@ -623,26 +636,37 @@ export default function FeeStructure() {
                                                     </Tooltip>
                                                 </Box>
                                             ) : (
-                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                                    <Tooltip title="Edit">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="primary"
-                                                            onClick={() => handleStartEditFeeType(ft)}
-                                                        >
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Delete">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="error"
-                                                            onClick={() => handleDeleteFeeTypeClick(ft)}
-                                                        >
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Box>
+                                                (() => {
+                                                    const isProtected = ft.name.toLowerCase().includes('transport') || ft.name.toLowerCase().includes('late fee');
+                                                    return (
+                                                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                            <Tooltip title={isProtected ? "Protected System Fee" : "Edit"}>
+                                                                <span>
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="primary"
+                                                                        onClick={() => handleStartEditFeeType(ft)}
+                                                                        disabled={isProtected}
+                                                                    >
+                                                                        <EditIcon fontSize="small" />
+                                                                    </IconButton>
+                                                                </span>
+                                                            </Tooltip>
+                                                            <Tooltip title={isProtected ? "Protected System Fee" : "Delete"}>
+                                                                <span>
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        onClick={() => handleDeleteFeeTypeClick(ft)}
+                                                                        disabled={isProtected}
+                                                                    >
+                                                                        <DeleteIcon fontSize="small" />
+                                                                    </IconButton>
+                                                                </span>
+                                                            </Tooltip>
+                                                        </Box>
+                                                    );
+                                                })()
                                             )}
                                         </TableCell>
                                     </TableRow>
@@ -705,22 +729,28 @@ export default function FeeStructure() {
                         </Select>
                     </FormControl>
 
-                    <TextField
-                        type="number"
-                        size="small"
-                        label="Amount (₹)"
-                        value={newFeeAmount || ''}
-                        onChange={(e) => setNewFeeAmount(parseFloat(e.target.value) || 0)}
-                        disabled={!selectedClass || !selectedFeeType}
-                        sx={{ width: 150 }}
-                        inputProps={{ min: 0, step: 100 }}
-                    />
+                    {(() => {
+                        const isTransport = feeTypesData?.feeTypes?.find((ft: any) => ft.id === selectedFeeType)?.name?.toLowerCase().includes('transport');
+                        return (
+                            <TextField
+                                type="number"
+                                size="small"
+                                label="Amount (₹)"
+                                value={newFeeAmount || ''}
+                                onChange={(e) => setNewFeeAmount(parseFloat(e.target.value) || 0)}
+                                disabled={!selectedClass || !selectedFeeType || isTransport}
+                                sx={{ width: 150 }}
+                                inputProps={{ min: 0, step: 100 }}
+                                helperText={isTransport ? "Auto-calculated" : ""}
+                            />
+                        );
+                    })()}
 
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
                         onClick={handleAddFeeType}
-                        disabled={!selectedClass || !selectedFeeType || !newFeeAmount}
+                        disabled={!selectedClass || !selectedFeeType || (!newFeeAmount && !feeTypesData?.feeTypes?.find((ft: any) => ft.id === selectedFeeType)?.name?.toLowerCase().includes('transport'))}
                         sx={{ height: 40 }}
                     >
                         Add Fee Type
@@ -815,9 +845,11 @@ export default function FeeStructure() {
                                                                 parseFloat(e.target.value) || 0
                                                             )
                                                         }
+                                                        disabled={item.feeTypeName.toLowerCase().includes('transport')}
                                                         sx={{ width: 120 }}
                                                         inputProps={{ min: 0, step: 100 }}
                                                         placeholder="Amount"
+                                                        helperText={item.feeTypeName.toLowerCase().includes('transport') ? "Auto" : ""}
                                                     />
                                                 ) : (
                                                     <Typography>₹{item.amount?.toLocaleString() || 0}</Typography>

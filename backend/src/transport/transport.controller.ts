@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { TransportService } from './transport.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
-import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
+// Driver DTO imports removed
 import { CreateRouteDto, UpdateRouteDto, CreateRouteStopDto, UpdateRouteStopDto } from './dto/route.dto';
 import { AssignTransportDto, UpdateTransportAssignmentDto, BulkAssignTransportDto } from './dto/assignment.dto';
 import { CreateFareSlabDto, UpdateFareSlabDto } from './dto/fare-slab.dto';
@@ -49,38 +49,8 @@ export class TransportController {
     }
 
     // ============================================
-    // DRIVER ENDPOINTS
+    // DRIVER ENDPOINTS (REMOVED - Use Staff Module)
     // ============================================
-
-    @Get('drivers')
-    @Roles('RECEPTIONIST')
-    findAllDrivers(@Query('status') status?: string) {
-        return this.transportService.findAllDrivers(status);
-    }
-
-    @Get('drivers/:id')
-    @Roles('RECEPTIONIST')
-    findDriverById(@Param('id', ParseIntPipe) id: number) {
-        return this.transportService.findDriverById(id);
-    }
-
-    @Post('drivers')
-    @Roles('ADMIN')
-    createDriver(@Body() createDriverDto: CreateDriverDto) {
-        return this.transportService.createDriver(createDriverDto);
-    }
-
-    @Patch('drivers/:id')
-    @Roles('ADMIN')
-    updateDriver(@Param('id', ParseIntPipe) id: number, @Body() updateDriverDto: UpdateDriverDto) {
-        return this.transportService.updateDriver(id, updateDriverDto);
-    }
-
-    @Delete('drivers/:id')
-    @Roles('ADMIN')
-    deleteDriver(@Param('id', ParseIntPipe) id: number) {
-        return this.transportService.deleteDriver(id);
-    }
 
     // ============================================
     // ROUTE ENDPOINTS

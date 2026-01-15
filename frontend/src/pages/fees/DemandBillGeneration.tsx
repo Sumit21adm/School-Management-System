@@ -196,9 +196,16 @@ export default function DemandBillGeneration() {
   });
 
   // Use structure-based fee types if available, otherwise fallback to all
-  const feeTypes = (structureFeeTypesData?.feeTypes?.length > 0)
+  const baseFeeTypes = (structureFeeTypesData?.feeTypes?.length > 0)
     ? structureFeeTypesData.feeTypes
     : (allFeeTypesData?.feeTypes || []);
+
+  // Always include Transport Fee from global list if not already present
+  // This is required because Transport Fee is hidden from Class Structure
+  const transportFee = allFeeTypesData?.feeTypes?.find((ft: any) => ft.name === 'Transport Fee');
+  const feeTypes = transportFee && !baseFeeTypes.some((ft: any) => ft.id === transportFee.id)
+    ? [...baseFeeTypes, transportFee]
+    : baseFeeTypes;
 
   const queryClient = useQueryClient();
 
@@ -224,11 +231,15 @@ export default function DemandBillGeneration() {
   }, []);
 
   // Pre-select Tuition Fee when fee types load
+  // Pre-select Tuition Fee and Transport Fee when fee types load
   useEffect(() => {
     if (feeTypes.length > 0 && !hasInitializedRef.current) {
-      const tuitionFee = feeTypes.find((ft: any) => ft.name === 'Tuition Fee');
-      if (tuitionFee) {
-        setSelectedFeeTypes([tuitionFee.id]);
+      const defaultFees = feeTypes.filter((ft: any) =>
+        ft.name === 'Tuition Fee' || ft.name === 'Transport Fee'
+      );
+
+      if (defaultFees.length > 0) {
+        setSelectedFeeTypes(defaultFees.map((ft: any) => ft.id));
         hasInitializedRef.current = true;
       }
     }

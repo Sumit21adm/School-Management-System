@@ -1,40 +1,23 @@
 import { useState, useEffect } from 'react';
 import {
-    Box,
-    Paper,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Button,
-    IconButton,
-    Chip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    TextField,
-    MenuItem,
-    Grid,
-    Typography,
+    Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Button, IconButton, Typography, MenuItem, Grid, Chip, Dialog, DialogTitle,
+    DialogContent, DialogActions, TextField
 } from '@mui/material';
 import {
-    Add as AddIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
+    Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
     DirectionsBus as BusIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
-import { transportService, type Vehicle, type Driver } from '../../lib/api/transport';
+import { transportService, type Vehicle } from '../../lib/api/transport';
+import { staffService, UserRole, type Staff } from '../../lib/api/staff';
 import PageHeader from '../../components/PageHeader';
 import { useSnackbar } from 'notistack';
 
 export default function VehicleList() {
     const { enqueueSnackbar } = useSnackbar();
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [drivers, setDrivers] = useState<Staff[]>([]);
     const [open, setOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
@@ -53,12 +36,14 @@ export default function VehicleList() {
 
     const fetchData = async () => {
         try {
-            const [vehiclesData, driversData] = await Promise.all([
+            // Fetch Vehicles and Drivers (Staff with role DRIVER)
+            // Note: getAll returns { data: Staff[], total }
+            const [vehiclesData, driversResponse] = await Promise.all([
                 transportService.getVehicles(),
-                transportService.getDrivers('active'),
+                staffService.getAll(UserRole.DRIVER, undefined, 1, 100),
             ]);
             setVehicles(vehiclesData);
-            setDrivers(driversData);
+            setDrivers(driversResponse.data);
         } catch (error: any) {
             console.error('Fetch error:', error);
             const message = error.response?.data?.message || 'Failed to fetch data';
@@ -81,7 +66,7 @@ export default function VehicleList() {
                 model: vehicle.model || '',
                 driverId: vehicle.driver?.id?.toString() || '',
                 status: vehicle.status,
-                notes: '', // Add notes field if it comes from API
+                notes: '',
             });
         } else {
             setEditingVehicle(null);
@@ -181,7 +166,12 @@ export default function VehicleList() {
                                 <TableCell>{vehicle.capacity}</TableCell>
                                 <TableCell>
                                     {vehicle.driver ? (
-                                        <Typography variant="body2">{vehicle.driver.name}</Typography>
+                                        <Box>
+                                            <Typography variant="body2">{vehicle.driver.name}</Typography>
+                                            {vehicle.driver.phone && (
+                                                <Typography variant="caption" color="textSecondary">{vehicle.driver.phone}</Typography>
+                                            )}
+                                        </Box>
                                     ) : (
                                         <Typography variant="caption" color="text.secondary">
                                             Unassigned
@@ -320,7 +310,7 @@ export default function VehicleList() {
                                             </MenuItem>
                                             {drivers.map((driver) => (
                                                 <MenuItem key={driver.id} value={driver.id}>
-                                                    {driver.name} ({driver.licenseNo})
+                                                    {driver.name} {driver.driverDetails?.licenseNumber ? `(DL: ${driver.driverDetails.licenseNumber})` : ''}
                                                 </MenuItem>
                                             ))}
                                         </TextField>

@@ -38,6 +38,8 @@ import TransportAssignments from './pages/transport/TransportAssignments';
 import TransportReports from './pages/transport/TransportReports';
 import FareSlabs from './pages/transport/FareSlabs';
 
+import StaffList from './pages/staff/StaffList';
+
 import ClassDetails from './pages/Classes/ClassDetails';
 
 function AppContent() {
@@ -140,6 +142,9 @@ function AppContent() {
               <Route path="/transport/assignments" element={<TransportAssignments />} />
               <Route path="/transport/reports" element={<TransportReports />} />
               <Route path="/transport/fare-slabs" element={<FareSlabs />} />
+
+              {/* Staff Routes */}
+              <Route path="/staff" element={<StaffList />} />
             </Route>
 
             {/* Catch all redirect */}

@@ -448,7 +448,6 @@ export class FeesService {
         let students: any[] = [];
         const studentInclude = {
             transport: {
-                where: { status: 'active' },
                 include: {
                     route: true,
                     pickupStop: true,
@@ -588,6 +587,11 @@ export class FeesService {
                     : feeStructure.feeItems;
 
                 for (const item of itemsToInclude) {
+                    // Skip Transport Fee in this loop (it's handled dynamically below)
+                    if (transportFeeType && item.feeTypeId === transportFeeType.id) {
+                        continue;
+                    }
+
                     const amount = Number(item.amount);
                     totalAmount += amount;
 
@@ -609,7 +613,7 @@ export class FeesService {
 
                 // Add Transport Fee if applicable
                 // Calculate based on stop distance using fare slabs
-                if (transportFeeType && student.transport && student.transport.route) {
+                if (transportFeeType && student.transport && student.transport.status === 'active' && student.transport.route) {
                     const shouldIncludeTransport = !dto.selectedFeeTypeIds || dto.selectedFeeTypeIds.includes(transportFeeType.id);
 
                     if (shouldIncludeTransport) {

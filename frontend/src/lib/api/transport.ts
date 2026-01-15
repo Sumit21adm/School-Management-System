@@ -15,11 +15,8 @@ export interface Vehicle {
 export interface Driver {
     id: number;
     name: string;
-    phone: string;
-    licenseNo: string;
-    licenseExpiry: string;
-    status: string;
-    vehicles?: { id: number; vehicleNo: string }[];
+    phone?: string;
+    // other fields like license are now in driverDetails, but vehicle usually only needs name/phone contact
 }
 
 export interface RouteStop {
@@ -58,6 +55,7 @@ export interface StudentTransport {
     dropStop?: RouteStop;
     transportType: string;
     status: string;
+    calculatedFee?: number;
 }
 
 // Service
@@ -75,18 +73,8 @@ export const transportService = {
     deleteVehicle: (id: number) =>
         apiClient.delete(`/transport/vehicles/${id}`).then(res => res.data),
 
-    // Drivers
-    getDrivers: (status?: string) =>
-        apiClient.get<Driver[]>('/transport/drivers', { params: { status } }).then(res => res.data),
+    // Drivers methods removed - use staffService
 
-    createDriver: (data: any) =>
-        apiClient.post<Driver>('/transport/drivers', data).then(res => res.data),
-
-    updateDriver: (id: number, data: any) =>
-        apiClient.patch<Driver>(`/transport/drivers/${id}`, data).then(res => res.data),
-
-    deleteDriver: (id: number) =>
-        apiClient.delete(`/transport/drivers/${id}`).then(res => res.data),
 
     // Routes
     getRoutes: (status?: string) =>

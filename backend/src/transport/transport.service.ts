@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
-import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
+// Driver DTOs removed
 import { CreateRouteDto, UpdateRouteDto, CreateRouteStopDto, UpdateRouteStopDto } from './dto/route.dto';
 import { AssignTransportDto, UpdateTransportAssignmentDto, BulkAssignTransportDto } from './dto/assignment.dto';
 
@@ -17,7 +17,7 @@ export class TransportService {
         return this.prisma.vehicle.findMany({
             where: status ? { status } : undefined,
             include: {
-                driver: true,
+                driver: { select: { id: true, name: true, phone: true } },
                 routes: {
                     select: { id: true, routeName: true, routeCode: true }
                 }
@@ -30,7 +30,7 @@ export class TransportService {
         const vehicle = await this.prisma.vehicle.findUnique({
             where: { id },
             include: {
-                driver: true,
+                driver: { select: { id: true, name: true, phone: true } },
                 routes: {
                     include: {
                         stops: { orderBy: { stopOrder: 'asc' } }
@@ -56,7 +56,7 @@ export class TransportService {
                 fitnessExpiry: dto.fitnessExpiry ? new Date(dto.fitnessExpiry) : null,
                 permitExpiry: dto.permitExpiry ? new Date(dto.permitExpiry) : null,
             },
-            include: { driver: true }
+            include: { driver: { select: { id: true, name: true, phone: true } } }
         });
     }
 
@@ -70,7 +70,7 @@ export class TransportService {
                 fitnessExpiry: dto.fitnessExpiry ? new Date(dto.fitnessExpiry) : undefined,
                 permitExpiry: dto.permitExpiry ? new Date(dto.permitExpiry) : undefined,
             },
-            include: { driver: true }
+            include: { driver: { select: { id: true, name: true, phone: true } } }
         });
     }
 
@@ -80,64 +80,11 @@ export class TransportService {
     }
 
     // ============================================
-    // DRIVER OPERATIONS
+    // DRIVER OPERATIONS (REMOVED - Use StaffService)
     // ============================================
 
-    async findAllDrivers(status?: string) {
-        return this.prisma.driver.findMany({
-            where: status ? { status } : undefined,
-            include: {
-                vehicles: {
-                    select: { id: true, vehicleNo: true, vehicleType: true }
-                }
-            },
-            orderBy: { name: 'asc' }
-        });
-    }
+    // Driver methods removed to use unified Staff/User model.
 
-    async findDriverById(id: number) {
-        const driver = await this.prisma.driver.findUnique({
-            where: { id },
-            include: { vehicles: true }
-        });
-        if (!driver) throw new NotFoundException('Driver not found');
-        return driver;
-    }
-
-    async createDriver(dto: CreateDriverDto) {
-        // Check for duplicate license number
-        const existing = await this.prisma.driver.findUnique({
-            where: { licenseNo: dto.licenseNo }
-        });
-        if (existing) throw new ConflictException('License number already exists');
-
-        return this.prisma.driver.create({
-            data: {
-                ...dto,
-                licenseExpiry: new Date(dto.licenseExpiry),
-                dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
-                dateOfJoining: dto.dateOfJoining ? new Date(dto.dateOfJoining) : new Date(),
-            }
-        });
-    }
-
-    async updateDriver(id: number, dto: UpdateDriverDto) {
-        await this.findDriverById(id);
-        return this.prisma.driver.update({
-            where: { id },
-            data: {
-                ...dto,
-                licenseExpiry: dto.licenseExpiry ? new Date(dto.licenseExpiry) : undefined,
-                dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
-                dateOfJoining: dto.dateOfJoining ? new Date(dto.dateOfJoining) : undefined,
-            }
-        });
-    }
-
-    async deleteDriver(id: number) {
-        await this.findDriverById(id);
-        return this.prisma.driver.delete({ where: { id } });
-    }
 
     // ============================================
     // ROUTE OPERATIONS
@@ -147,7 +94,7 @@ export class TransportService {
         return this.prisma.route.findMany({
             where: status ? { status } : undefined,
             include: {
-                vehicle: { include: { driver: true } },
+                vehicle: { include: { driver: { select: { id: true, name: true, phone: true } } } },
                 stops: { orderBy: { stopOrder: 'asc' } },
                 _count: { select: { studentTransports: true } }
             },
@@ -159,7 +106,7 @@ export class TransportService {
         const route = await this.prisma.route.findUnique({
             where: { id },
             include: {
-                vehicle: { include: { driver: true } },
+                vehicle: { include: { driver: { select: { id: true, name: true, phone: true } } } },
                 stops: { orderBy: { stopOrder: 'asc' } },
                 studentTransports: {
                     include: {
@@ -290,7 +237,33 @@ export class TransportService {
                 dropStop: true
             }
         });
-        return assignment;
+
+        if (!assignment) return null;
+
+        // Calculate Fee based on Fare Slabs
+        let calculatedFee = 0;
+        let distance = 0;
+
+        if (assignment.pickupStop?.distanceFromSchool) {
+            distance = Number(assignment.pickupStop.distanceFromSchool);
+        } else if (assignment.dropStop?.distanceFromSchool) {
+            distance = Number(assignment.dropStop.distanceFromSchool);
+        }
+
+        if (distance > 0) {
+            const slab = await this.prisma.transportFareSlab.findFirst({
+                where: {
+                    isActive: true,
+                    minDistance: { lte: distance },
+                    maxDistance: { gte: distance }
+                }
+            });
+            if (slab) {
+                calculatedFee = Number(slab.monthlyFee);
+            }
+        }
+
+        return { ...assignment, calculatedFee };
     }
 
     async assignTransport(dto: AssignTransportDto) {

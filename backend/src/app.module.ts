@@ -24,6 +24,7 @@ import { SubjectsModule } from './subjects/subjects.module';
 import { BackupModule } from './backup/backup.module';
 
 import { TransportModule } from './transport/transport.module';
+import { StaffModule } from './staff/staff.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { TransportModule } from './transport/transport.module';
     PrintSettingsModule,
     ExaminationModule,
     UsersModule,
+    StaffModule,
     SubjectsModule,
     BackupModule,
     TransportModule,

@@ -119,7 +119,7 @@ export default function StudentTransportDetails({ studentId, transportData }: St
                     <Grid size={{ xs: 12, md: 6 }}>
                         <Typography variant="subtitle2" color="text.secondary">Monthly Fee</Typography>
                         <Typography variant="h6" color="primary.main">
-                            ₹{assignment.route?.monthlyFee || 0}
+                            ₹{assignment.calculatedFee || assignment.route?.monthlyFee || 0}
                         </Typography>
                     </Grid>
                 </Grid>

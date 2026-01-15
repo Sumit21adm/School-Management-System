@@ -109,6 +109,13 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    labelKey: 'sidebar.staff',
+    icon: UserIcon,
+    children: [
+      { path: '/staff', labelKey: 'sidebar.staffList', icon: UserIcon, requiredPermission: 'users_manage' },
+    ],
+  },
+  {
     labelKey: 'sidebar.transport',
     icon: TransportIcon,
     children: [

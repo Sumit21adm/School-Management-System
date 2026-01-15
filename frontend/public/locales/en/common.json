@@ -24,7 +24,9 @@
         "routes": "Routes",
         "assignments": "Assignments",
         "transportReports": "Reports",
-        "fareSlabs": "Fare Slabs"
+        "fareSlabs": "Fare Slabs",
+        "staff": "STAFF MANAGEMENT",
+        "staffList": "Staff List"
     },
     "pages": {
         "dashboard": "Dashboard",
