@@ -78,18 +78,29 @@ export default function RoleSettingsPage() {
             queryClient.invalidateQueries({ queryKey: ['roleSettings'] });
             setSnackbar({ open: true, message: 'Role updated successfully', severity: 'success' });
         },
-        onError: (error: Error) => {
-            setSnackbar({ open: true, message: error.message || 'Failed to update role', severity: 'error' });
+        onError: (error: any) => {
+            // Extract error message from API response
+            const message = error?.response?.data?.message || error?.message || 'Failed to update role';
+            setSnackbar({ open: true, message, severity: 'error' });
         },
     });
 
-    const handleToggleRole = (role: string, currentEnabled: boolean) => {
+    const handleToggleRole = (role: RoleSettings) => {
         // Prevent disabling SUPER_ADMIN
-        if (role === 'SUPER_ADMIN') {
+        if (role.role === 'SUPER_ADMIN') {
             setSnackbar({ open: true, message: 'Cannot disable Super Admin role', severity: 'error' });
             return;
         }
-        updateRoleMutation.mutate({ role, data: { isEnabled: !currentEnabled } });
+        // Show warning on frontend if role has users (backend also validates)
+        if (role.isEnabled && role.userCount > 0) {
+            setSnackbar({
+                open: true,
+                message: `Cannot disable "${role.displayName}" - ${role.userCount} user(s) have this role. Reassign them first.`,
+                severity: 'error'
+            });
+            return;
+        }
+        updateRoleMutation.mutate({ role: role.role, data: { isEnabled: !role.isEnabled } });
     };
 
     const handleUpdateDisplayName = (role: string, displayName: string) => {
@@ -132,7 +143,7 @@ export default function RoleSettingsPage() {
             </Typography>
 
             <Alert severity="info" sx={{ mb: 3 }}>
-                <strong>Note:</strong> Disabling a role only hides it from new selections. Existing users with that role will continue to function normally.
+                <strong>Note:</strong> Roles with active users cannot be disabled. Reassign users to another role first, then disable.
             </Alert>
 
             {categoryOrder.map(category => {
@@ -152,6 +163,7 @@ export default function RoleSettingsPage() {
                                     <TableRow>
                                         <TableCell width="60">Enabled</TableCell>
                                         <TableCell width="200">Role</TableCell>
+                                        <TableCell width="100">Users</TableCell>
                                         <TableCell>Display Name</TableCell>
                                         <TableCell>Description</TableCell>
                                     </TableRow>
@@ -159,15 +171,23 @@ export default function RoleSettingsPage() {
                                 <TableBody>
                                     {categoryRoles.map(role => {
                                         const isSuperAdmin = role.role === 'SUPER_ADMIN';
+                                        const hasUsers = role.userCount > 0;
+                                        const cannotDisable = isSuperAdmin || (role.isEnabled && hasUsers);
                                         return (
                                             <TableRow key={role.role} hover>
                                                 <TableCell>
-                                                    <Switch
-                                                        checked={role.isEnabled}
-                                                        onChange={() => handleToggleRole(role.role, role.isEnabled)}
-                                                        disabled={isSuperAdmin || updateRoleMutation.isPending}
-                                                        color="primary"
-                                                    />
+                                                    <Tooltip
+                                                        title={cannotDisable && !isSuperAdmin ? `${role.userCount} user(s) have this role` : ''}
+                                                    >
+                                                        <span>
+                                                            <Switch
+                                                                checked={role.isEnabled}
+                                                                onChange={() => handleToggleRole(role)}
+                                                                disabled={cannotDisable || updateRoleMutation.isPending}
+                                                                color="primary"
+                                                            />
+                                                        </span>
+                                                    </Tooltip>
                                                 </TableCell>
                                                 <TableCell>
                                                     <Chip
@@ -175,6 +195,15 @@ export default function RoleSettingsPage() {
                                                         size="small"
                                                         variant={role.isEnabled ? 'filled' : 'outlined'}
                                                         color={role.isEnabled ? 'primary' : 'default'}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip
+                                                        label={role.userCount}
+                                                        size="small"
+                                                        color={role.userCount > 0 ? 'info' : 'default'}
+                                                        variant="outlined"
+                                                        sx={{ minWidth: 40 }}
                                                     />
                                                 </TableCell>
                                                 <TableCell>

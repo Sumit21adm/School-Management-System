@@ -7,6 +7,7 @@ export interface RoleSettings {
     displayName: string;
     description: string | null;
     sortOrder: number;
+    userCount: number; // Number of users with this role
     createdAt: string;
     updatedAt: string;
 }
