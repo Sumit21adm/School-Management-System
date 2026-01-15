@@ -68,6 +68,31 @@ export class FeesController {
         return this.feesService.getTransactions(query);
     }
 
+    // ========== FEE REPORTS ==========
+
+    @Get('reports/outstanding')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN')
+    async getOutstandingReport(@Query('sessionId', ParseIntPipe) sessionId: number) {
+        return this.feesService.getOutstandingReport(sessionId);
+    }
+
+    @Get('reports/history')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN')
+    async getHistoryReport(@Query('sessionId', ParseIntPipe) sessionId: number) {
+        return this.feesService.getHistoryReport(sessionId);
+    }
+
+    @Get('reports/fee-analysis')
+    @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN')
+    async getFeeAnalysisReport(
+        @Query('sessionId', ParseIntPipe) sessionId: number,
+        @Query('className') className?: string,
+    ) {
+        return this.feesService.getFeeAnalysisReport(sessionId, className);
+    }
+
+    // ========== PDF GENERATION ==========
+
     @Get('receipt/pdf')
     @Roles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'RECEPTIONIST')
     async getReceiptPdf(

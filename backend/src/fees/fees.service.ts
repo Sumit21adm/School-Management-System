@@ -1202,4 +1202,285 @@ export class FeesService {
 
         return { count: result.count };
     }
+
+    /**
+     * Get Outstanding Dues Report - Class-wise breakdown of unpaid fees
+     */
+    async getOutstandingReport(sessionId: number) {
+        // Get all students with unpaid bills for this session
+        const studentsWithDues = await this.prisma.studentDetails.findMany({
+            where: {
+                sessionId,
+                status: 'active',
+            },
+            select: {
+                studentId: true,
+                name: true,
+                fatherName: true,
+                className: true,
+                section: true,
+                phone: true,
+            },
+        });
+
+        // Get all demand bills for the session
+        const allBills = await this.prisma.demandBill.findMany({
+            where: { sessionId },
+            select: {
+                studentId: true,
+                netAmount: true,
+                paidAmount: true,
+            },
+        });
+
+        // Build map of student dues
+        const studentDuesMap = new Map<string, { totalBilled: number; totalPaid: number }>();
+        allBills.forEach(bill => {
+            const existing = studentDuesMap.get(bill.studentId) || { totalBilled: 0, totalPaid: 0 };
+            existing.totalBilled += Number(bill.netAmount);
+            existing.totalPaid += Number(bill.paidAmount);
+            studentDuesMap.set(bill.studentId, existing);
+        });
+
+        // Filter students with outstanding balance and build class-wise grouping
+        const classMap = new Map<string, {
+            className: string;
+            totalOutstanding: number;
+            students: Array<{
+                studentId: string;
+                name: string;
+                fatherName: string;
+                section: string;
+                mobile: string | null;
+                totalBilled: number;
+                totalPaid: number;
+                outstanding: number;
+            }>;
+        }>();
+
+        studentsWithDues.forEach(student => {
+            const dues = studentDuesMap.get(student.studentId);
+            if (!dues) return;
+
+            const outstanding = dues.totalBilled - dues.totalPaid;
+            if (outstanding <= 0) return;
+
+            if (!classMap.has(student.className)) {
+                classMap.set(student.className, {
+                    className: student.className,
+                    totalOutstanding: 0,
+                    students: [],
+                });
+            }
+
+            const classData = classMap.get(student.className)!;
+            classData.totalOutstanding += outstanding;
+            classData.students.push({
+                studentId: student.studentId,
+                name: student.name,
+                fatherName: student.fatherName || '',
+                section: student.section,
+                mobile: student.phone,
+                totalBilled: dues.totalBilled,
+                totalPaid: dues.totalPaid,
+                outstanding,
+            });
+        });
+
+        // Sort classes and convert to array
+        const classes = Array.from(classMap.values())
+            .sort((a, b) => a.className.localeCompare(b.className))
+            .map(c => ({
+                ...c,
+                studentCount: c.students.length,
+                students: c.students.sort((a, b) => a.name.localeCompare(b.name)),
+            }));
+
+        const grandTotal = classes.reduce((sum, c) => sum + c.totalOutstanding, 0);
+        const totalStudents = classes.reduce((sum, c) => sum + c.studentCount, 0);
+
+        return {
+            sessionId,
+            generatedAt: new Date().toISOString(),
+            summary: {
+                totalClasses: classes.length,
+                totalStudents,
+                grandTotal,
+            },
+            classes,
+        };
+    }
+
+    /**
+     * Get Bill History Report - Wrapper for getBillGenerationHistory with frontend-friendly format
+     */
+    async getHistoryReport(sessionId: number) {
+        const history = await this.getBillGenerationHistory(sessionId);
+
+        // Transform to match frontend interface
+        const transformedHistory = history.map(batch => ({
+            timestamp: batch.timestamp,
+            billType: batch.billType,
+            month: batch.month,
+            year: batch.year,
+            classes: batch.classes,
+            sections: batch.sections,
+            feeTypes: batch.feeTypes,
+            studentCount: batch.studentCount,
+            totalAmount: batch.totalAmount,
+            bills: batch.bills.map(b => ({
+                billNo: b.billNo,
+                studentId: b.studentId,
+                studentName: b.studentName,
+                className: b.className,
+                section: b.section,
+                amount: b.amount,
+                netAmount: b.amount - (b.previousDues || 0) + (b.advanceUsed || 0),
+                status: b.status,
+            })),
+        }));
+
+        return {
+            sessionId,
+            generatedAt: new Date().toISOString(),
+            totalBatches: transformedHistory.length,
+            totalBills: transformedHistory.reduce((sum, batch) => sum + batch.bills.length, 0),
+            history: transformedHistory,
+        };
+    }
+
+    /**
+     * Get Fee Type Analysis Report - Breakdown by fee type with collection rates
+     */
+    async getFeeAnalysisReport(sessionId: number, className?: string) {
+        // Build where clause for student filtering
+        const studentWhere: any = { sessionId, status: 'active' };
+        if (className) studentWhere.className = className;
+
+        // Get all students matching filter
+        const students = await this.prisma.studentDetails.findMany({
+            where: studentWhere,
+            select: { studentId: true },
+        });
+        const studentIds = students.map(s => s.studentId);
+
+        if (studentIds.length === 0) {
+            return {
+                sessionId,
+                className: className || 'All Classes',
+                generatedAt: new Date().toISOString(),
+                summary: {
+                    totalDemanded: 0,
+                    totalDiscount: 0,
+                    totalCollected: 0,
+                    totalPending: 0,
+                    overallCollectionRate: 0,
+                },
+                feeTypes: [],
+            };
+        }
+
+        // Get all bill items for these students
+        const billItems = await this.prisma.demandBillItem.findMany({
+            where: {
+                bill: {
+                    sessionId,
+                    studentId: { in: studentIds },
+                },
+            },
+            include: {
+                feeType: true,
+                bill: {
+                    select: { billNo: true },
+                },
+            },
+        });
+
+        // Get all payment details for these students
+        const paymentDetails = await this.prisma.feePaymentDetail.findMany({
+            where: {
+                transaction: {
+                    sessionId,
+                    studentId: { in: studentIds },
+                },
+            },
+            include: {
+                feeType: true,
+            },
+        });
+
+        // Aggregate by fee type
+        const feeTypeMap = new Map<number, {
+            feeTypeId: number;
+            feeType: string;
+            frequency: string;
+            totalDemanded: number;
+            totalDiscount: number;
+            netDemanded: number;
+            totalCollected: number;
+            billCount: number;
+            paymentCount: number;
+        }>();
+
+        billItems.forEach(item => {
+            const existing = feeTypeMap.get(item.feeTypeId) || {
+                feeTypeId: item.feeTypeId,
+                feeType: item.feeType.name,
+                frequency: item.feeType.frequency || 'yearly',
+                totalDemanded: 0,
+                totalDiscount: 0,
+                netDemanded: 0,
+                totalCollected: 0,
+                billCount: 0,
+                paymentCount: 0,
+            };
+
+            existing.totalDemanded += Number(item.amount);
+            existing.totalDiscount += Number(item.discountAmount);
+            existing.netDemanded += Number(item.amount) - Number(item.discountAmount);
+            existing.billCount += 1;
+            feeTypeMap.set(item.feeTypeId, existing);
+        });
+
+        paymentDetails.forEach(pd => {
+            const existing = feeTypeMap.get(pd.feeTypeId);
+            if (existing) {
+                existing.totalCollected += Number(pd.netAmount);
+                existing.paymentCount += 1;
+            }
+        });
+
+        // Calculate collection rate and pending
+        const feeTypes = Array.from(feeTypeMap.values()).map(ft => ({
+            ...ft,
+            pending: Math.max(0, ft.netDemanded - ft.totalCollected),
+            collectionRate: ft.netDemanded > 0
+                ? Math.round((ft.totalCollected / ft.netDemanded) * 100)
+                : 0,
+        })).sort((a, b) => b.totalDemanded - a.totalDemanded);
+
+        // Calculate summary
+        const totalDemanded = feeTypes.reduce((sum, ft) => sum + ft.totalDemanded, 0);
+        const totalDiscount = feeTypes.reduce((sum, ft) => sum + ft.totalDiscount, 0);
+        const totalCollected = feeTypes.reduce((sum, ft) => sum + ft.totalCollected, 0);
+        const totalPending = feeTypes.reduce((sum, ft) => sum + ft.pending, 0);
+        const netDemanded = totalDemanded - totalDiscount;
+        const overallCollectionRate = netDemanded > 0
+            ? Math.round((totalCollected / netDemanded) * 100)
+            : 0;
+
+        return {
+            sessionId,
+            className: className || 'All Classes',
+            generatedAt: new Date().toISOString(),
+            summary: {
+                totalDemanded,
+                totalDiscount,
+                totalCollected,
+                totalPending,
+                overallCollectionRate,
+            },
+            feeTypes,
+        };
+    }
 }
