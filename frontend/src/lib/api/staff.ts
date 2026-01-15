@@ -1,17 +1,29 @@
 import { apiClient } from '../api';
 
 export enum UserRole {
+    // Administrative
     SUPER_ADMIN = 'SUPER_ADMIN',
+    PRINCIPAL = 'PRINCIPAL',
+    VICE_PRINCIPAL = 'VICE_PRINCIPAL',
     ADMIN = 'ADMIN',
-    TEACHER = 'TEACHER',
-    ACCOUNTANT = 'ACCOUNTANT',
+    // Academic
+    HEAD_OF_DEPARTMENT = 'HEAD_OF_DEPARTMENT',
     COORDINATOR = 'COORDINATOR',
+    SECTION_INCHARGE = 'SECTION_INCHARGE',
+    TEACHER = 'TEACHER',
+    // Finance & Office
+    ACCOUNTANT = 'ACCOUNTANT',
     RECEPTIONIST = 'RECEPTIONIST',
     LIBRARIAN = 'LIBRARIAN',
+    LAB_ASSISTANT = 'LAB_ASSISTANT',
     OFFICE_STAFF = 'OFFICE_STAFF',
+    CLERK = 'CLERK',
+    // Transport & Support
     DRIVER = 'DRIVER',
     CONDUCTOR = 'CONDUCTOR',
     SECURITY = 'SECURITY',
+    PEON = 'PEON',
+    // External Users
     PARENT = 'PARENT',
     STUDENT = 'STUDENT'
 }

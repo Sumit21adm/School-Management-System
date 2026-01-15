@@ -94,18 +94,19 @@ export const PERMISSION_MODULES: PermissionModule[] = [
 
 // Default permissions for each role
 export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+    // Full access roles
     SUPER_ADMIN: PERMISSION_MODULES.flatMap(m => m.permissions.map(p => p.key)),
-    ADMIN: PERMISSION_MODULES.flatMap(m => m.permissions.map(p => p.key)).filter(p => p !== 'users_manage'), // Admin has all except user management
-    ACCOUNTANT: [
+    PRINCIPAL: PERMISSION_MODULES.flatMap(m => m.permissions.map(p => p.key)), // Principal has all permissions
+    VICE_PRINCIPAL: PERMISSION_MODULES.flatMap(m => m.permissions.map(p => p.key)).filter(p => p !== 'users_manage'), // All except user management
+    ADMIN: PERMISSION_MODULES.flatMap(m => m.permissions.map(p => p.key)).filter(p => p !== 'users_manage'),
+
+    // Academic roles
+    HEAD_OF_DEPARTMENT: [
         'dashboard_view', 'dashboard_stats',
-        'fees_view', 'fees_collect', 'fees_receipt', 'fees_refund',
-        'demand_bills_view', 'demand_bills_generate', 'demand_bills_print', 'demand_bills_delete',
-        'fee_structure_view', 'fee_structure_edit', 'fee_types_manage',
-    ],
-    TEACHER: [
-        'dashboard_view',
-        'admissions_view',
-        'exams_view', 'exams_create', 'exams_edit', 'exams_schedule',
+        'admissions_view', 'admissions_create', 'admissions_edit',
+        'promotions_view', 'promotions_execute',
+        'exams_view', 'exams_create', 'exams_edit', 'exams_schedule', 'exam_config',
+        'fees_view',
     ],
     COORDINATOR: [
         'dashboard_view', 'dashboard_stats',
@@ -113,15 +114,64 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
         'promotions_view', 'promotions_execute',
         'exams_view', 'exams_create', 'exams_edit', 'exams_schedule', 'exam_config',
     ],
+    SECTION_INCHARGE: [
+        'dashboard_view', 'dashboard_stats',
+        'admissions_view', 'admissions_edit',
+        'exams_view', 'exams_create', 'exams_edit', 'exams_schedule',
+    ],
+    TEACHER: [
+        'dashboard_view',
+        'admissions_view',
+        'exams_view', 'exams_create', 'exams_edit', 'exams_schedule',
+    ],
+
+    // Finance & Office roles
+    ACCOUNTANT: [
+        'dashboard_view', 'dashboard_stats',
+        'fees_view', 'fees_collect', 'fees_receipt', 'fees_refund',
+        'demand_bills_view', 'demand_bills_generate', 'demand_bills_print', 'demand_bills_delete',
+        'fee_structure_view', 'fee_structure_edit', 'fee_types_manage',
+    ],
     RECEPTIONIST: [
         'dashboard_view',
         'admissions_view', 'admissions_create', 'admissions_edit',
         'fees_view', 'fees_collect', 'fees_receipt',
     ],
+    LIBRARIAN: [
+        'dashboard_view',
+        'admissions_view',
+    ],
+    LAB_ASSISTANT: [
+        'dashboard_view',
+    ],
+    OFFICE_STAFF: [
+        'dashboard_view',
+        'admissions_view',
+        'fees_view',
+    ],
+    CLERK: [
+        'dashboard_view',
+        'admissions_view', 'admissions_create',
+    ],
+
+    // Transport & Support roles
+    DRIVER: [
+        'dashboard_view',
+        'transport_view',
+    ],
+    CONDUCTOR: [
+        'dashboard_view',
+        'transport_view',
+    ],
     SECURITY: [
         'dashboard_view',
         'admissions_view',
     ],
+    PEON: [
+        'dashboard_view',
+    ],
+
+    // External users
     PARENT: ['dashboard_view'],
     STUDENT: ['dashboard_view'],
 };

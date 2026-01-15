@@ -27,6 +27,7 @@ import ExamList from './pages/examination/ExamList';
 import ExamDetails from './pages/examination/ExamDetails';
 import ExamConfiguration from './pages/examination/ExamConfiguration';
 import UserManagement from './pages/settings/UserManagement';
+import RoleSettings from './pages/settings/RoleSettings';
 import ClassManagement from './pages/settings/ClassManagement';
 import BackupRestore from './pages/settings/BackupRestore';
 import SubjectList from './pages/subjects/SubjectList';
@@ -126,6 +127,7 @@ function AppContent() {
               <Route path="/settings/sessions" element={<SessionsManagement />} />
               <Route path="/settings/print" element={<SchoolSettings />} />
               <Route path="/settings/users" element={<UserManagement />} />
+              <Route path="/settings/roles" element={<RoleSettings />} />
               <Route path="/settings/classes" element={<ClassManagement />} />
               <Route path="/settings/backup" element={<BackupRestore />} />
               <Route path="/classes/:id" element={<ClassDetails />} />

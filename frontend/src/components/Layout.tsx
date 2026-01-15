@@ -135,6 +135,7 @@ const menuItems: MenuItem[] = [
       { path: '/settings/classes', labelKey: 'sidebar.classManagement', icon: ClassIcon, requiredPermission: 'school_settings' },
       { path: '/settings/print', labelKey: 'sidebar.schoolSettings', icon: DomainIcon, requiredPermission: 'school_settings' },
       { path: '/settings/users', labelKey: 'sidebar.userManagement', icon: UserIcon, requiredPermission: 'users_manage' },
+      { path: '/settings/roles', labelKey: 'sidebar.roleSettings', icon: Settings, requiredPermission: 'users_manage' },
     ],
   },
 ];

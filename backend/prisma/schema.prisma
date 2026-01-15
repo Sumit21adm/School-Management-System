@@ -315,21 +315,43 @@ enum DiscountType {
 
 
 
-// User Roles
+// User Roles - Ordered by hierarchy
 enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  ACCOUNTANT
+  SUPER_ADMIN         // System administrator (highest)
+  PRINCIPAL           // School head
+  VICE_PRINCIPAL      // Deputy head
+  ADMIN               // School administrator
+  HEAD_OF_DEPARTMENT  // HOD
+  COORDINATOR         // Academic coordinator
+  SECTION_INCHARGE    // Class/Section in-charge
   TEACHER
-  COORDINATOR
+  ACCOUNTANT
   RECEPTIONIST
   LIBRARIAN
+  LAB_ASSISTANT       // Science/Computer lab
   OFFICE_STAFF
+  CLERK               // Administrative clerk
   DRIVER
   CONDUCTOR
   SECURITY
+  PEON                // Support staff
   PARENT
   STUDENT
+}
+
+// Role Settings - Configurable roles per organization
+model RoleSettings {
+  id          Int      @id @default(autoincrement())
+  role        String   @unique @db.VarChar(50)  // Role name from UserRole enum
+  isEnabled   Boolean  @default(true)           // Show in dropdowns?
+  displayName String   @db.VarChar(100)         // Human-readable name
+  description String?  @db.VarChar(200)
+  sortOrder   Int      @default(0)              // Display order in dropdowns
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isEnabled])
+  @@map("role_settings")
 }
 
 // User/Auth Tables
