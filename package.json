@@ -20,5 +20,10 @@
         "react",
         "vite"
     ],
-    "author": "Sumit21adm"
+    "author": "Sumit21adm",
+    "devDependencies": {
+        "@types/node": "^25.0.9",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3"
+    }
 }

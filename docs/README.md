@@ -42,6 +42,7 @@ Implementation plans and architecture documents.
 | [transport-management-plan.md](plans/transport-management-plan.md) | Transport module implementation |
 | [staff-management-plan.md](plans/staff-management-plan.md) | Staff & HR module plan |
 | [attendance-management-plan.md](plans/attendance-management-plan.md) | Attendance system plan |
+| [refactoring-plan.md](plans/refactoring-plan.md) | Deprecated code & technical debt strategy |
 
 ---
 
