@@ -81,6 +81,64 @@ echo  [OK] Database ready
 echo.
 
 REM ============================================
+REM Build Application (if needed)
+REM ============================================
+
+REM Determine if we're inside the repo (has parent with backend/frontend source)
+set PROJECT_ROOT=%SCRIPT_DIR%..\..
+set PROJECT_BACKEND=%PROJECT_ROOT%\backend
+set PROJECT_FRONTEND=%PROJECT_ROOT%\frontend
+
+REM Check if backend dist exists, build if not
+if not exist "%API_DIR%\dist" (
+    echo  Building backend ^(first run^)...
+    if exist "%PROJECT_BACKEND%\src" (
+        cd /d "%PROJECT_BACKEND%"
+        call npm install >nul 2>nul
+        call npm run build >nul 2>nul
+        if exist "%PROJECT_BACKEND%\dist" (
+            xcopy /E /I /Y "%PROJECT_BACKEND%\dist" "%API_DIR%\dist" >nul
+        )
+    ) else (
+        cd /d "%API_DIR%"
+        call npm run build >nul 2>nul
+    )
+    if not exist "%API_DIR%\dist" (
+        echo  [!] Backend build failed.
+        pause
+        exit /b 1
+    )
+    echo  [OK] Backend built successfully
+) else (
+    echo  [OK] Backend already built
+)
+
+REM Check if frontend dist exists, build if not
+if not exist "%FRONTEND_DIR%\dist" (
+    echo  Building frontend ^(first run^)...
+    if exist "%PROJECT_FRONTEND%\src" (
+        cd /d "%PROJECT_FRONTEND%"
+        call npm install >nul 2>nul
+        call npm run build >nul 2>nul
+        if exist "%PROJECT_FRONTEND%\dist" (
+            xcopy /E /I /Y "%PROJECT_FRONTEND%\dist" "%FRONTEND_DIR%\dist" >nul
+        )
+    ) else (
+        cd /d "%FRONTEND_DIR%"
+        call npm run build >nul 2>nul
+    )
+    if not exist "%FRONTEND_DIR%\dist" (
+        echo  [!] Frontend build failed.
+        pause
+        exit /b 1
+    )
+    echo  [OK] Frontend built successfully
+) else (
+    echo  [OK] Frontend already built
+)
+echo.
+
+REM ============================================
 REM Start Application
 REM ============================================
 
