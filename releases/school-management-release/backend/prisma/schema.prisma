@@ -1,0 +1,819 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Student and Admission Tables
+// Student and Admission Tables
+model SchoolClass {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique  // The internal identifier/value e.g. "1", "LKG"
+  displayName String            // The visual name e.g. "Class 1", "LKG / Mount 2"
+  order       Int      @default(0)             // For sorting (Play=1, LKG=2, ... 12=15)
+  capacity    Int?     // Optional: max students
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classSubjects ClassSubject[]
+  sections      Section[]
+
+  @@map("school_classes")
+}
+
+model StudentDetails {
+  id               Int       @id @default(autoincrement())
+  studentId        String    @unique 
+  name             String    
+  fatherName       String    
+  motherName       String    
+  dob              DateTime  
+  gender           String    
+  className        String    
+  section          String    
+  rollNumber       String?   
+  admissionDate    DateTime  
+  address          String    
+  phone            String    
+  email            String?   
+  photoUrl         String?   
+  status           String    @default("active") 
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  aadharCardNo     String?   @unique 
+  fatherOccupation String?   
+  motherOccupation String?   
+  subjects         String?   
+  whatsAppNo       String?   
+  category         String    @default("NA")  // General, OBC, SC/ST, Others, NA
+  religion         String?   
+  apaarId          String?   
+
+  // Parent Documents
+  fatherAadharNo   String?   
+  fatherPanNo      String?   
+  motherAadharNo   String?   
+  motherPanNo      String?   
+
+  // Guardian Details
+  guardianRelation String?    // 'Father', 'Mother', 'Other'
+  guardianName     String?   
+  guardianOccupation String? 
+  guardianPhone    String?   
+  guardianEmail    String?   
+  guardianAadharNo String?   
+  guardianPanNo    String?   
+  guardianAddress  String?   
+  
+  // Session relation
+  sessionId        Int?
+  session          AcademicSession? @relation(fields: [sessionId], references: [id])
+
+  feeTransactions  FeeTransaction[]
+  discounts        StudentFeeDiscount[]
+  demandBills      DemandBill[]
+  academicHistory  StudentAcademicHistory[]
+  transport        StudentTransport?         // Optional transport assignment
+
+  @@index([className])
+  @@index([section])
+  @@index([status])
+  @@index([sessionId])
+  @@map("student_details")
+}
+
+// Fee Tables
+model FeeTransaction {
+  id            Int      @id @default(autoincrement())
+  transactionId String   @unique 
+  studentId     String   
+  sessionId     Int
+  receiptNo     String   @unique 
+  amount        Decimal  
+  description   String   
+  date          DateTime 
+  yearId        Int
+  remarks       String?  
+  collectedBy   String?  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student       StudentDetails  @relation(fields: [studentId], references: [studentId])
+  session       AcademicSession @relation(fields: [sessionId], references: [id])
+  paymentDetails FeePaymentDetail[]
+  paymentModeDetails PaymentModeDetail[]  // Split payment support
+
+  @@index([studentId])
+  @@index([sessionId])
+  @@index([date])
+  @@map("feetransaction_new")
+}
+
+model FeePaymentDetail {
+  id            Int      @id @default(autoincrement())
+  transactionId Int
+  feeTypeId     Int
+  amount        Decimal  
+  discountAmount Decimal @default(0) 
+  netAmount     Decimal  
+  createdAt     DateTime @default(now())
+
+  transaction   FeeTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  feeType       FeeType        @relation(fields: [feeTypeId], references: [id])
+
+  @@index([transactionId])
+  @@index([feeTypeId])
+  @@map("fee_payment_details")
+}
+
+// Split Payment Mode Support - stores individual payment modes for a transaction
+model PaymentModeDetail {
+  id            Int      @id @default(autoincrement())
+  transactionId Int
+  paymentMode   String     // cash, upi, card, cheque, online
+  amount        Decimal  
+  reference     String?   // Check no, UPI ref, card last 4 digits
+  createdAt     DateTime @default(now())
+
+  transaction   FeeTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@map("payment_mode_details")
+}
+
+model DemandBill {
+  id            Int      @id @default(autoincrement())
+  billNo        String   @unique 
+  studentId     String   
+  sessionId     Int
+  month         Int
+  year          Int
+  billDate      DateTime 
+  dueDate       DateTime 
+  totalAmount   Decimal  
+  previousDues  Decimal  @default(0) 
+  advanceUsed   Decimal  @default(0)   // Advance (overpayment) applied to this bill
+  lateFee       Decimal  @default(0) 
+  discount      Decimal  @default(0) 
+  netAmount     Decimal  
+  paidAmount    Decimal  @default(0) 
+  status        BillStatus @default(PENDING)
+  sentDate      DateTime?
+  paidDate      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student       StudentDetails  @relation(fields: [studentId], references: [studentId])
+  session       AcademicSession @relation(fields: [sessionId], references: [id])
+  billItems     DemandBillItem[]
+
+  @@unique([studentId, sessionId, month, year])
+  @@index([studentId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([billDate])
+  @@map("demand_bills")
+}
+
+model DemandBillItem {
+  id             Int      @id @default(autoincrement())
+  billId         Int
+  feeTypeId      Int
+  amount         Decimal  
+  discountAmount Decimal  @default(0) 
+  description    String?  
+  createdAt      DateTime @default(now())
+
+  bill        DemandBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  feeType     FeeType    @relation(fields: [feeTypeId], references: [id])
+
+  @@index([billId])
+  @@index([feeTypeId])
+  @@map("demand_bill_items")
+}
+
+enum BillStatus {
+  PENDING
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Academic Session Management
+model AcademicSession {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique 
+  startDate   DateTime 
+  endDate     DateTime 
+  isActive    Boolean  @default(false)
+  isSetupMode Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  students      StudentDetails[]
+  feeStructures FeeStructure[]
+  discounts     StudentFeeDiscount[]
+  feeTransactions FeeTransaction[]
+  demandBills   DemandBill[]
+  academicHistory StudentAcademicHistory[]
+
+  exams       Exam[]
+
+  @@index([isActive])
+  @@index([startDate, endDate])
+  @@map("academic_sessions")
+
+  classTeacherAssignments ClassTeacherAssignment[]
+  subjectAllocations      SubjectTeacherAllocation[]
+  routines                ClassRoutine[]
+}
+
+// Fee Management
+model FeeType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique 
+  description String?  
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  isRecurring Boolean  @default(false)
+  frequency   String?   // 'Monthly', 'Yearly', 'Refundable', 'One-time'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  structureItems FeeStructureItem[]
+  discounts      StudentFeeDiscount[]
+  paymentDetails FeePaymentDetail[]
+  billItems      DemandBillItem[]
+
+  @@index([isActive])
+  @@map("fee_types")
+}
+
+model FeeStructure {
+  id          Int      @id @default(autoincrement())
+  sessionId   Int
+  className   String   
+  description String?  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session    AcademicSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  feeItems   FeeStructureItem[]
+
+  @@unique([sessionId, className])
+  @@index([sessionId])
+  @@map("fee_structures")
+}
+
+model FeeStructureItem {
+  id          Int      @id @default(autoincrement())
+  structureId Int
+  feeTypeId   Int
+  amount      Decimal  
+  isOptional  Boolean  @default(false)
+  frequency   String?   // 'Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'One-time', 'Refundable'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  structure FeeStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  feeType   FeeType      @relation(fields: [feeTypeId], references: [id])
+
+  @@unique([structureId, feeTypeId])
+  @@index([structureId])
+  @@index([feeTypeId])
+  @@map("fee_structure_items")
+}
+
+model StudentFeeDiscount {
+  id            Int          @id @default(autoincrement())
+  studentId     String       
+  feeTypeId     Int
+  sessionId     Int
+  discountType  DiscountType
+  discountValue Decimal      
+  reason        String?      
+  approvedBy    String?      
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  student StudentDetails  @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  feeType FeeType         @relation(fields: [feeTypeId], references: [id])
+  session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, feeTypeId, sessionId])
+  @@index([studentId])
+  @@index([feeTypeId])
+  @@index([sessionId])
+  @@map("student_fee_discounts")
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+// Exam Tables
+
+
+
+
+
+
+
+
+// User Roles - Ordered by hierarchy
+enum UserRole {
+  SUPER_ADMIN         // System administrator (highest)
+  PRINCIPAL           // School head
+  VICE_PRINCIPAL      // Deputy head
+  ADMIN               // School administrator
+  HEAD_OF_DEPARTMENT  // HOD
+  COORDINATOR         // Academic coordinator
+  SECTION_INCHARGE    // Class/Section in-charge
+  TEACHER
+  ACCOUNTANT
+  RECEPTIONIST
+  LIBRARIAN
+  LAB_ASSISTANT       // Science/Computer lab
+  OFFICE_STAFF
+  CLERK               // Administrative clerk
+  DRIVER
+  CONDUCTOR
+  SECURITY
+  PEON                // Support staff
+  PARENT
+  STUDENT
+}
+
+// Role Settings - Configurable roles per organization
+model RoleSettings {
+  id          Int      @id @default(autoincrement())
+  role        String   @unique   // Role name from UserRole enum
+  isEnabled   Boolean  @default(true)           // Show in dropdowns?
+  displayName String            // Human-readable name
+  description String?  
+  sortOrder   Int      @default(0)              // Display order in dropdowns
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isEnabled])
+  @@map("role_settings")
+}
+
+// User/Auth Tables
+model User {
+  id          Int       @id @default(autoincrement())
+  username    String    @unique 
+  password    String    
+  role        UserRole  @default(RECEPTIONIST)
+  permissions String?    // JSON array of permission strings
+  name        String    
+  email       String?   
+  phone       String?   
+  active      Boolean   @default(true)
+  lastLogin   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([role])
+  @@index([active])
+  @@map("users")
+
+  teacherProfile          TeacherProfile?
+  classTeacherAssignments ClassTeacherAssignment[]
+  subjectAllocations      SubjectTeacherAllocation[]
+  routines                ClassRoutine[]
+  staffDetails            StaffDetails?
+  staffAttendance         StaffAttendance[]
+  driverDetails           DriverDetails?
+  drivenVehicles          Vehicle[]     @relation("DriverVehicles")
+}
+
+// Staff / HR Management
+model StaffDetails {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @unique
+  
+  // HR Info
+  designation   String     // "Senior Teacher", "Head Guard"
+  department    String?     // "Academics", "Security", "Transport"
+  joiningDate   DateTime  
+  bloodGroup    String?   
+  qualification String?   
+  experience    String?   
+  
+  // Financial
+  basicSalary   Decimal?  
+  bankName      String?   
+  accountNo     String?   
+  ifscCode      String?   
+  panNo         String?   
+  aadharNo      String?   
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("staff_details")
+}
+
+model DriverDetails {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @unique
+  licenseNumber String?   
+  licenseExpiry DateTime? 
+  badgeNumber   String?   
+  
+  user          User      @relation(fields: [userId], references: [id])
+  @@map("driver_details")
+}
+
+model StaffAttendance {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  date        DateTime 
+  status      AttendanceStatus
+  checkIn     String?   // "08:00"
+  checkOut    String?   // "14:00"
+  remarks     String?  
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, date])
+  @@index([date])
+  @@map("staff_attendance")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALFDAY
+  LEAVE
+}
+
+// Student Academic History
+model StudentAcademicHistory {
+  id          Int      @id @default(autoincrement())
+  studentId   String   
+  sessionId   Int
+  className   String   
+  section     String   
+  rollNo      String?  
+  status      String    // 'passed', 'promoted', 'detained'
+  finalResult String?   // '85%', 'Grade A'
+  createdAt   DateTime @default(now())
+
+  student StudentDetails  @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, sessionId])
+  @@index([studentId])
+  @@index([sessionId])
+  @@map("student_academic_history")
+}
+
+// Print Settings for customizable school configuration and letterhead
+model PrintSettings {
+  id            Int      @id @default(autoincrement())
+  schoolName    String   
+  schoolAddress String   
+  phone         String?  
+  email         String?  
+  website       String?  
+  logoUrl       String?  
+  tagline       String?  
+  
+  // Affiliation & Certification
+  affiliationNo      String?  
+  affiliationNote    String?       // e.g., "Affiliated to CBSE, New Delhi"
+  isoCertifiedNote   String?  
+  
+  // Document-specific Notes
+  demandBillNote     String?  
+  feeReceiptNote     String?  
+  admitCardNote      String?  
+  transferCertNote   String?  
+  idCardNote         String?  
+  
+  // Regional Settings
+  timezone           String   @default("Asia/Kolkata") 
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+
+  @@map("print_settings")
+}
+
+// Examination Management
+model ExamType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique  // e.g., "Weekly Test", "Annual Exam"
+  description String?  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exams       Exam[]
+  @@map("exam_types")
+}
+
+model Subject {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique  // e.g., "Mathematics", "Science"
+  code        String?  @unique  // e.g., "MATH"
+  description String?  
+  color       String?    // Hex color for UI display
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  examSchedules ExamSchedule[]
+  classSubjects ClassSubject[]
+  allocations   SubjectTeacherAllocation[]
+  routines      ClassRoutine[]
+  
+  @@map("subjects")
+}
+
+model ClassSubject {
+  id            Int      @id @default(autoincrement())
+  classId       Int
+  subjectId     Int
+  isCompulsory  Boolean  @default(true)
+  weeklyPeriods Int      @default(0)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  class   SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+  @@map("class_subjects")
+}
+
+
+model Exam {
+  id          Int      @id @default(autoincrement())
+  name        String    // e.g., "Annual Examination 2024"
+  examTypeId  Int
+  sessionId   Int
+  startDate   DateTime 
+  endDate     DateTime 
+  description String?  
+  status      String   @default("UPCOMING")  // UPCOMING, ONGOING, COMPLETED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  examType    ExamType        @relation(fields: [examTypeId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  schedules   ExamSchedule[]
+
+  @@index([examTypeId])
+  @@index([sessionId])
+  @@map("exams")
+}
+
+model ExamSchedule {
+  id          Int      @id @default(autoincrement())
+  examId      Int
+  subjectId   Int
+  className   String    // Class this specific paper is for
+  date        DateTime 
+  startTime   DateTime 
+  endTime     DateTime 
+  roomNo      String?  
+  period      Int?
+  
+  
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+
+  @@index([examId])
+  @@index([subjectId])
+  @@map("exam_schedules")
+}
+
+// Class Management Models
+
+model Section {
+  id        Int      @id @default(autoincrement())
+  name      String    // "A", "B", "Rose"
+  classId   Int
+  class     SchoolClass @relation(fields: [classId], references: [id])
+  
+  // Section Metadata
+  roomNo    String?  
+  capacity  Int?
+  
+  // Relations
+  routines            ClassRoutine[]
+  allocations         SubjectTeacherAllocation[]
+  teacherAssignments  ClassTeacherAssignment[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([classId, name])
+  @@map("sections")
+}
+
+model TeacherProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  
+  qualification   String?  
+  experience      String?  
+  specialization  String?   // 'Math', 'Science'
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("teacher_profiles")
+}
+
+model ClassTeacherAssignment {
+  id          Int             @id @default(autoincrement())
+  sectionId   Int
+  teacherId   Int // User ID (Teacher)
+  sessionId   Int
+  isPrimary   Boolean         @default(true) // True = Class Teacher, False = Co-Teacher/Backup
+  
+  section     Section         @relation(fields: [sectionId], references: [id])
+  teacher     User            @relation(fields: [teacherId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  
+  @@unique([sectionId, sessionId, isPrimary])
+  @@map("class_teacher_assignments")
+}
+
+model SubjectTeacherAllocation {
+  id          Int             @id @default(autoincrement())
+  sectionId   Int
+  subjectId   Int
+  teacherId   Int
+  sessionId   Int
+  
+  section     Section         @relation(fields: [sectionId], references: [id])
+  subject     Subject         @relation(fields: [subjectId], references: [id])
+  teacher     User            @relation(fields: [teacherId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  
+  @@unique([sectionId, subjectId, sessionId])
+  @@map("subject_teacher_allocations")
+}
+
+model ClassRoutine {
+  id          Int             @id @default(autoincrement())
+  sectionId   Int
+  sessionId   Int
+  dayOfWeek   String           // 'MONDAY', 'TUESDAY'...
+  periodNo    Int             // 1, 2, 3...
+  
+  subjectId   Int?            // Nullable for Break/Free period
+  teacherId   Int? 
+  
+  startTime   String?          // "09:00"
+  endTime     String?          // "09:45"
+  
+  section     Section         @relation(fields: [sectionId], references: [id])
+  subject     Subject?        @relation(fields: [subjectId], references: [id])
+  teacher     User?           @relation(fields: [teacherId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+  
+  @@unique([sectionId, sessionId, dayOfWeek, periodNo])
+  @@map("class_routines")
+}
+
+// ============================================
+// TRANSPORT MANAGEMENT MODELS
+// ============================================
+
+model Vehicle {
+  id              Int       @id @default(autoincrement())
+  vehicleNo       String    @unique   // e.g., "UP32AB1234"
+  vehicleType     String              // Bus, Van, Mini Bus
+  capacity        Int                                 // Seating capacity
+  make            String?             // Tata, Ashok Leyland
+  model           String?   
+  year            Int?
+  insuranceNo     String?   
+  insuranceExpiry DateTime? 
+  fitnessExpiry   DateTime? 
+  permitExpiry    DateTime? 
+  status          String    @default("active")  // active, maintenance, retired
+  notes           String?   
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  driverId        Int?
+  driver          User?     @relation("DriverVehicles", fields: [driverId], references: [id])
+  routes          Route[]
+
+  @@index([status])
+  @@map("vehicles")
+}
+
+
+
+model Route {
+  id              Int       @id @default(autoincrement())
+  routeName       String             // e.g., "Route 1 - City Center"
+  routeCode       String    @unique   // e.g., "R1"
+  startPoint      String    
+  endPoint        String    
+  viaPoints       String?            // e.g., "Main Market, Railway Station"
+  distance        Decimal?           // in kilometers
+  estimatedTime   Int?                                // in minutes
+  morningDeparture String?            // "07:30"
+  eveningDeparture String?            // "14:30"
+  status          String    @default("active")  // active, inactive
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  vehicleId       Int?
+  vehicle         Vehicle?  @relation(fields: [vehicleId], references: [id])
+  stops           RouteStop[]
+  studentTransports StudentTransport[]
+
+  @@index([status])
+  @@map("routes")
+}
+
+model RouteStop {
+  id              Int       @id @default(autoincrement())
+  stopName        String             // e.g., "Main Market"
+  stopOrder       Int                                 // 1, 2, 3... sequence
+  pickupTime      String?             // "07:35"
+  dropTime        String?             // "14:45"
+  landmark        String?   
+  latitude        Decimal?  
+  longitude       Decimal?  
+  distanceFromSchool Decimal?  // Distance from school in km
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  routeId         Int
+  route           Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  pickupStudents  StudentTransport[] @relation("PickupStop")
+  dropStudents    StudentTransport[] @relation("DropStop")
+
+  @@unique([routeId, stopOrder])
+  @@index([routeId])
+  @@map("route_stops")
+}
+
+model StudentTransport {
+  id              Int       @id @default(autoincrement())
+  transportType   String    @default("both")  // pickup, drop, both
+  startDate       DateTime  
+  endDate         DateTime? 
+  status          String    @default("active")  // active, discontinued
+  notes           String?   
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  studentId       String    @unique   // One transport record per student
+  student         StudentDetails @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  routeId         Int
+  route           Route     @relation(fields: [routeId], references: [id])
+  pickupStopId    Int?
+  pickupStop      RouteStop? @relation("PickupStop", fields: [pickupStopId], references: [id])
+  dropStopId      Int?
+  dropStop        RouteStop? @relation("DropStop", fields: [dropStopId], references: [id])
+
+  @@index([routeId])
+  @@index([status])
+  @@map("student_transports")
+}
+
+// Distance-based Transport Fare Slabs
+model TransportFareSlab {
+  id              Int       @id @default(autoincrement())
+  minDistance     Decimal     // e.g., 0.00 km
+  maxDistance     Decimal     // e.g., 3.00 km
+  monthlyFee      Decimal    // e.g., 500.00
+  description     String?     // e.g., "0-3 km"
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([minDistance, maxDistance])
+  @@map("transport_fare_slabs")
+}

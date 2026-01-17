@@ -14,7 +14,7 @@ echo  ========================================
 echo.
 
 set SCRIPT_DIR=%~dp0
-set PROJECT_DIR=%SCRIPT_DIR%..\
+set PROJECT_DIR=%SCRIPT_DIR%..\..\
 set API_DIR=%PROJECT_DIR%backend
 set FRONTEND_DIR=%PROJECT_DIR%frontend
 set LOGS_DIR=%PROJECT_DIR%logs
