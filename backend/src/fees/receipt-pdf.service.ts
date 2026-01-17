@@ -29,6 +29,7 @@ export class ReceiptPdfService {
                         feeType: true,
                     },
                 },
+                paymentModeDetails: true, // Include split payment details
             },
         });
 
@@ -299,13 +300,28 @@ export class ReceiptPdfService {
         y += 10;
 
         // Payment Mode
-        doc.fontSize(6)
-            .font(fontRegular)
-            .text(`Payment Mode: ${transaction.paymentMode || 'CASH'}`, col1X, y);
-        if (transaction.referenceNo) {
-            doc.text(`  |  Ref: ${transaction.referenceNo}`, col1X + 80, y);
+        // Payment Mode
+        if (transaction.paymentModeDetails && transaction.paymentModeDetails.length > 0) {
+            doc.fontSize(6).font(fontBold).text('Payment Modes:', col1X, y);
+            y += 8;
+
+            doc.font(fontRegular);
+            for (const pm of transaction.paymentModeDetails) {
+                let pmText = `${pm.paymentMode.toUpperCase()}: ₹${Number(pm.amount).toFixed(2)}`;
+                if (pm.reference) {
+                    pmText += ` (Ref: ${pm.reference})`;
+                }
+                doc.text(pmText, col1X + 10, y);
+                y += 8;
+            }
+            y += 5;
+        } else {
+            // Fallback for very old data if migration failed (should not happen)
+            doc.fontSize(6)
+                .font(fontRegular)
+                .text(`Payment Mode: CASH`, col1X, y);
+            y += 15;
         }
-        y += 15;
 
         // --- FOOTER SECTION (two columns) ---
         const footerY = A6_HEIGHT - MARGIN - 55;

@@ -1,10 +1,11 @@
-import { IsString, IsEmail, IsOptional, IsEnum, IsDate, IsNumber, IsBoolean } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsEnum, IsDate, IsNumber, IsBoolean, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserRole } from '@prisma/client';
 
 export class CreateStaffDto {
     // User Base Info
     @IsString()
+    @IsNotEmpty({ message: 'Name is required' })
     name: string;
 
     @IsEnum(UserRole)
@@ -26,8 +27,16 @@ export class CreateStaffDto {
     @IsOptional()
     password?: string; // If omitted, use default
 
+    @IsBoolean()
+    @IsOptional()
+    active?: boolean;
+
+    @IsOptional()
+    permissions?: string[]; // Array of permission keys
+
     // Staff Details (HR)
     @IsString()
+    @IsNotEmpty({ message: 'Designation is required' })
     designation: string;
 
     @IsString()

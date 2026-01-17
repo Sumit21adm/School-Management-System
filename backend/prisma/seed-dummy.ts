@@ -166,7 +166,8 @@ async function main() {
                     receiptNo: `REC/24-25/${1000 + i}`,
                     amount: paidAmount,
                     description: 'Tuition Fee Payment',
-                    paymentMode: random(['CASH', 'UPI', 'CARD']),
+                    // paymentMode removed
+
                     date: new Date(),
                     yearId: 2024,
                 }

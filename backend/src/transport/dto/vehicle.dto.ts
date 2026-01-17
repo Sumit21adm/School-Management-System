@@ -1,15 +1,17 @@
-import { IsString, IsOptional, IsInt, IsNumber, IsDateString, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsNumber, IsDateString, Min, Max, IsNotEmpty } from 'class-validator';
 
 export class CreateVehicleDto {
     @IsString()
+    @IsNotEmpty({ message: 'Vehicle number is required' })
     vehicleNo: string;
 
     @IsString()
+    @IsNotEmpty({ message: 'Vehicle type is required' })
     vehicleType: string;
 
     @IsInt()
-    @Min(1)
-    @Max(100)
+    @Min(1, { message: 'Capacity must be at least 1' })
+    @Max(100, { message: 'Capacity cannot exceed 100' })
     capacity: number;
 
     @IsOptional()

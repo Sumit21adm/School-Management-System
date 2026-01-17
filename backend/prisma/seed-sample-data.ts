@@ -409,7 +409,8 @@ async function main() {
           receiptNo: generateReceiptNo(transactionIndex++),
           amount: 3500 + Math.floor(Math.random() * 2000),
           description: `Fee payment for ${['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 4]} 2024`,
-          paymentMode: randomItem(paymentModes),
+          // paymentMode removed
+
           date: new Date(2024, month - 1, Math.floor(Math.random() * 25) + 1),
           yearId: 2024,
           collectedBy: randomItem(collectors),

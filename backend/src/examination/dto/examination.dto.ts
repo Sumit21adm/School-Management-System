@@ -1,10 +1,11 @@
-import { IsString, IsBoolean, IsOptional, MaxLength, IsInt, IsDateString, IsArray, ValidateNested, IsEnum } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, MaxLength, IsInt, IsDateString, IsArray, ValidateNested, IsEnum, IsNotEmpty, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 // ExamType DTOs
 export class CreateExamTypeDto {
     @IsString()
     @MaxLength(50)
+    @IsNotEmpty({ message: 'Exam type name is required' })
     name: string;
 
     @IsOptional()
@@ -33,6 +34,7 @@ export class UpdateExamTypeDto {
 export class CreateSubjectDto {
     @IsString()
     @MaxLength(50)
+    @IsNotEmpty({ message: 'Subject name is required' })
     name: string;
 
     @IsOptional()
@@ -60,13 +62,16 @@ export class UpdateSubjectDto {
 // Exam Schedule DTO
 export class CreateExamScheduleDto {
     @IsInt()
+    @IsNotEmpty({ message: 'Subject is required' })
     subjectId: number;
 
     @IsString()
     @MaxLength(20)
+    @IsNotEmpty({ message: 'Class name is required' })
     className: string;
 
     @IsDateString()
+    @IsNotEmpty({ message: 'Exam date is required' })
     date: string;
 
     @IsString() // Using string for Time for simplicity in DTO, but validation might need regex or Date
@@ -80,33 +85,46 @@ export class CreateExamScheduleDto {
     // Wait, if it's just Time, maybe the client sends '10:00:00'.
     // Let's treat it as string and handle conversion in service if needed, or use IsDateString if we send full ISO.
     // Let's stick to IsDateString which is safer for "DateTime" type in Prisma.
+    @IsNotEmpty({ message: 'Start time is required' })
     startTime: string;
 
     @IsDateString()
+    @IsNotEmpty({ message: 'End time is required' })
     endTime: string;
 
     @IsOptional()
     @IsString()
     @MaxLength(20)
     roomNo?: string;
+
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Max(10)
+    period?: number;
 }
 
 // Exam DTOs
 export class CreateExamDto {
     @IsString()
     @MaxLength(100)
+    @IsNotEmpty({ message: 'Exam name is required' })
     name: string;
 
     @IsInt()
+    @IsNotEmpty({ message: 'Exam type is required' })
     examTypeId: number;
 
     @IsInt()
+    @IsNotEmpty({ message: 'Session is required' })
     sessionId: number;
 
     @IsDateString()
+    @IsNotEmpty({ message: 'Start date is required' })
     startDate: string;
 
     @IsDateString()
+    @IsNotEmpty({ message: 'End date is required' })
     endDate: string;
 
     @IsOptional()

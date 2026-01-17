@@ -214,7 +214,7 @@ export class TransportService {
             },
             include: {
                 student: { select: { studentId: true, name: true, className: true, section: true, phone: true } },
-                route: { select: { id: true, routeName: true, routeCode: true, monthlyFee: true } },
+                route: { select: { id: true, routeName: true, routeCode: true } },
                 pickupStop: true,
                 dropStop: true
             },
@@ -294,7 +294,7 @@ export class TransportService {
             },
             include: {
                 student: { select: { studentId: true, name: true, className: true } },
-                route: { select: { routeName: true, monthlyFee: true } },
+                route: { select: { routeName: true } },
                 pickupStop: true,
                 dropStop: true
             }
@@ -314,7 +314,7 @@ export class TransportService {
             },
             include: {
                 student: { select: { studentId: true, name: true, className: true } },
-                route: { select: { routeName: true, monthlyFee: true } },
+                route: { select: { routeName: true } },
                 pickupStop: true,
                 dropStop: true
             }

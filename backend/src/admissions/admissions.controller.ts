@@ -45,6 +45,13 @@ export class AdmissionsController {
         // Remove photo field if present (it's handled via UploadedFile)
         delete createAdmissionDto.photo;
 
+        // Remove transport fields (handled separately via transportService locally or in frontend)
+        delete createAdmissionDto.hasTransport;
+        delete createAdmissionDto.routeId;
+        delete createAdmissionDto.pickupStopId;
+        delete createAdmissionDto.dropStopId;
+        delete createAdmissionDto.transportType;
+
         try {
             return await this.admissionsService.create(createAdmissionDto);
         } catch (error) {
@@ -173,6 +180,13 @@ export class AdmissionsController {
 
         // Remove photo field if present
         delete updateAdmissionDto.photo;
+
+        // Remove transport fields
+        delete updateAdmissionDto.hasTransport;
+        delete updateAdmissionDto.routeId;
+        delete updateAdmissionDto.pickupStopId;
+        delete updateAdmissionDto.dropStopId;
+        delete updateAdmissionDto.transportType;
 
         try {
             return await this.admissionsService.update(+id, updateAdmissionDto);

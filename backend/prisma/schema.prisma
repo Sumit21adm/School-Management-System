@@ -98,7 +98,6 @@ model FeeTransaction {
   receiptNo     String   @unique @db.VarChar(50)
   amount        Decimal  @db.Decimal(10, 2)
   description   String   @db.VarChar(100)
-  paymentMode   String   @db.VarChar(20)
   date          DateTime @db.Date
   yearId        Int
   remarks       String?  @db.Text
@@ -109,6 +108,7 @@ model FeeTransaction {
   student       StudentDetails  @relation(fields: [studentId], references: [studentId])
   session       AcademicSession @relation(fields: [sessionId], references: [id])
   paymentDetails FeePaymentDetail[]
+  paymentModeDetails PaymentModeDetail[]  // Split payment support
 
   @@index([studentId])
   @@index([sessionId])
@@ -131,6 +131,21 @@ model FeePaymentDetail {
   @@index([transactionId])
   @@index([feeTypeId])
   @@map("fee_payment_details")
+}
+
+// Split Payment Mode Support - stores individual payment modes for a transaction
+model PaymentModeDetail {
+  id            Int      @id @default(autoincrement())
+  transactionId Int
+  paymentMode   String   @db.VarChar(20)  // cash, upi, card, cheque, online
+  amount        Decimal  @db.Decimal(10, 2)
+  reference     String?  @db.VarChar(100) // Check no, UPI ref, card last 4 digits
+  createdAt     DateTime @default(now())
+
+  transaction   FeeTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@map("payment_mode_details")
 }
 
 model DemandBill {
@@ -579,6 +594,8 @@ model ExamSchedule {
   startTime   DateTime @db.Time
   endTime     DateTime @db.Time
   roomNo      String?  @db.VarChar(20)
+  period      Int?
+  
   
   exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   subject     Subject  @relation(fields: [subjectId], references: [id])
@@ -723,7 +740,6 @@ model Route {
   estimatedTime   Int?                                // in minutes
   morningDeparture String?  @db.VarChar(10)          // "07:30"
   eveningDeparture String?  @db.VarChar(10)          // "14:30"
-  monthlyFee      Decimal?  @db.Decimal(10,2)        // Transport fee for this route (Deprecated)
   status          String    @default("active") @db.VarChar(20) // active, inactive
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

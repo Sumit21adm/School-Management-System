@@ -32,7 +32,8 @@ export class StaffService {
                     role: createStaffDto.role,
                     email: createStaffDto.email,
                     phone: createStaffDto.phone,
-                    active: true,
+                    active: createStaffDto.active !== undefined ? createStaffDto.active : true,
+                    permissions: createStaffDto.permissions ? JSON.stringify(createStaffDto.permissions) : undefined,
                 },
             });
 
@@ -135,94 +136,113 @@ export class StaffService {
     }
 
     async update(id: number, updateStaffDto: UpdateStaffDto) {
-        // Transactional Update
-        return this.prisma.$transaction(async (tx) => {
-            // Update User basic info
-            await tx.user.update({
-                where: { id },
-                data: {
+        try {
+            // Transactional Update
+            return await this.prisma.$transaction(async (tx) => {
+                // Prepare user update data
+                const userData: any = {
                     name: updateStaffDto.name,
                     email: updateStaffDto.email,
                     phone: updateStaffDto.phone,
                     role: updateStaffDto.role,
-                    // username/password usually updated via specific endpoints, but can include here
-                }
-            });
+                };
 
-            // Update StaffDetails
-            // We use upsert just in case it was missing for some reason (legacy data), or update
-            await tx.staffDetails.upsert({
-                where: { userId: id },
-                create: {
-                    userId: id,
-                    designation: updateStaffDto.designation || 'Staff',
-                    joiningDate: updateStaffDto.joiningDate || new Date(),
-                    // ... map all fields (tedious but safe)
-                    department: updateStaffDto.department,
-                    basicSalary: updateStaffDto.basicSalary,
-                    qualification: updateStaffDto.qualification,
-                    experience: updateStaffDto.experience,
-                    bloodGroup: updateStaffDto.bloodGroup,
-                    bankName: updateStaffDto.bankName,
-                    accountNo: updateStaffDto.accountNo,
-                    ifscCode: updateStaffDto.ifscCode,
-                    panNo: updateStaffDto.panNo,
-                    aadharNo: updateStaffDto.aadharNo,
-                },
-                update: {
-                    designation: updateStaffDto.designation,
-                    department: updateStaffDto.department,
-                    joiningDate: updateStaffDto.joiningDate,
-                    qualification: updateStaffDto.qualification,
-                    experience: updateStaffDto.experience,
-                    bloodGroup: updateStaffDto.bloodGroup,
-                    basicSalary: updateStaffDto.basicSalary,
-                    bankName: updateStaffDto.bankName,
-                    accountNo: updateStaffDto.accountNo,
-                    ifscCode: updateStaffDto.ifscCode,
-                    panNo: updateStaffDto.panNo,
-                    aadharNo: updateStaffDto.aadharNo,
+                if (updateStaffDto.password) {
+                    userData.password = await bcrypt.hash(updateStaffDto.password, 10);
                 }
-            });
 
-            // Update TeacherProfile if role is TEACHER
-            if (updateStaffDto.role === UserRole.TEACHER) {
-                await tx.teacherProfile.upsert({
+                if (updateStaffDto.active !== undefined) {
+                    userData.active = updateStaffDto.active;
+                }
+
+                if (updateStaffDto.permissions) {
+                    userData.permissions = JSON.stringify(updateStaffDto.permissions);
+                }
+
+                // Update User basic info
+                await tx.user.update({
+                    where: { id },
+                    data: userData
+                });
+
+                // Update StaffDetails
+                // We use upsert just in case it was missing for some reason (legacy data), or update
+                await tx.staffDetails.upsert({
                     where: { userId: id },
                     create: {
                         userId: id,
+                        designation: updateStaffDto.designation || 'Staff',
+                        joiningDate: updateStaffDto.joiningDate || new Date(),
+                        // ... map all fields (tedious but safe)
+                        department: updateStaffDto.department,
+                        basicSalary: updateStaffDto.basicSalary,
                         qualification: updateStaffDto.qualification,
                         experience: updateStaffDto.experience,
-                        specialization: updateStaffDto.specialization,
+                        bloodGroup: updateStaffDto.bloodGroup,
+                        bankName: updateStaffDto.bankName,
+                        accountNo: updateStaffDto.accountNo,
+                        ifscCode: updateStaffDto.ifscCode,
+                        panNo: updateStaffDto.panNo,
+                        aadharNo: updateStaffDto.aadharNo,
                     },
                     update: {
+                        designation: updateStaffDto.designation,
+                        department: updateStaffDto.department,
+                        joiningDate: updateStaffDto.joiningDate,
                         qualification: updateStaffDto.qualification,
                         experience: updateStaffDto.experience,
-                        specialization: updateStaffDto.specialization,
+                        bloodGroup: updateStaffDto.bloodGroup,
+                        basicSalary: updateStaffDto.basicSalary,
+                        bankName: updateStaffDto.bankName,
+                        accountNo: updateStaffDto.accountNo,
+                        ifscCode: updateStaffDto.ifscCode,
+                        panNo: updateStaffDto.panNo,
+                        aadharNo: updateStaffDto.aadharNo,
                     }
                 });
-            }
 
-            // Update DriverDetails if role is DRIVER
-            if (updateStaffDto.role === UserRole.DRIVER) {
-                await tx.driverDetails.upsert({
-                    where: { userId: id },
-                    create: {
-                        userId: id,
-                        licenseNumber: updateStaffDto.licenseNumber,
-                        licenseExpiry: updateStaffDto.licenseExpiry,
-                        badgeNumber: updateStaffDto.badgeNumber,
-                    },
-                    update: {
-                        licenseNumber: updateStaffDto.licenseNumber,
-                        licenseExpiry: updateStaffDto.licenseExpiry,
-                        badgeNumber: updateStaffDto.badgeNumber,
-                    }
-                });
-            }
+                // Update TeacherProfile if role is TEACHER
+                if (updateStaffDto.role === UserRole.TEACHER) {
+                    await tx.teacherProfile.upsert({
+                        where: { userId: id },
+                        create: {
+                            userId: id,
+                            qualification: updateStaffDto.qualification,
+                            experience: updateStaffDto.experience,
+                            specialization: updateStaffDto.specialization,
+                        },
+                        update: {
+                            qualification: updateStaffDto.qualification,
+                            experience: updateStaffDto.experience,
+                            specialization: updateStaffDto.specialization,
+                        }
+                    });
+                }
 
-            return tx.user.findUnique({ where: { id }, include: { staffDetails: true, teacherProfile: true, driverDetails: true } });
-        });
+                // Update DriverDetails if role is DRIVER
+                if (updateStaffDto.role === UserRole.DRIVER) {
+                    await tx.driverDetails.upsert({
+                        where: { userId: id },
+                        create: {
+                            userId: id,
+                            licenseNumber: updateStaffDto.licenseNumber,
+                            licenseExpiry: updateStaffDto.licenseExpiry,
+                            badgeNumber: updateStaffDto.badgeNumber,
+                        },
+                        update: {
+                            licenseNumber: updateStaffDto.licenseNumber,
+                            licenseExpiry: updateStaffDto.licenseExpiry,
+                            badgeNumber: updateStaffDto.badgeNumber,
+                        }
+                    });
+                }
+
+                return tx.user.findUnique({ where: { id }, include: { staffDetails: true, teacherProfile: true, driverDetails: true } });
+            });
+        } catch (error) {
+            console.error('[StaffService] Error updating staff:', error);
+            throw error;
+        }
     }
 
     async remove(id: number) {

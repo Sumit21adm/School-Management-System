@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, IsBoolean, IsEnum, MinLength, IsArray } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsBoolean, IsEnum, MinLength, IsArray, IsNotEmpty, Matches } from 'class-validator';
 
 export enum UserRole {
     SUPER_ADMIN = 'SUPER_ADMIN',
@@ -14,24 +14,28 @@ export enum UserRole {
 
 export class CreateUserDto {
     @IsString()
-    @MinLength(3)
+    @MinLength(3, { message: 'Username must be at least 3 characters' })
+    @IsNotEmpty({ message: 'Username is required' })
     username: string;
 
     @IsString()
-    @MinLength(6)
+    @MinLength(6, { message: 'Password must be at least 6 characters' })
+    @IsNotEmpty({ message: 'Password is required' })
     password: string;
 
     @IsString()
+    @IsNotEmpty({ message: 'Name is required' })
     name: string;
 
-    @IsEnum(UserRole)
+    @IsEnum(UserRole, { message: 'Invalid role' })
     role: UserRole;
 
-    @IsEmail()
+    @IsEmail({}, { message: 'Please enter a valid email address' })
     @IsOptional()
     email?: string;
 
     @IsString()
+    @Matches(/^[6-9]\d{9}$/, { message: 'Please enter a valid 10-digit phone number' })
     @IsOptional()
     phone?: string;
 

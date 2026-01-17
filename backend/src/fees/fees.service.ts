@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { CollectFeeDto, FeeStatementDto } from './dto/fee-collection.dto';
+import { CollectFeeDto, FeeStatementDto, PaymentMode } from './dto/fee-collection.dto';
 import { GenerateDemandBillDto, UpdateBillStatusDto } from './dto/demand-bill.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -39,8 +39,31 @@ export class FeesService {
             return sum + Math.max(0, balance);
         }, 0);
 
-        // If no outstanding dues and payment is not 'advance', reject the payment
-        const isAdvancePayment = dto.paymentMode === 'advance';
+        // Determine payment modes - support both legacy single mode and new array
+        // Determine payment modes
+        const paymentModes = dto.paymentModes && dto.paymentModes.length > 0
+            ? dto.paymentModes
+            : [];
+
+        if (paymentModes.length === 0) {
+            throw new BadRequestException('At least one payment mode is required');
+        }
+
+        // Get primary payment mode for backward compatibility (stored in main transaction)
+        // Primary payment mode legacy support removed
+
+
+        // Check if this is an advance payment based on Fee Type
+        // We look for fee types with "Advance" in their name
+        const feeTypeIds = dto.feeDetails.map(d => d.feeTypeId);
+        const selectedFeeTypes = await this.prisma.feeType.findMany({
+            where: { id: { in: feeTypeIds } }
+        });
+
+        const isAdvancePayment = selectedFeeTypes.some(ft =>
+            ft.name.toLowerCase().includes('advance')
+        );
+
         if (outstandingDues <= 0 && !isAdvancePayment) {
             throw new BadRequestException(
                 'No outstanding dues for this student. Please use "Advance" payment type for advance payments.'
@@ -58,11 +81,22 @@ export class FeesService {
             throw new BadRequestException('Total amount must be greater than zero');
         }
 
+        // Validate payment modes sum matches total (if using new paymentModes array with amounts)
+        if (dto.paymentModes && dto.paymentModes.length > 0) {
+            const paymentModesSum = dto.paymentModes.reduce((sum, pm) => sum + pm.amount, 0);
+            // Allow small floating point differences
+            if (Math.abs(paymentModesSum - totalAmount) > 0.01) {
+                throw new BadRequestException(
+                    `Payment modes total (₹${paymentModesSum.toFixed(2)}) does not match fee total (₹${totalAmount.toFixed(2)})`
+                );
+            }
+        }
+
         // Generate receipt number if not provided
         const receiptNo = dto.receiptNo || `REC${Date.now()}`;
         const transactionId = `TXN${Date.now()}`;
 
-        // Create transaction with payment details
+        // Create transaction with payment details and payment mode details
         const transaction = await this.prisma.feeTransaction.create({
             data: {
                 transactionId,
@@ -71,7 +105,8 @@ export class FeesService {
                 receiptNo,
                 amount: new Decimal(totalAmount),
                 description: isAdvancePayment ? 'Advance payment' : dto.feeDetails.map(d => `Fee payment`).join(', '),
-                paymentMode: dto.paymentMode,
+                // paymentMode removed in Phase 3
+
                 date: dto.date ? new Date(dto.date) : new Date(),
                 yearId: new Date().getFullYear(),
                 remarks: isAdvancePayment ? (dto.remarks || 'Advance payment - will be adjusted against future bills') : dto.remarks,
@@ -84,6 +119,14 @@ export class FeesService {
                         netAmount: new Decimal(detail.amount - (detail.discountAmount || 0)),
                     })),
                 },
+                // Create payment mode details for split payments
+                paymentModeDetails: dto.paymentModes && dto.paymentModes.length > 0 ? {
+                    create: dto.paymentModes.map(pm => ({
+                        paymentMode: pm.paymentMode,
+                        amount: new Decimal(pm.amount),
+                        reference: pm.reference || null,
+                    })),
+                } : undefined,
             },
             include: {
                 paymentDetails: {
@@ -91,6 +134,7 @@ export class FeesService {
                         feeType: true,
                     },
                 },
+                paymentModeDetails: true,  // Include split payment details
                 student: true,
             },
         });
@@ -427,7 +471,8 @@ export class FeesService {
                 date: txn.date,
                 amount: Number(txn.amount),
                 receiptNo: txn.receiptNo,
-                paymentMode: txn.paymentMode,
+                // paymentMode removed
+
             })),
             pendingBills,
         };
@@ -648,8 +693,23 @@ export class FeesService {
 
                         totalAmount += transportAmount;
 
-                        // TODO: Implement Transport Discount if needed
-                        const transportDiscount = 0;
+                        // Implement Transport Discount
+                        let transportDiscount = 0;
+                        if (student.discounts && student.discounts.length > 0) {
+                            const discountRecord = student.discounts.find(
+                                d => d.feeTypeId === transportFeeType.id && d.sessionId === dto.sessionId
+                            );
+
+                            if (discountRecord) {
+                                if (discountRecord.discountType === 'PERCENTAGE') {
+                                    transportDiscount = (transportAmount * Number(discountRecord.discountValue)) / 100;
+                                } else {
+                                    transportDiscount = Number(discountRecord.discountValue);
+                                }
+                                // Cap discount at total amount
+                                transportDiscount = Math.min(transportDiscount, transportAmount);
+                            }
+                        }
 
                         billItems.push({
                             feeTypeId: transportFeeType.id,
@@ -923,7 +983,8 @@ export class FeesService {
                 receiptNo: txn.receiptNo,
                 date: txn.date,
                 amount: Number(txn.amount),
-                paymentMode: txn.paymentMode,
+                // paymentMode removed
+
                 details: txn.paymentDetails.map(pd => ({
                     feeType: pd.feeType.name,
                     amount: Number(pd.netAmount),
@@ -969,7 +1030,8 @@ export class FeesService {
                 receiptNo: txn.receiptNo,
                 date: txn.date,
                 amount,
-                paymentMode: txn.paymentMode,
+                // paymentMode removed
+
             });
             monthlyData[month].totalPaid += amount;
         });
@@ -1032,6 +1094,7 @@ export class FeesService {
                         feeType: true,
                     },
                 },
+                paymentModeDetails: true,
             },
             orderBy: { date: 'desc' },
         });
@@ -1047,7 +1110,8 @@ export class FeesService {
                 section: txn.student.section,
             },
             amount: Number(txn.amount),
-            paymentMode: txn.paymentMode,
+            // paymentMode removed
+
             description: txn.description,
             remarks: txn.remarks,
             details: txn.paymentDetails.map(pd => ({
@@ -1055,6 +1119,11 @@ export class FeesService {
                 amount: Number(pd.amount),
                 discount: Number(pd.discountAmount),
                 netAmount: Number(pd.netAmount),
+            })),
+            paymentModes: (txn.paymentModeDetails || []).map(pm => ({
+                mode: pm.paymentMode,
+                amount: Number(pm.amount),
+                reference: pm.reference
             })),
             timestamp: txn.createdAt,
         }));

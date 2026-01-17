@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsArray, ValidateNested, Min, IsDateString } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsArray, ValidateNested, Min, IsDateString, IsNotEmpty, IsPositive } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum PaymentMode {
@@ -6,16 +6,16 @@ export enum PaymentMode {
     CHEQUE = 'cheque',
     ONLINE = 'online',
     CARD = 'card',
-    UPI = 'upi',
-    ADVANCE = 'advance'
+    UPI = 'upi'
 }
 
 export class FeePaymentDetailDto {
     @IsNumber()
+    @IsNotEmpty({ message: 'Fee type is required' })
     feeTypeId: number;
 
     @IsNumber()
-    @Min(0)
+    @IsPositive({ message: 'Amount must be a positive number' })
     amount: number;
 
     @IsNumber()
@@ -24,11 +24,27 @@ export class FeePaymentDetailDto {
     discountAmount?: number;
 }
 
+// Split Payment Mode Support - each payment mode has an amount and optional reference
+export class PaymentModeDetailDto {
+    @IsEnum(PaymentMode)
+    paymentMode: PaymentMode;
+
+    @IsNumber()
+    @IsPositive({ message: 'Amount must be a positive number' })
+    amount: number;
+
+    @IsString()
+    @IsOptional()
+    reference?: string;  // Check no, UPI ref, card last 4 digits
+}
+
 export class CollectFeeDto {
     @IsString()
+    @IsNotEmpty({ message: 'Student ID is required' })
     studentId: string;
 
     @IsNumber()
+    @IsNotEmpty({ message: 'Session is required' })
     sessionId: number;
 
     @IsArray()
@@ -36,8 +52,15 @@ export class CollectFeeDto {
     @Type(() => FeePaymentDetailDto)
     feeDetails: FeePaymentDetailDto[];
 
-    @IsEnum(PaymentMode)
-    paymentMode: PaymentMode;
+    // Single paymentMode removed in Refactoring Phase 3
+
+
+    // NEW: Array of payment modes for split payments
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => PaymentModeDetailDto)
+    @IsOptional()
+    paymentModes?: PaymentModeDetailDto[];
 
     @IsString()
     @IsOptional()

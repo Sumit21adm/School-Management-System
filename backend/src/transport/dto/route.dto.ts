@@ -1,11 +1,13 @@
-import { IsString, IsOptional, IsInt, IsNumber, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsNumber, IsArray, ValidateNested, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateRouteStopDto {
     @IsString()
+    @IsNotEmpty({ message: 'Stop name is required' })
     stopName: string;
 
     @IsInt()
+    @IsNotEmpty({ message: 'Stop order is required' })
     stopOrder: number;
 
     @IsOptional()
@@ -35,15 +37,19 @@ export class CreateRouteStopDto {
 
 export class CreateRouteDto {
     @IsString()
+    @IsNotEmpty({ message: 'Route name is required' })
     routeName: string;
 
     @IsString()
+    @IsNotEmpty({ message: 'Route code is required' })
     routeCode: string;
 
     @IsString()
+    @IsNotEmpty({ message: 'Start point is required' })
     startPoint: string;
 
     @IsString()
+    @IsNotEmpty({ message: 'End point is required' })
     endPoint: string;
 
     @IsOptional()
@@ -66,9 +72,8 @@ export class CreateRouteDto {
     @IsString()
     eveningDeparture?: string;
 
-    @IsOptional()
-    @IsNumber()
-    monthlyFee?: number;
+    // monthlyFee removed
+
 
     @IsOptional()
     @IsString()
@@ -122,9 +127,8 @@ export class UpdateRouteDto {
     @IsString()
     eveningDeparture?: string;
 
-    @IsOptional()
-    @IsNumber()
-    monthlyFee?: number;
+    // monthlyFee removed
+
 
     @IsOptional()
     @IsString()

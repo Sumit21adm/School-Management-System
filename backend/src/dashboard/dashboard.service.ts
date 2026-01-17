@@ -105,7 +105,7 @@ export class DashboardService {
                 id: true,
                 studentId: true,
                 amount: true,
-                paymentMode: true,
+                paymentModeDetails: true,
                 date: true,
                 student: {
                     select: {
