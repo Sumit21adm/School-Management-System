@@ -1,6 +1,8 @@
 @echo off
 REM ============================================
-REM School Management System - Stop Script (Release)
+REM School Management System - Stop Application
+REM ============================================
+REM This script stops all running instances
 REM ============================================
 
 echo.
@@ -9,25 +11,18 @@ echo   Stopping School Management System
 echo  ========================================
 echo.
 
-REM Stop API (Port 3001)
-echo  Stopping API Server (Port 3001)...
+REM Kill node processes running on ports 3000 and 3001
+echo  Stopping API server (port 3001)...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3001" ^| findstr "LISTENING"') do (
-    taskkill /F /PID %%a >nul 2>nul
-    echo  [OK] API Server stopped
+    taskkill /F /PID %%a >nul 2>&1
+)
+
+echo  Stopping Frontend server (port 3000)...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000" ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
 )
 
 echo.
-
-REM Stop Frontend (Port 5173)
-echo  Stopping Frontend (Port 5173)...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":5173" ^| findstr "LISTENING"') do (
-    taskkill /F /PID %%a >nul 2>nul
-    echo  [OK] Frontend stopped
-)
-
-echo.
-echo  ========================================
-echo   All Application Services Stopped
-echo  ========================================
+echo  [OK] Application stopped successfully.
 echo.
 pause

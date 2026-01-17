@@ -139,14 +139,30 @@ if not exist "%FRONTEND_DIR%\dist" (
 echo.
 
 REM ============================================
-REM Start Application
+REM Start Application (Hidden Background)
 REM ============================================
 
-echo  Starting API server...
-start "School API" /MIN cmd /c "cd /d %API_DIR% && node dist/src/main > "%LOGS_DIR%\api.log" 2>&1"
+REM Create VBScript to launch processes hidden
+set HIDDEN_LAUNCHER=%SCRIPT_DIR%hidden_launcher.vbs
 
-echo  Starting Frontend...
-start "School Frontend" /MIN cmd /c "cd /d %FRONTEND_DIR% && node server.js > "%LOGS_DIR%\frontend.log" 2>&1"
+echo  Starting API server (hidden)...
+(
+echo Set WshShell = CreateObject^("WScript.Shell"^)
+echo WshShell.CurrentDirectory = "%API_DIR%"
+echo WshShell.Run "cmd /c node dist/src/main ^> ""%LOGS_DIR%\api.log"" 2^>^&1", 0, False
+) > "%HIDDEN_LAUNCHER%"
+cscript //nologo "%HIDDEN_LAUNCHER%"
+
+echo  Starting Frontend (hidden)...
+(
+echo Set WshShell = CreateObject^("WScript.Shell"^)
+echo WshShell.CurrentDirectory = "%FRONTEND_DIR%"
+echo WshShell.Run "cmd /c node server.js ^> ""%LOGS_DIR%\frontend.log"" 2^>^&1", 0, False
+) > "%HIDDEN_LAUNCHER%"
+cscript //nologo "%HIDDEN_LAUNCHER%"
+
+REM Clean up launcher script
+del "%HIDDEN_LAUNCHER%" >nul 2>&1
 
 echo.
 echo  Waiting for services to start...
@@ -160,9 +176,11 @@ echo.
 echo   Frontend: http://localhost:3000
 echo   API:      http://localhost:3001/api
 echo.
-echo   [INFO] App started in background.
+echo   [INFO] App is running as HIDDEN background processes.
+echo          No visible windows - processes cannot be accidentally closed!
 echo          Logs: logs\api.log, logs\frontend.log
-echo          Use Ctrl+C to stop checking, but processes will continue.
+echo.
+echo   To stop the application, run: stop_app_windows.bat
 echo.
 
 start http://localhost:3000
