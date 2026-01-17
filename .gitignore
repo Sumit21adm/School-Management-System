@@ -50,6 +50,10 @@ Thumbs.db
 /deploy
 backups/
 
+# Release builds
+releases/
+release_build/
+
 # Backup directories
 **/uploads_backup_*/
 *.tgz
