@@ -30,7 +30,7 @@ A comprehensive, full-stack School Management System (ERP) designed for K-12 edu
 ### 💰 Fee Management
 - Fee structure configuration by class
 - Demand bill generation (individual & batch)
-- Fee collection with multiple payment modes
+- Fee collection with **Split Payment** support (e.g., Cash + UPI)
 - Transaction history & pending bills tracking
 - PDF receipts with school branding
 
@@ -38,8 +38,9 @@ A comprehensive, full-stack School Management System (ERP) designed for K-12 edu
 - Vehicle fleet management (insurance, fitness, permit tracking)
 - Driver management with license expiry alerts
 - Route management with stops and timings
+- **Distance-based** automated fee calculation (Fare Slabs)
+- Transport Discount management
 - Student-route assignment (individual & bulk)
-- Transport fee integration
 
 ### 🏫 Class & Session Management
 - Class and section configuration
