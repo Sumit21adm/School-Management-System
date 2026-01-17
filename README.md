@@ -5,7 +5,7 @@
 ![Node: 18+](https://img.shields.io/badge/Node-18%2B-green.svg)
 ![React: 18](https://img.shields.io/badge/React-18-61DAFB.svg)
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E.svg)
-![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-33K-blueviolet.svg)
+![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-36K-blueviolet.svg)
 
 A comprehensive, full-stack School Management System (ERP) designed for K-12 educational institutions. Built with modern web technologies, it offers a seamless experience for administrators, teachers, and staff.
 
