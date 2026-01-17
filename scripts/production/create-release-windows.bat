@@ -32,6 +32,17 @@ mkdir "%RELEASE_DIR%"
 REM 2. Build Backend
 echo  [2/7] Building Backend...
 cd /d "%PROJECT_DIR%\backend"
+
+REM Generate Prisma Client (ensures types are up-to-date)
+echo        Generating Prisma Client...
+set DATABASE_URL=file:./dev.db
+call npx prisma generate
+if %ERRORLEVEL% NEQ 0 (
+    echo  [!] Prisma generate failed!
+    pause
+    exit /b 1
+)
+
 call npm run build
 if %ERRORLEVEL% NEQ 0 (
     echo  [!] Backend build failed!
