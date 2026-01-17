@@ -9,7 +9,7 @@ import {
 } from '@mui/icons-material';
 import { staffService, UserRole, type Staff } from '../../lib/api/staff';
 import PageHeader from '../../components/PageHeader';
-import AddStaffDialog from '../staff/AddStaffDialog';
+import AddUserDialog from '../users/AddUserDialog';
 import { useSnackbar } from 'notistack';
 import { format, isBefore, addDays } from 'date-fns';
 
@@ -100,7 +100,7 @@ export default function DriverList() {
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                                     <Typography variant="body1" color="text.secondary">
-                                        No drivers found. Please add drivers in the <a href="/staff" style={{ color: 'inherit', textDecoration: 'underline' }}>Staff Management</a> module.
+                                        No drivers found. Please add drivers in the <a href="/users" style={{ color: 'inherit', textDecoration: 'underline' }}>User Management</a> module.
                                     </Typography>
                                 </TableCell>
                             </TableRow>
@@ -178,7 +178,7 @@ export default function DriverList() {
             </TableContainer>
 
             {openDialog && (
-                <AddStaffDialog
+                <AddUserDialog
                     open={openDialog}
                     onClose={handleClose}
                     staffToEdit={editingDriver}

@@ -53,6 +53,7 @@ export default function DiscountDialog({
         sessionId: 0,
     });
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<{ feeType?: string; discountValue?: string; session?: string }>({});
 
     // Fetch fee types
     const { data: feeTypesData } = useQuery({
@@ -87,28 +88,28 @@ export default function DiscountDialog({
 
     const handleSubmit = () => {
         setError('');
+        const errors: { feeType?: string; discountValue?: string; session?: string } = {};
 
         // Validation
         if (!formData.feeTypeId) {
-            setError('Please select a fee type');
-            return;
+            errors.feeType = 'Fee type is required';
         }
 
         if (!formData.discountValue || formData.discountValue <= 0) {
-            setError('Discount value must be greater than 0');
-            return;
-        }
-
-        if (formData.discountType === 'PERCENTAGE' && formData.discountValue > 100) {
-            setError('Percentage cannot exceed 100%');
-            return;
+            errors.discountValue = 'Discount value must be greater than 0';
+        } else if (formData.discountType === 'PERCENTAGE' && formData.discountValue > 100) {
+            errors.discountValue = 'Percentage cannot exceed 100%';
         }
 
         // Merge studentId if available from props
         const finalSessionId = formData.sessionId || activeSessionData?.id;
 
         if (!finalSessionId) {
-            setError('Active session not found. Please refresh the page.');
+            errors.session = 'Session is required';
+        }
+
+        setFieldErrors(errors);
+        if (Object.keys(errors).length > 0) {
             return;
         }
 
@@ -158,13 +159,14 @@ export default function DiscountDialog({
                     )}
 
                     {/* Fee Type Selector */}
-                    <FormControl fullWidth required>
+                    <FormControl fullWidth required error={!!fieldErrors.feeType}>
                         <InputLabel>Fee Type</InputLabel>
                         <Select
                             value={formData.feeTypeId}
-                            onChange={(e) =>
-                                setFormData({ ...formData, feeTypeId: Number(e.target.value) })
-                            }
+                            onChange={(e) => {
+                                setFormData({ ...formData, feeTypeId: Number(e.target.value) });
+                                if (fieldErrors.feeType) setFieldErrors({ ...fieldErrors, feeType: undefined });
+                            }}
                             label="Fee Type"
                         >
                             {feeTypesData?.feeTypes?.map((type: any) => (
@@ -173,6 +175,7 @@ export default function DiscountDialog({
                                 </MenuItem>
                             ))}
                         </Select>
+                        {fieldErrors.feeType && <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5 }}>{fieldErrors.feeType}</Box>}
                     </FormControl>
 
                     {/* Discount Type Radio */}
@@ -202,11 +205,13 @@ export default function DiscountDialog({
                         label="Discount Value"
                         type="number"
                         value={formData.discountValue || ''}
-                        onChange={(e) =>
-                            setFormData({ ...formData, discountValue: Number(e.target.value) })
-                        }
+                        onChange={(e) => {
+                            setFormData({ ...formData, discountValue: Number(e.target.value) });
+                            if (fieldErrors.discountValue) setFieldErrors({ ...fieldErrors, discountValue: undefined });
+                        }}
                         required
                         fullWidth
+                        error={!!fieldErrors.discountValue}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -215,9 +220,10 @@ export default function DiscountDialog({
                             ),
                         }}
                         helperText={
-                            formData.discountType === 'PERCENTAGE'
+                            fieldErrors.discountValue ||
+                            (formData.discountType === 'PERCENTAGE'
                                 ? 'Enter percentage (0-100)'
-                                : 'Enter fixed amount in rupees'
+                                : 'Enter fixed amount in rupees')
                         }
                     />
 

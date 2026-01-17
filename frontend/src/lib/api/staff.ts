@@ -69,6 +69,7 @@ export interface Staff {
     staffDetails?: StaffDetails;
     teacherProfile?: TeacherProfile;
     driverDetails?: DriverDetails;
+    permissions?: string[]; // Custom permissions override
     drivenVehicles?: {
         id: number;
         vehicleNo: string;

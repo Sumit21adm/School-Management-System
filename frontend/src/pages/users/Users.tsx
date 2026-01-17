@@ -7,16 +7,21 @@ import {
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { staffService, type Staff } from '../../lib/api/staff';
 import { roleSettingsService, type EnabledRole } from '../../lib/api/roleSettings';
-import AddStaffDialog from './AddStaffDialog';
+import AddUserDialog from './AddUserDialog';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { useSnackbar } from 'notistack';
 
-const StaffList = () => {
+const Users = () => {
     const [staffList, setStaffList] = useState<Staff[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [filterRole, setFilterRole] = useState<string>('ALL');
     const [openAddDialog, setOpenAddDialog] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
     const { enqueueSnackbar } = useSnackbar();
+
+    // Delete Confirmation State
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<number | null>(null);
 
     // Enabled roles from API
     const [enabledRoles, setEnabledRoles] = useState<EnabledRole[]>([]);
@@ -67,10 +72,15 @@ const StaffList = () => {
         setPage(0);
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm('Are you sure you want to delete this staff member?')) {
+    const handleDeleteClick = (id: number) => {
+        setUserToDelete(id);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (userToDelete !== null) {
             try {
-                await staffService.delete(id);
+                await staffService.delete(userToDelete);
                 enqueueSnackbar('Staff deleted successfully', { variant: 'success' });
                 fetchStaff();
             } catch (error) {
@@ -99,14 +109,14 @@ const StaffList = () => {
         <Box sx={{ p: 3 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h5" component="h1">
-                    Staff Management
+                    User Management
                 </Typography>
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={handleAdd}
                 >
-                    Add Staff
+                    Add User
                 </Button>
             </Stack>
 
@@ -122,7 +132,7 @@ const StaffList = () => {
                                 setPage(0); // Reset page on filter change
                             }}
                         >
-                            <MenuItem value="ALL">All Roles (Staff Only)</MenuItem>
+                            <MenuItem value="ALL">All Users</MenuItem>
                             {enabledRoles.map((role) => (
                                 <MenuItem key={role.role} value={role.role}>
                                     {role.displayName}
@@ -190,7 +200,7 @@ const StaffList = () => {
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Delete">
-                                                <IconButton size="small" color="error" onClick={() => handleDelete(staff.id)}>
+                                                <IconButton size="small" color="error" onClick={() => handleDeleteClick(staff.id)}>
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
@@ -213,14 +223,24 @@ const StaffList = () => {
             </Paper>
 
             {openAddDialog && (
-                <AddStaffDialog
+                <AddUserDialog
                     open={openAddDialog}
                     onClose={handleCloseDialog}
                     staffToEdit={selectedStaff}
                 />
             )}
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete User"
+                content="Are you sure you want to delete this user? This action cannot be undone."
+                confirmText="Delete"
+                severity="error"
+            />
         </Box>
     );
 };
 
-export default StaffList;
+export default Users;

@@ -12,6 +12,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { transportService, type Vehicle } from '../../lib/api/transport';
 import { staffService, UserRole, type Staff } from '../../lib/api/staff';
 import PageHeader from '../../components/PageHeader';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { useSnackbar } from 'notistack';
 
 export default function VehicleList() {
@@ -20,6 +21,8 @@ export default function VehicleList() {
     const [drivers, setDrivers] = useState<Staff[]>([]);
     const [open, setOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     const { control, handleSubmit, reset } = useForm({
         defaultValues: {
@@ -112,16 +115,21 @@ export default function VehicleList() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm('Are you sure you want to delete this vehicle?')) {
-            try {
-                await transportService.deleteVehicle(id);
-                enqueueSnackbar('Vehicle deleted successfully', { variant: 'success' });
-                fetchData();
-            } catch (error: any) {
-                enqueueSnackbar('Failed to delete vehicle', { variant: 'error' });
-            }
+    const handleDeleteClick = (id: number) => {
+        setDeleteId(id);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteId) return;
+        try {
+            await transportService.deleteVehicle(deleteId);
+            enqueueSnackbar('Vehicle deleted successfully', { variant: 'success' });
+            fetchData();
+        } catch (error: any) {
+            enqueueSnackbar('Failed to delete vehicle', { variant: 'error' });
         }
+        setConfirmOpen(false);
     };
 
     return (
@@ -195,7 +203,7 @@ export default function VehicleList() {
                                     <IconButton
                                         size="small"
                                         color="error"
-                                        onClick={() => handleDelete(vehicle.id)}
+                                        onClick={() => handleDeleteClick(vehicle.id)}
                                     >
                                         <DeleteIcon />
                                     </IconButton>
@@ -342,6 +350,16 @@ export default function VehicleList() {
                     </DialogActions>
                 </form>
             </Dialog>
+
+            <ConfirmDialog
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Vehicle"
+                content="Are you sure you want to delete this vehicle?"
+                confirmText="Delete"
+                severity="error"
+            />
         </Box>
     );
 }

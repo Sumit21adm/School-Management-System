@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button,
     Stepper, Step, StepLabel, Box, TextField, MenuItem,
-    Typography, Stack, CircularProgress
+    Typography, Stack, CircularProgress,
+    Alert, Paper, Switch, Divider, Chip
 } from '@mui/material';
+import { LockReset as LockResetIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { staffService, UserRole, type Staff } from '../../lib/api/staff';
 import { roleSettingsService, type EnabledRole } from '../../lib/api/roleSettings';
+import { ROLE_DEFAULT_PERMISSIONS } from '../../utils/permissions';
 import { useSnackbar } from 'notistack';
 
 interface AddStaffDialogProps {
@@ -16,9 +19,9 @@ interface AddStaffDialogProps {
     initialRole?: UserRole;
 }
 
-const steps = ['Identity & Role', 'HR Details', 'Professional Info', 'Review'];
+const steps = ['Identity & Role', 'HR Details', 'Professional Info', 'Login & Access', 'Review'];
 
-export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole }: AddStaffDialogProps) {
+export default function AddUserDialog({ open, onClose, staffToEdit, initialRole }: AddStaffDialogProps) {
     const [activeStep, setActiveStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [enabledRoles, setEnabledRoles] = useState<EnabledRole[]>([]);
@@ -28,17 +31,16 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
     useEffect(() => {
         roleSettingsService.getEnabledRoles()
             .then(roles => {
-                // Filter out STUDENT and PARENT for staff management
                 const staffRoles = roles.filter(r => r.role !== 'STUDENT' && r.role !== 'PARENT');
                 setEnabledRoles(staffRoles);
             })
             .catch(err => console.error('Failed to fetch enabled roles:', err));
     }, []);
 
-    // Determine if we are editing
     const isEdit = !!staffToEdit;
 
-    const { control, handleSubmit, watch, reset } = useForm({
+    const { control, handleSubmit, watch, reset, getValues, setValue, trigger } = useForm({
+        shouldUnregister: false,
         defaultValues: {
             name: '',
             email: '',
@@ -46,6 +48,8 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
             role: initialRole || UserRole.TEACHER,
             username: '',
             password: '',
+            active: true,
+            permissions: [] as string[],
 
             // HR
             designation: '',
@@ -72,6 +76,15 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
 
     const watchedRole = watch('role');
 
+    const watchedActive = watch('active');
+
+    // Effect to update permissions when role changes (only for new users or if explicitly requested)
+    useEffect(() => {
+        if (!isEdit && watchedRole) {
+            setValue('permissions', ROLE_DEFAULT_PERMISSIONS[watchedRole] || []);
+        }
+    }, [watchedRole, isEdit, setValue]);
+
     useEffect(() => {
         if (staffToEdit) {
             reset({
@@ -81,6 +94,8 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                 role: staffToEdit.role,
                 username: staffToEdit.username,
                 password: '',
+                active: staffToEdit.active ?? true,
+                permissions: staffToEdit.permissions || ROLE_DEFAULT_PERMISSIONS[staffToEdit.role] || [],
 
                 designation: staffToEdit.staffDetails?.designation || '',
                 department: staffToEdit.staffDetails?.department || '',
@@ -100,16 +115,36 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                 badgeNumber: staffToEdit.driverDetails?.badgeNumber || '',
             });
         } else {
-            reset();
+            reset({
+                role: initialRole || UserRole.TEACHER,
+                permissions: ROLE_DEFAULT_PERMISSIONS[initialRole || UserRole.TEACHER] || [],
+                active: true,
+                joiningDate: new Date().toISOString().split('T')[0],
+            });
         }
         setActiveStep(0);
-    }, [staffToEdit, open, reset]);
+    }, [staffToEdit, open, reset, initialRole]);
 
-    const handleNext = () => {
+    // Define which fields belong to each step for validation
+    const stepFields: Record<number, (keyof typeof control._defaultValues)[]> = {
+        0: ['role', 'name', 'email', 'phone', 'username', 'password'], // Identity & Role
+        1: ['designation', 'department', 'joiningDate', 'basicSalary', 'bankName', 'accountNo', 'ifscCode', 'panNo'], // HR Details
+        2: ['qualification', 'experience', 'specialization', 'licenseNumber', 'licenseExpiry', 'badgeNumber'], // Professional Info
+        3: ['active', 'password'], // Login & Access
+        4: [], // Review (no additional fields)
+    };
+
+    const handleNext = async () => {
         if (activeStep === steps.length - 1) {
             submitForm();
         } else {
-            setActiveStep((prev) => prev + 1);
+            // Validate only fields in the current step
+            const fieldsToValidate = stepFields[activeStep] || [];
+            const isValid = await trigger(fieldsToValidate as any);
+
+            if (isValid) {
+                setActiveStep((prev) => prev + 1);
+            }
         }
     };
 
@@ -117,14 +152,24 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
         setActiveStep((prev) => prev - 1);
     };
 
+
+
     const submitForm = handleSubmit(async (data) => {
         setLoading(true);
+        const formValues = getValues();
+        console.log('AddStaffDialog Submit Payload (Raw):', data);
+
         try {
             const payload = {
-                ...data,
-                joiningDate: new Date(data.joiningDate),
-                basicSalary: Number(data.basicSalary)
+                ...formValues,
+                joiningDate: formValues.joiningDate ? new Date(formValues.joiningDate) : undefined,
+                basicSalary: Number(formValues.basicSalary),
+                licenseExpiry: formValues.licenseExpiry ? new Date(formValues.licenseExpiry) : undefined,
             };
+
+            // Safety cleanup
+            if (payload.joiningDate && isNaN(payload.joiningDate.getTime())) delete payload.joiningDate;
+            if (payload.licenseExpiry && isNaN(payload.licenseExpiry.getTime())) delete payload.licenseExpiry;
 
             if (isEdit && staffToEdit) {
                 await staffService.update(staffToEdit.id, payload);
@@ -144,9 +189,9 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
 
     const renderStepContent = (step: number) => {
         switch (step) {
-            case 0:
+            case 0: // Identity & Role
                 return (
-                    <Stack spacing={2}>
+                    <Stack spacing={2} key="step-identity">
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                             <Box flex={1}>
                                 <Controller
@@ -179,8 +224,21 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                                 <Controller
                                     name="email"
                                     control={control}
-                                    render={({ field }) => (
-                                        <TextField {...field} label="Email" fullWidth type="email" />
+                                    rules={{
+                                        pattern: {
+                                            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                                            message: 'Please enter a valid email address'
+                                        }
+                                    }}
+                                    render={({ field, fieldState }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Email"
+                                            fullWidth
+                                            type="email"
+                                            error={!!fieldState.error}
+                                            helperText={fieldState.error?.message}
+                                        />
                                     )}
                                 />
                             </Box>
@@ -188,8 +246,20 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                                 <Controller
                                     name="phone"
                                     control={control}
-                                    render={({ field }) => (
-                                        <TextField {...field} label="Phone" fullWidth />
+                                    rules={{
+                                        pattern: {
+                                            value: /^[6-9]\d{9}$/,
+                                            message: 'Please enter a valid 10-digit phone number'
+                                        }
+                                    }}
+                                    render={({ field, fieldState }) => (
+                                        <TextField
+                                            {...field}
+                                            label="Phone"
+                                            fullWidth
+                                            error={!!fieldState.error}
+                                            helperText={fieldState.error?.message}
+                                        />
                                     )}
                                 />
                             </Box>
@@ -218,9 +288,9 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                         )}
                     </Stack>
                 );
-            case 1:
+            case 1: // HR Details
                 return (
-                    <Stack spacing={2}>
+                    <Stack spacing={2} key="step-hr">
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                             <Box flex={1}>
                                 <Controller
@@ -281,9 +351,9 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                         </Stack>
                     </Stack>
                 );
-            case 2:
+            case 2: // Professional Info
                 return (
-                    <Stack spacing={2}>
+                    <Stack spacing={2} key="step-prof">
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                             <Box flex={1}>
                                 <Controller
@@ -351,21 +421,90 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                         )}
                     </Stack>
                 );
-            case 3:
+            case 3: // Login & Access (NEW)
                 return (
-                    <Box>
+                    <Box key="step-login">
+                        <Stack spacing={3}>
+                            {/* Account Status Card */}
+                            <Paper variant="outlined" sx={{ p: 2, bgcolor: watchedActive ? 'success.lighter' : 'grey.100' }}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Box>
+                                        <Typography variant="subtitle1" fontWeight="bold">Login Access</Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Allow this staff member to log in to the portal
+                                        </Typography>
+                                    </Box>
+                                    <Controller
+                                        name="active"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Switch
+                                                checked={field.value}
+                                                onChange={(e) => field.onChange(e.target.checked)}
+                                                color="success"
+                                            />
+                                        )}
+                                    />
+                                </Stack>
+                            </Paper>
+
+                            {/* Credentials Section */}
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                {isEdit && (
+                                    <Box flex={1}>
+                                        <TextField
+                                            label="Username"
+                                            value={watch('username') || getValues('username')}
+                                            fullWidth
+                                            disabled
+                                            size="small"
+                                            helperText="Username cannot be changed"
+                                        />
+                                    </Box>
+                                )}
+                                <Box flex={1}>
+                                    <Controller
+                                        name="password"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <TextField
+                                                {...field}
+                                                label={isEdit ? "Set New Password" : "Password"}
+                                                placeholder={isEdit ? "Leave blank to keep current" : ""}
+                                                fullWidth
+                                                type="password"
+                                                size="small"
+                                                helperText={isEdit ? "Only enter to reset password" : "Default: Welcome@123"}
+                                                InputProps={{
+                                                    startAdornment: isEdit ? <LockResetIcon color="action" sx={{ mr: 1 }} /> : null
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                </Box>
+                            </Stack>
+
+                            <Alert severity="info" sx={{ mt: 2 }}>
+                                <Typography variant="caption">
+                                    Detailed permissions can be configured in <strong>User Permissions</strong> after creation.
+                                    Default permissions for <strong>{watchedRole}</strong> will be applied automatically.
+                                </Typography>
+                            </Alert>
+                        </Stack>
+                    </Box>
+                );
+            case 4: // Review
+                return (
+                    <Box key="step-review">
                         <Typography variant="h6" gutterBottom>Confirm Details</Typography>
                         <Stack spacing={1}>
                             <Stack direction="row"><Typography color="textSecondary" width={120}>Name:</Typography><Typography>{watch('name')}</Typography></Stack>
                             <Stack direction="row"><Typography color="textSecondary" width={120}>Role:</Typography><Typography>{watch('role')}</Typography></Stack>
+                            <Stack direction="row"><Typography color="textSecondary" width={120}>Status:</Typography><Chip label={watch('active') ? 'Active' : 'Inactive'} size="small" color={watch('active') ? 'success' : 'default'} /></Stack>
+                            <Stack direction="row"><Typography color="textSecondary" width={120}>Permissions:</Typography><Typography>Default (Role Based)</Typography></Stack>
+                            <Divider sx={{ my: 1 }} />
                             <Stack direction="row"><Typography color="textSecondary" width={120}>Designation:</Typography><Typography>{watch('designation')}</Typography></Stack>
                             <Stack direction="row"><Typography color="textSecondary" width={120}>Department:</Typography><Typography>{watch('department')}</Typography></Stack>
-                            {watchedRole === UserRole.TEACHER && (
-                                <Stack direction="row"><Typography color="textSecondary" width={120}>Specialization:</Typography><Typography>{watch('specialization')}</Typography></Stack>
-                            )}
-                            {watchedRole === UserRole.DRIVER && (
-                                <Stack direction="row"><Typography color="textSecondary" width={120}>License:</Typography><Typography>{watch('licenseNumber')} (Exp: {watch('licenseExpiry')})</Typography></Stack>
-                            )}
                         </Stack>
                     </Box>
                 )
@@ -377,10 +516,10 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
     return (
         <Dialog open={open} onClose={() => onClose()} maxWidth="md" fullWidth>
             <DialogTitle>
-                {isEdit ? 'Edit Staff' : 'Add New Staff'}
+                {isEdit ? 'Edit User & Access' : 'Add New User'}
             </DialogTitle>
             <DialogContent dividers>
-                <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+                <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
                     {steps.map((label) => (
                         <Step key={label}>
                             <StepLabel>{label}</StepLabel>
@@ -388,7 +527,7 @@ export default function AddStaffDialog({ open, onClose, staffToEdit, initialRole
                     ))}
                 </Stepper>
 
-                <Box sx={{ mt: 2, minHeight: '300px' }}>
+                <Box sx={{ mt: 2, minHeight: '350px' }}>
                     {renderStepContent(activeStep)}
                 </Box>
             </DialogContent>

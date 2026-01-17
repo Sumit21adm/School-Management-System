@@ -146,8 +146,14 @@ const CollectFeeDialog: React.FC<CollectFeeDialogProps> = ({
                                 label="Amount"
                                 type="number"
                                 fullWidth
+                                required
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
+                                onChange={(e) => {
+                                    setAmount(e.target.value);
+                                    if (error) setError(null); // Clear error on change
+                                }}
+                                error={!!error && error.includes('amount')}
+                                helperText={error && error.includes('amount') ? error : undefined}
                                 InputProps={{
                                     startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>
                                 }}

@@ -32,7 +32,7 @@ import {
   Divider,
   Autocomplete,
 } from '@mui/material';
-import { Plus, Trash2, IndianRupee, Clock, Printer, Search } from 'lucide-react';
+import { Plus, Trash2, IndianRupee, Clock, Printer } from 'lucide-react';
 import { feeService, admissionService, apiClient } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import { hasPermission, getCurrentUserPermissions } from '../../utils/permissions';
@@ -53,11 +53,18 @@ const feeDetailSchema = z.object({
   discountAmount: z.number().min(0).optional(),
 });
 
+// Split Payment Mode Schema
+const paymentModeSchema = z.object({
+  paymentMode: z.enum(['cash', 'cheque', 'online', 'card', 'upi']),
+  amount: z.number().min(0.01, 'Amount must be positive'),
+  reference: z.string().optional(),
+});
+
 const feeCollectionSchema = z.object({
   studentId: z.string().min(1, 'Student ID is required'),
   sessionId: z.number().min(1),
   feeDetails: z.array(feeDetailSchema).min(1, 'Add at least one fee item'),
-  paymentMode: z.enum(['cash', 'cheque', 'online', 'card', 'upi', 'advance']),
+  paymentModes: z.array(paymentModeSchema).min(1, 'Add at least one payment mode'),  // Split payments
   receiptNo: z.string().optional(),
   remarks: z.string().optional(),
   collectedBy: z.string().optional(),
@@ -97,7 +104,7 @@ export default function EnhancedFeeCollection() {
       studentId: '',
       sessionId: selectedSession?.id || 1,
       feeDetails: [{ feeTypeId: 0, amount: 0, discountAmount: 0 }],
-      paymentMode: 'cash',
+      paymentModes: [{ paymentMode: 'cash', amount: 0, reference: '' }],  // Split payments
       receiptNo: '',
       remarks: '',
       collectedBy: '',
@@ -118,9 +125,16 @@ export default function EnhancedFeeCollection() {
     name: 'feeDetails',
   });
 
+  // Field array for split payment modes
+  const { fields: paymentModeFields, append: appendPaymentMode, remove: removePaymentMode } = useFieldArray({
+    control,
+    name: 'paymentModes',
+  });
+
   const studentId = watch('studentId');
   const sessionId = watch('sessionId');
   const feeDetails = watch('feeDetails');
+  const paymentModes = watch('paymentModes');
 
   // Fetch fee types
   const { data: feeTypes } = useQuery({
@@ -147,7 +161,7 @@ export default function EnhancedFeeCollection() {
   });
 
   // Fetch student dashboard for fee structure
-  const { data: dashboard, isLoading: loadingStudent } = useQuery({
+  const { data: dashboard } = useQuery({
     queryKey: ['student-dashboard', studentId, sessionId],
     queryFn: async () => {
       const response = await apiClient.get(
@@ -300,12 +314,18 @@ export default function EnhancedFeeCollection() {
     }
   }, [selectedSession, setValue]);
 
-  // Auto-select Advance payment mode when outstanding dues is zero
+  // Auto-select Advance Payment fee type when student has no outstanding dues
   useEffect(() => {
-    if (dashboard && dashboard.summary.totalDues <= 0) {
-      setValue('paymentMode', 'advance');
+    if (dashboard && dashboard.summary.totalDues <= 0 && feeTypes) {
+      // Find "Advance Payment" fee type
+      const advancePaymentType = feeTypes.find((ft: any) =>
+        ft.name.toLowerCase().includes('advance')
+      );
+      if (advancePaymentType) {
+        setValue('feeDetails', [{ feeTypeId: advancePaymentType.id, amount: 0, discountAmount: 0 }]);
+      }
     }
-  }, [dashboard, setValue]);
+  }, [dashboard, feeTypes, setValue]);
 
   // Collect fee mutation
   const collectFeeMutation = useMutation({
@@ -339,59 +359,82 @@ export default function EnhancedFeeCollection() {
     return sum + netAmount;
   }, 0);
 
+  // Calculate total payment amount from all payment modes
+  const totalPaymentAmount = paymentModes?.reduce((sum, mode) => sum + (mode.amount || 0), 0) || 0;
+  const isPaymentMismatch = Math.abs(totalPaymentAmount - totalAmount) > 1; // Allow 1 rupee difference for rounding
+
   const fillFeeStructure = () => {
-    // Strategy: Use pendingBills to ensure Bill-First principle.
-    // Only allow collecting fees that have a corresponding pending bill.
+    // Strategy: Process ALL pending bills and aggregate unpaid items
+    // This matches the behavior when navigating from student details with studentId in URL
 
-    if (dashboard?.pendingBills) {
-      // Find the first bill with a positive balance
-      const unpaidBill = dashboard.pendingBills.find((bill: any) => bill.balance > 0);
+    if (dashboard?.pendingBills && dashboard.pendingBills.length > 0 && feeTypes) {
+      const allUnpaidItems: any[] = [];
+      const billNumbers: string[] = [];
 
-      if (unpaidBill) {
-        // Calculate unpaid items from this bill
-        let billPaidPool = unpaidBill.paid;
-        const unpaidItems: any[] = [];
+      // Process ALL pending bills
+      dashboard.pendingBills.forEach((bill: any) => {
+        if (bill.balance > 0 && bill.items && bill.items.length > 0) {
+          billNumbers.push(bill.billNo);
 
-        unpaidBill.items.forEach((item: any) => {
-          const itemNet = item.amount - (item.discount || 0);
+          // Use waterfall allocation for each bill
+          let paidPool = bill.paid;
 
-          // Allocate paid amount to this item
-          let allocatedPay = 0;
-          if (billPaidPool >= itemNet) {
-            allocatedPay = itemNet;
-            billPaidPool -= itemNet;
-          } else {
-            allocatedPay = billPaidPool;
-            billPaidPool = 0;
-          }
+          bill.items.forEach((item: any) => {
+            const itemNet = item.amount - (item.discount || 0);
 
-          const itemDue = itemNet - allocatedPay;
+            // Allocate paid amount to this item
+            let allocatedPay = 0;
+            if (paidPool >= itemNet) {
+              allocatedPay = itemNet;
+              paidPool -= itemNet;
+            } else {
+              allocatedPay = paidPool;
+              paidPool = 0;
+            }
 
-          if (itemDue > 0) {
-            const feeTypeObj = feeTypes?.find((ft: any) => ft.name === item.feeType);
-            if (feeTypeObj) {
-              // If fully unpaid, show original gross/discount. If partial, just balance.
-              if (itemDue === itemNet) {
-                unpaidItems.push({
-                  feeTypeId: feeTypeObj.id,
-                  amount: item.amount,
-                  discountAmount: item.discount || 0,
-                });
-              } else {
-                unpaidItems.push({
-                  feeTypeId: feeTypeObj.id,
-                  amount: itemDue,
-                  discountAmount: 0,
-                });
+            const itemDue = itemNet - allocatedPay;
+
+            if (itemDue > 0) {
+              const feeType = feeTypes.find((ft: any) => ft.name === item.feeType);
+              if (feeType) {
+                // Check if we already have this fee type from another bill
+                const existingItem = allUnpaidItems.find(ui => ui.feeTypeId === feeType.id);
+                if (existingItem) {
+                  // Add to existing amount
+                  existingItem.amount += itemDue === itemNet ? item.amount : itemDue;
+                  if (itemDue === itemNet) {
+                    existingItem.discountAmount += item.discount || 0;
+                  }
+                } else {
+                  // Add new item
+                  if (itemDue === itemNet) {
+                    allUnpaidItems.push({
+                      feeTypeId: feeType.id,
+                      amount: item.amount,
+                      discountAmount: item.discount || 0,
+                    });
+                  } else {
+                    allUnpaidItems.push({
+                      feeTypeId: feeType.id,
+                      amount: itemDue,
+                      discountAmount: 0,
+                    });
+                  }
+                }
               }
             }
-          }
-        });
+          });
+        }
+      });
 
-        if (unpaidItems.length > 0) {
-          setValue('feeDetails', unpaidItems);
-          setValue('remarks', `Payment for Bill: ${unpaidBill.billNo}`);
-          setValue('billNo', unpaidBill.billNo);
+      if (allUnpaidItems.length > 0) {
+        setValue('feeDetails', allUnpaidItems);
+        if (billNumbers.length === 1) {
+          setValue('remarks', `Payment for Bill: ${billNumbers[0]}`);
+          setValue('billNo', billNumbers[0]);
+        } else {
+          setValue('remarks', `Payment for Bills: ${billNumbers.join(', ')}`);
+          // Don't set billNo when multiple bills - let backend handle via remarks
         }
       }
     }
@@ -520,10 +563,10 @@ export default function EnhancedFeeCollection() {
                             options={options}
                             loading={loading}
                             inputValue={inputValue}
-                            onInputChange={(event, newInputValue) => {
+                            onInputChange={(_, newInputValue) => {
                               setInputValue(newInputValue);
                             }}
-                            onChange={(event, newValue: any) => {
+                            onChange={(_, newValue: any) => {
                               if (newValue) {
                                 field.onChange(newValue.studentId);
                                 setSelectedOpt(newValue);
@@ -696,11 +739,52 @@ export default function EnhancedFeeCollection() {
                                         }}
                                       >
                                         <MenuItem value={0}>Select Fee Type</MenuItem>
-                                        {(feeTypes || []).map((type: any) => (
-                                          <MenuItem key={type.id} value={type.id}>
-                                            {type.name}
-                                          </MenuItem>
-                                        ))}
+                                        {(() => {
+                                          // Universal exception fee types - always visible for ad-hoc payments
+                                          const universalFeeTypes = [
+                                            'advance', 'late fee', 'library', 'miscellaneous',
+                                            'dress', 'exam', 'laboratory', 'lab'
+                                          ];
+
+                                          // Get fee type IDs from student's class fee structure (dashboard.feeHeads)
+                                          const structureFeeTypeIds = new Set(
+                                            (dashboard?.feeHeads || []).map((fh: any) => fh.feeTypeId)
+                                          );
+
+                                          // Filter fee types to show only relevant ones
+                                          const filteredFeeTypes = (feeTypes || []).filter((type: any) => {
+                                            const typeName = type.name.toLowerCase();
+
+                                            // Always include universal/exception fee types
+                                            const isUniversal = universalFeeTypes.some(uf => typeName.includes(uf));
+                                            if (isUniversal) return true;
+
+                                            // Include if it's in the student's class fee structure
+                                            if (structureFeeTypeIds.has(type.id)) return true;
+
+                                            // If no student selected yet, show all fee types
+                                            if (!studentInfo) return true;
+
+                                            return false;
+                                          });
+
+                                          return filteredFeeTypes.map((type: any) => {
+                                            const isAdvancePayment = type.name.toLowerCase().includes('advance');
+                                            const hasNoDues = dashboard?.summary?.totalDues <= 0;
+                                            const isDisabled = hasNoDues && !isAdvancePayment;
+
+                                            return (
+                                              <MenuItem
+                                                key={type.id}
+                                                value={type.id}
+                                                disabled={isDisabled}
+                                              >
+                                                {type.name}
+                                                {isAdvancePayment && hasNoDues && ' ✓'}
+                                              </MenuItem>
+                                            );
+                                          });
+                                        })()}
                                       </Select>
                                     </FormControl>
                                   )}
@@ -781,29 +865,97 @@ export default function EnhancedFeeCollection() {
 
                 {/* Payment Details */}
                 <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Controller
-                      name="paymentMode"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth>
-                          <InputLabel>Payment Mode *</InputLabel>
-                          <Select {...field} label="Payment Mode *">
-                            <MenuItem value="cash" disabled={dashboard?.summary.totalDues <= 0}>Cash</MenuItem>
-                            <MenuItem value="cheque" disabled={dashboard?.summary.totalDues <= 0}>Cheque</MenuItem>
-                            <MenuItem value="online" disabled={dashboard?.summary.totalDues <= 0}>Online Transfer</MenuItem>
-                            <MenuItem value="card" disabled={dashboard?.summary.totalDues <= 0}>Card</MenuItem>
-                            <MenuItem value="upi" disabled={dashboard?.summary.totalDues <= 0}>UPI</MenuItem>
-                            <MenuItem value="advance">💰 Advance Payment</MenuItem>
-                          </Select>
-                          {dashboard?.summary.totalDues <= 0 && (
-                            <Typography variant="caption" color="info.main" sx={{ mt: 0.5 }}>
-                              ℹ️ Outstanding dues is ₹0. Only Advance Payment is allowed.
-                            </Typography>
-                          )}
-                        </FormControl>
-                      )}
-                    />
+                  <Grid size={{ xs: 12 }}>
+                    <Typography variant="subtitle2" gutterBottom>Payment Modes</Typography>
+                    {paymentModeFields.map((field, index) => (
+                      <Stack key={field.id} direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }} alignItems="flex-start">
+                        <Box sx={{ width: { xs: '100%', sm: '30%' } }}>
+                          <Controller
+                            name={`paymentModes.${index}.paymentMode`}
+                            control={control}
+                            render={({ field }) => (
+                              <FormControl fullWidth size="small">
+                                <InputLabel>Mode</InputLabel>
+                                <Select {...field} label="Mode">
+                                  <MenuItem value="cash">Cash</MenuItem>
+                                  <MenuItem value="upi">UPI</MenuItem>
+                                  <MenuItem value="card">Card</MenuItem>
+                                  <MenuItem value="cheque">Cheque</MenuItem>
+                                  <MenuItem value="online">Online</MenuItem>
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                        </Box>
+                        <Box sx={{ width: { xs: '100%', sm: '30%' } }}>
+                          <Controller
+                            name={`paymentModes.${index}.amount`}
+                            control={control}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                label="Amount"
+                                type="number"
+                                size="small"
+                                fullWidth
+                                error={!!errors.paymentModes?.[index]?.amount}
+                                helperText={errors.paymentModes?.[index]?.amount?.message}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                        <Box sx={{ width: { xs: '100%', sm: '30%' } }}>
+                          <Controller
+                            name={`paymentModes.${index}.reference`}
+                            control={control}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                label="Reference (Optional)"
+                                placeholder="Txn ID / Cheque No"
+                                size="small"
+                                fullWidth
+                              />
+                            )}
+                          />
+                        </Box>
+                        <IconButton
+                          onClick={() => removePaymentMode(index)}
+                          disabled={paymentModeFields.length === 1}
+                          color="error"
+                          size="small"
+                          sx={{ mt: 0.5 }}
+                        >
+                          <Trash2 size={18} />
+                        </IconButton>
+                      </Stack>
+                    ))}
+
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Button
+                        startIcon={<Plus size={16} />}
+                        onClick={() => appendPaymentMode({ paymentMode: 'cash', amount: 0 })}
+                        size="small"
+                        variant="outlined"
+                      >
+                        Add Payment Mode
+                      </Button>
+
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="subtitle2" color={isPaymentMismatch ? 'error.main' : 'success.main'}>
+                          Payment Total: ₹{totalPaymentAmount.toLocaleString()} / ₹{totalAmount.toLocaleString()}
+                        </Typography>
+                        {isPaymentMismatch && (
+                          <Typography variant="caption" color="error">
+                            Amounts must match
+                          </Typography>
+                        )}
+                      </Box>
+                    </Stack>
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Controller
@@ -865,7 +1017,7 @@ export default function EnhancedFeeCollection() {
                   type="submit"
                   variant="contained"
                   size="large"
-                  disabled={collectFeeMutation.isPending}
+                  disabled={collectFeeMutation.isPending || isPaymentMismatch}
                   startIcon={
                     collectFeeMutation.isPending ? (
                       <CircularProgress size={20} color="inherit" />

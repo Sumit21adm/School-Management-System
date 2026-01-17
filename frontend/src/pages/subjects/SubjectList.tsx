@@ -32,6 +32,7 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { subjectService } from '../../lib/api';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#9c27b0', '#d32f2f', '#0288d1', '#7b1fa2'];
 
@@ -39,6 +40,8 @@ const SubjectList = () => {
     const queryClient = useQueryClient();
     const [openDialog, setOpenDialog] = useState(false);
     const [editingSubject, setEditingSubject] = useState<any>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         code: '',
@@ -95,16 +98,22 @@ const SubjectList = () => {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm('Are you sure you want to delete this subject? It will be removed from all classes.')) {
+    const handleDeleteClick = (id: number) => {
+        setDeleteId(id);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (deleteId) {
             try {
-                await subjectService.delete(id);
+                await subjectService.delete(deleteId);
                 queryClient.invalidateQueries({ queryKey: ['subjects'] });
             } catch (error) {
                 console.error('Failed to delete', error);
                 alert('Failed to delete subject');
             }
         }
+        setConfirmOpen(false);
     };
 
     return (
@@ -169,7 +178,7 @@ const SubjectList = () => {
                                     <IconButton size="small" onClick={() => handleOpenDialog(subject)}>
                                         <EditIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton size="small" color="error" onClick={() => handleDelete(subject.id)}>
+                                    <IconButton size="small" color="error" onClick={() => handleDeleteClick(subject.id)}>
                                         <DeleteIcon fontSize="small" />
                                     </IconButton>
                                 </TableCell>
@@ -256,6 +265,16 @@ const SubjectList = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <ConfirmDialog
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Subject"
+                content="Are you sure you want to delete this subject? It will be removed from all classes."
+                confirmText="Delete"
+                severity="error"
+            />
         </Box>
     );
 };

@@ -17,7 +17,7 @@
         "sessions": "Sessions",
         "classManagement": "Class Management",
         "schoolSettings": "School Settings",
-        "userManagement": "User Management",
+        "userManagement": "User Permissions",
         "roleSettings": "Role Settings",
         "transport": "TRANSPORT",
         "vehicles": "Vehicles",
@@ -26,8 +26,8 @@
         "assignments": "Assignments",
         "transportReports": "Reports",
         "fareSlabs": "Fare Slabs",
-        "staff": "STAFF MANAGEMENT",
-        "staffList": "Staff List"
+        "staff": "USER MANAGEMENT",
+        "staffList": "Users"
     },
     "pages": {
         "dashboard": "Dashboard",

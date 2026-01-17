@@ -17,6 +17,12 @@ interface AddClassDialogProps {
     onSuccess: () => void;
 }
 
+interface FormErrors {
+    name?: string;
+    displayName?: string;
+    order?: string;
+}
+
 const AddClassDialog: React.FC<AddClassDialogProps> = ({ open, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         name: '',
@@ -25,14 +31,38 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({ open, onClose, onSucces
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        // Clear field error on change
+        if (fieldErrors[name as keyof FormErrors]) {
+            setFieldErrors({ ...fieldErrors, [name]: undefined });
+        }
+    };
+
+    const validateForm = (): boolean => {
+        const errors: FormErrors = {};
+
+        if (!formData.name.trim()) {
+            errors.name = 'Class code is required';
+        }
+        if (!formData.displayName.trim()) {
+            errors.displayName = 'Display name is required';
+        }
+        if (!formData.order.trim()) {
+            errors.order = 'Order number is required';
+        } else if (isNaN(Number(formData.order)) || Number(formData.order) < 0) {
+            errors.order = 'Order must be a positive number';
+        }
+
+        setFieldErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
     const handleSubmit = async () => {
-        if (!formData.name || !formData.displayName || !formData.order) {
-            setError('All fields are required');
+        if (!validateForm()) {
             return;
         }
 
@@ -47,6 +77,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({ open, onClose, onSucces
             });
             onSuccess();
             setFormData({ name: '', displayName: '', order: '' });
+            setFieldErrors({});
             onClose();
         } catch (err: any) {
             console.error(err);
@@ -68,10 +99,12 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({ open, onClose, onSucces
                             name="name"
                             label="Class Code (e.g. M1)"
                             fullWidth
+                            required
                             value={formData.name}
                             onChange={handleChange}
                             placeholder="M1"
-                            helperText="Short code/abbreviation"
+                            error={!!fieldErrors.name}
+                            helperText={fieldErrors.name || "Short code/abbreviation"}
                         />
                     </Grid>
                     <Grid item xs={12} sm={6}>
@@ -80,10 +113,12 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({ open, onClose, onSucces
                             label="Order Number"
                             type="number"
                             fullWidth
+                            required
                             value={formData.order}
                             onChange={handleChange}
                             placeholder="1"
-                            helperText="Sorting order"
+                            error={!!fieldErrors.order}
+                            helperText={fieldErrors.order || "Sorting order"}
                         />
                     </Grid>
                     <Grid item xs={12}>
@@ -91,9 +126,12 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({ open, onClose, onSucces
                             name="displayName"
                             label="Display Name (e.g. Mount 1)"
                             fullWidth
+                            required
                             value={formData.displayName}
                             onChange={handleChange}
                             placeholder="Mount 1"
+                            error={!!fieldErrors.displayName}
+                            helperText={fieldErrors.displayName}
                         />
                     </Grid>
                 </Grid>
@@ -109,3 +147,4 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({ open, onClose, onSucces
 };
 
 export default AddClassDialog;
+

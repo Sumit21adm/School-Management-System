@@ -137,6 +137,12 @@ const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, l
     const grandTotal = sortedBills.reduce((sum, bill) => sum + bill.amount, 0);
     const grandTotalDue = sortedBills.reduce((sum, bill) => sum + bill.totalDue, 0);
 
+    // Calculate total discount per bill
+    const getBillDiscount = (bill: BillData) => {
+        return bill.items?.reduce((sum, item) => sum + (item.discount || 0), 0) || 0;
+    };
+    const grandTotalDiscount = sortedBills.reduce((sum, bill) => sum + getBillDiscount(bill), 0);
+
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
@@ -223,6 +229,9 @@ const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, l
                                     {type}
                                 </TableCell>
                             ))}
+                            <TableCell align="right" sx={{ fontWeight: 700, bgcolor: 'warning.light', color: 'warning.dark' }}>
+                                Discount
+                            </TableCell>
                             <TableCell align="right" sx={{ fontWeight: 700, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
                                 Total
                             </TableCell>
@@ -258,6 +267,9 @@ const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, l
                                         </TableCell>
                                     );
                                 })}
+                                <TableCell align="right" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                                    {getBillDiscount(bill) > 0 ? `-${getBillDiscount(bill).toLocaleString()}` : '-'}
+                                </TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 600, bgcolor: 'success.light', color: 'success.dark' }}>
                                     {bill.amount.toLocaleString()}
                                 </TableCell>
@@ -280,6 +292,9 @@ const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, l
                                     {columnTotals[type].toLocaleString()}
                                 </TableCell>
                             ))}
+                            <TableCell align="right" sx={{ fontWeight: 800, color: 'warning.main' }}>
+                                {grandTotalDiscount > 0 ? `-${grandTotalDiscount.toLocaleString()}` : '-'}
+                            </TableCell>
                             <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main' }}>
                                 {grandTotal.toLocaleString()}
                             </TableCell>

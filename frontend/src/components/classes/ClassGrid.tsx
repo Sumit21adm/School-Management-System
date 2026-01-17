@@ -19,6 +19,7 @@ import {
     Group as GroupIcon
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
+import ConfirmDialog from '../ConfirmDialog';
 
 interface ClassData {
     id: number;
@@ -36,6 +37,8 @@ interface ClassGridProps {
 const ClassGrid: React.FC<ClassGridProps> = ({ classes: propClasses, onRefresh }) => {
     const [internalClasses, setInternalClasses] = useState<ClassData[]>([]);
     const [loading, setLoading] = useState(!propClasses);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const navigate = useNavigate();
     const theme = useTheme();
 
@@ -60,21 +63,26 @@ const ClassGrid: React.FC<ClassGridProps> = ({ classes: propClasses, onRefresh }
         }
     };
 
-    const handleDelete = async (id: number, e: React.MouseEvent) => {
+    const handleDeleteClick = (id: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (window.confirm('Are you sure you want to delete this class?')) {
-            try {
-                await classService.delete(id);
-                if (onRefresh) {
-                    onRefresh();
-                } else {
-                    loadClasses();
-                }
-            } catch (error) {
-                alert('Failed to delete class');
+        setDeleteId(id);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteId) return;
+        try {
+            await classService.delete(deleteId);
+            if (onRefresh) {
+                onRefresh();
+            } else {
+                loadClasses();
             }
+        } catch (error) {
+            alert('Failed to delete class');
         }
-    }
+        setConfirmOpen(false);
+    };
 
     const getInitials = (name: string) => {
         // For short names (like "10", "KG"), use the full name
@@ -164,7 +172,7 @@ const ClassGrid: React.FC<ClassGridProps> = ({ classes: propClasses, onRefresh }
                                 </Avatar>
                                 <IconButton
                                     size="small"
-                                    onClick={(e) => handleDelete(cls.id, e)}
+                                    onClick={(e) => handleDeleteClick(cls.id, e)}
                                     sx={{ color: 'text.disabled', '&:hover': { color: 'error.main', bgcolor: 'error.lighter' } }}
                                 >
                                     <DeleteIcon fontSize="small" />
@@ -203,6 +211,16 @@ const ClassGrid: React.FC<ClassGridProps> = ({ classes: propClasses, onRefresh }
                     </Card>
                 );
             })}
+
+            <ConfirmDialog
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Class"
+                content="Are you sure you want to delete this class? All sections and student data associated with it will be deleted permanently."
+                confirmText="Delete"
+                severity="error"
+            />
         </Box>
     );
 };

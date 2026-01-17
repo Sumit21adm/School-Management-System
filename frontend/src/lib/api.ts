@@ -195,16 +195,31 @@ export const feeService = {
   getReceiptPdfUrl: (receiptNo: string) => `${API_BASE_URL}/fees/receipt/pdf?receiptNo=${encodeURIComponent(receiptNo)}`,
   openReceiptPdf: async (receiptNo: string) => {
     try {
+      // Create a temporary link to download if window.open fails
       const response = await apiClient.get(`/fees/receipt/pdf`, {
         params: { receiptNo },
         responseType: 'blob',
       });
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
+
+      // Try opening in new tab
+      const newWindow = window.open(url, '_blank');
+
+      // If blocked, fallback to same window or download
+      if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+        // Fallback: Create a link and click it to force download/open
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        // link.download = `Receipt-${receiptNo}.pdf`; // Optional: force download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
       console.error('Error opening receipt PDF:', error);
-      alert('Failed to open receipt. Please try again.');
+      alert('Failed to open receipt. Please check your internet connection or allow popups.');
     }
   },
   getDemandBillPdfUrl: (billNo: string) => `${API_BASE_URL}/fees/demand-bill/pdf?billNo=${encodeURIComponent(billNo)}`,

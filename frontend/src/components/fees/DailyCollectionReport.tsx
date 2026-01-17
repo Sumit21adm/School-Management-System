@@ -48,6 +48,7 @@ interface Transaction {
     };
     amount: number;
     paymentMode: string;
+    paymentModes?: Array<{ mode: string; amount: number; reference?: string }>;
 }
 
 interface DailyCollectionReportProps {
@@ -448,12 +449,27 @@ export default function DailyCollectionReport({ sessionId, classes }: DailyColle
                                         <TableCell>{txn.student?.name || '-'}</TableCell>
                                         <TableCell>{txn.student?.className} {txn.student?.section}</TableCell>
                                         <TableCell>
-                                            <Chip
-                                                label={txn.paymentMode?.toUpperCase()}
-                                                size="small"
-                                                variant="outlined"
-                                                color={txn.paymentMode === 'cash' ? 'success' : 'primary'}
-                                            />
+                                            {txn.paymentModes && txn.paymentModes.length > 0 ? (
+                                                <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                                    {txn.paymentModes.map((pm, idx) => (
+                                                        <Chip
+                                                            key={idx}
+                                                            label={`${pm.mode.toUpperCase()} ₹${pm.amount}`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color={pm.mode === 'cash' ? 'success' : 'primary'}
+                                                            sx={{ mb: 0.5 }}
+                                                        />
+                                                    ))}
+                                                </Stack>
+                                            ) : (
+                                                <Chip
+                                                    label={txn.paymentMode?.toUpperCase()}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color={txn.paymentMode === 'cash' ? 'success' : 'primary'}
+                                                />
+                                            )}
                                         </TableCell>
                                         <TableCell align="right" sx={{ fontWeight: 600, color: 'success.main' }}>
                                             {formatCurrency(Number(txn.amount))}

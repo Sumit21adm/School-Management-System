@@ -321,7 +321,7 @@ export default function UserManagement() {
     return (
         <Box>
             <PageHeader
-                title="User Management"
+                title="User Permissions"
                 action={
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                         <FormControlLabel
@@ -333,13 +333,6 @@ export default function UserManagement() {
                             }
                             label="Show Inactive"
                         />
-                        <Button
-                            variant="contained"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleOpenDialog()}
-                        >
-                            Add New User
-                        </Button>
                     </Box>
                 }
             />

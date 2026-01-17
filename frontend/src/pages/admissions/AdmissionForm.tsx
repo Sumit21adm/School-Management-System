@@ -313,6 +313,26 @@ export default function AdmissionForm() {
     setTempPhotoUrl(null);
   };
 
+  const handleStudentIdBlur = async (studentId: string) => {
+    if (!studentId || studentId.trim() === '') return;
+
+    try {
+      const response = await admissionService.getStudents({ search: studentId });
+      const students = response.data.data || [];
+      const exactMatch = students.find((s: any) => s.studentId.toLowerCase() === studentId.toLowerCase());
+
+      if (exactMatch) {
+        // If in edit mode and matches current student, ignore
+        if (id && Number(exactMatch.id) === Number(id)) {
+          return;
+        }
+        setError(`Student ID '${studentId}' already exists.`);
+      }
+    } catch (err) {
+      console.error('Error checking student ID:', err);
+    }
+  };
+
   const onSubmit = async (data: AdmissionFormData) => {
     setLoading(true);
     setError('');
@@ -322,7 +342,12 @@ export default function AdmissionForm() {
       const formData = new FormData();
 
       // Append all text fields
+      const excludedFields = ['hasTransport', 'routeId', 'pickupStopId', 'dropStopId', 'transportType'];
+
+      // Append all text fields
       Object.keys(data).forEach(key => {
+        if (excludedFields.includes(key)) return; // Skip transport fields
+
         const value = data[key as keyof AdmissionFormData];
         if (value !== undefined && value !== null) {
           // Handle dates specifically if needed, but string format is usually fine
@@ -408,11 +433,7 @@ export default function AdmissionForm() {
 
           <Paper elevation={3} sx={{ p: { xs: 3, md: 5 }, borderRadius: 4 }}>
             <form onSubmit={handleSubmit(onSubmit)}>
-              {error && (
-                <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }}>
-                  {error}
-                </Alert>
-              )}
+
 
               {/* Personal Details Section */}
               <SectionHeader icon={User} title="Personal Details" />
@@ -476,6 +497,10 @@ export default function AdmissionForm() {
                             helperText={errors.studentId?.message}
                             placeholder="e.g. STU2024001"
                             InputLabelProps={{ shrink: true }}
+                            onBlur={(e) => {
+                              field.onBlur();
+                              handleStudentIdBlur(e.target.value);
+                            }}
                           />
                         )}
                       />
@@ -1401,6 +1426,16 @@ export default function AdmissionForm() {
             </DialogActions>
           </Dialog>
         </Paper>
+
+        <Dialog open={!!error} onClose={() => setError(null)}>
+          <DialogTitle color="error">Error</DialogTitle>
+          <DialogContent>
+            <Typography>{error}</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setError(null)} color="primary" autoFocus>OK</Button>
+          </DialogActions>
+        </Dialog>
       </LocalizationProvider>
     </Box>
   );

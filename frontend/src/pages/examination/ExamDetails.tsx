@@ -25,7 +25,8 @@ export default function ExamDetails() {
         date: '',
         startTime: '',
         endTime: '',
-        roomNo: ''
+        roomNo: '',
+        period: ''
     });
 
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
@@ -51,7 +52,7 @@ export default function ExamDetails() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exam', examId] });
             setScheduleDialogOpen(false);
-            setScheduleData({ subjectId: '', className: '', date: '', startTime: '', endTime: '', roomNo: '' });
+            setScheduleData({ subjectId: '', className: '', date: '', startTime: '', endTime: '', roomNo: '', period: '' });
             showMessage('Schedule added successfully');
         },
         onError: (err: any) => showMessage(err.response?.data?.message || 'Failed to add schedule', 'error')
@@ -82,7 +83,8 @@ export default function ExamDetails() {
             date: new Date(scheduleData.date).toISOString(),
             startTime: startDateTime.toISOString(),
             endTime: endDateTime.toISOString(),
-            roomNo: scheduleData.roomNo
+            roomNo: scheduleData.roomNo,
+            period: scheduleData.period ? Number(scheduleData.period) : undefined
         });
     };
 
@@ -144,6 +146,7 @@ export default function ExamDetails() {
                                     <TableCell>
                                         {new Date(schedule.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
                                         {new Date(schedule.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {schedule.period && <Typography variant="caption" display="block" color="textSecondary">Period: {schedule.period}</Typography>}
                                     </TableCell>
                                     <TableCell>{schedule.roomNo || '-'}</TableCell>
                                     <TableCell align="right">
@@ -216,12 +219,26 @@ export default function ExamDetails() {
                                 onChange={(e) => setScheduleData({ ...scheduleData, endTime: e.target.value })}
                             />
                         </Box>
-                        <TextField
-                            label="Room No (Optional)"
-                            fullWidth
-                            value={scheduleData.roomNo}
-                            onChange={(e) => setScheduleData({ ...scheduleData, roomNo: e.target.value })}
-                        />
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <TextField
+                                select
+                                label="Period (Optional)"
+                                fullWidth
+                                value={scheduleData.period}
+                                onChange={(e) => setScheduleData({ ...scheduleData, period: e.target.value })}
+                            >
+                                <MenuItem value=""><em>None</em></MenuItem>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
+                                    <MenuItem key={p} value={p}>Period {p}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                label="Room No (Optional)"
+                                fullWidth
+                                value={scheduleData.roomNo}
+                                onChange={(e) => setScheduleData({ ...scheduleData, roomNo: e.target.value })}
+                            />
+                        </Box>
                     </Stack>
                 </DialogContent>
                 <DialogActions>

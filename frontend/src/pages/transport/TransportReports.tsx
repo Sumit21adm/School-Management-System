@@ -35,6 +35,7 @@ import {
     DirectionsBus,
     Person,
     Phone,
+    Download,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { transportService } from '../../lib/api/transport';
@@ -212,6 +213,52 @@ function RouteWiseReport() {
         window.print();
     };
 
+    const handleExportCSV = () => {
+        if (!routes.length) return;
+
+        const headers = ['Route Code', 'Route Name', 'Vehicle', 'Driver', 'Student ID', 'Student Name', 'Class', 'Pickup Stop', 'Drop Stop', 'Transport Type', 'Est. Revenue'];
+        const rows: any[][] = [];
+
+        routes.forEach(route => {
+            const commonRouteInfo = [
+                route.routeCode,
+                route.routeName,
+                route.vehicle?.vehicleNo || 'N/A',
+                `${route.vehicle?.driver?.name || 'N/A'} ${route.vehicle?.driver?.phone ? `(${route.vehicle.driver.phone})` : ''}`,
+            ];
+
+            if (route.studentTransports.length === 0) {
+                // Add row for route even if no students
+                rows.push([...commonRouteInfo, '-', '-', '-', '-', '-', '-', route.monthlyFee]);
+            } else {
+                route.studentTransports.forEach(st => {
+                    rows.push([
+                        ...commonRouteInfo,
+                        st.student.studentId,
+                        st.student.name,
+                        `${st.student.className}-${st.student.section}`,
+                        st.pickupStop?.stopName || '-',
+                        st.dropStop?.stopName || '-',
+                        st.transportType,
+                        route.monthlyFee
+                    ]);
+                });
+            }
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + headers.join(",") + "\n"
+            + rows.map(e => e.map(c => `"${c}"`).join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `transport_report_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (isLoading) {
         return (
             <Box display="flex" justifyContent="center" p={4}>
@@ -248,14 +295,25 @@ function RouteWiseReport() {
                         color="secondary"
                     />
                 </Stack>
-                <Button
-                    variant="outlined"
-                    startIcon={<Print />}
-                    onClick={handlePrint}
-                    className="no-print"
-                >
-                    Print Report
-                </Button>
+                <Stack direction="row" spacing={2}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<Print />}
+                        onClick={handlePrint}
+                        className="no-print"
+                    >
+                        Print Report
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<Download />}
+                        onClick={handleExportCSV}
+                        className="no-print"
+                    >
+                        Export CSV
+                    </Button>
+                </Stack>
             </Box>
 
             <TableContainer component={Paper} variant="outlined">

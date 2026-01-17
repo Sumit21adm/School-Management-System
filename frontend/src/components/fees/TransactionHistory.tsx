@@ -23,7 +23,8 @@ interface Transaction {
     receiptNo: string;
     date: string;
     amount: number;
-    paymentMode: string;
+    paymentMode?: string;
+    paymentModes?: Array<{ mode: string; amount: number; reference?: string }>;
 }
 
 interface TransactionHistoryProps {
@@ -69,7 +70,25 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transactions })
                                 ₹{txn.amount.toLocaleString()}
                             </TableCell>
                             <TableCell>
-                                <Chip label={txn.paymentMode} size="small" variant="outlined" />
+                                {txn.paymentModes && txn.paymentModes.length > 0 ? (
+                                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                        {txn.paymentModes.map((pm, idx) => (
+                                            <Chip
+                                                key={idx}
+                                                label={`${pm.mode.toUpperCase()} ₹${pm.amount}`}
+                                                size="small"
+                                                variant="outlined"
+                                                color={pm.mode === 'cash' ? 'success' : 'primary'}
+                                            />
+                                        ))}
+                                    </Box>
+                                ) : (
+                                    <Chip
+                                        label={txn.paymentMode?.toUpperCase() || 'UNKNOWN'}
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                )}
                             </TableCell>
                             <TableCell>
                                 <Button

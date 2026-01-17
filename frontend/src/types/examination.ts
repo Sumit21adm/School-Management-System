@@ -38,5 +38,6 @@ export interface ExamSchedule {
     startTime: string; // ISO string
     endTime: string;   // ISO string
     roomNo?: string;
+    period?: number;
     subject?: Subject;
 }
