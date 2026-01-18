@@ -37,7 +37,8 @@ cd "$PROJECT_DIR"
 # 3. Build Frontend
 echo " [3/6] Building Frontend..."
 cd "$PROJECT_DIR/frontend"
-npm run build
+# Force local API URL for Docker release
+VITE_API_URL=http://localhost:3001 npm run build
 cd "$PROJECT_DIR"
 
 # 4. Prepare Release Directory
@@ -49,6 +50,9 @@ cp "$TEMPLATES_DIR/docker-compose.yml" "$RELEASE_DIR/"
 # Copy and Setup Launcher Scripts
 cp "$TEMPLATES_DIR/run-release-mac-docker.command" "$RELEASE_DIR/start_app_mac.command"
 cp "$TEMPLATES_DIR/stop-release-mac-docker.command" "$RELEASE_DIR/stop_app_mac.command"
+cp "$TEMPLATES_DIR/run-release-windows-docker.bat" "$RELEASE_DIR/start_app_windows.bat"
+cp "$TEMPLATES_DIR/stop-release-windows-docker.bat" "$RELEASE_DIR/stop_app_windows.bat"
+
 chmod +x "$RELEASE_DIR/start_app_mac.command"
 chmod +x "$RELEASE_DIR/stop_app_mac.command"
 
@@ -60,6 +64,36 @@ cp -r "$PROJECT_DIR/backend/dist" "$RELEASE_DIR/backend/"
 cp "$PROJECT_DIR/backend/package.json" "$RELEASE_DIR/backend/"
 
 cp -r "$PROJECT_DIR/backend/prisma" "$RELEASE_DIR/backend/"
+# Remove existing migrations (they are MySQL specific and will conflict)
+rm -rf "$RELEASE_DIR/backend/prisma/migrations"
+
+# Convert Prisma Schema to PostgreSQL for Docker Release
+echo "       Converting Schema to PostgreSQL..."
+sed -i '' 's/provider = "mysql"/provider = "postgresql"/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
+sed -i '' 's/@db.LongText/@db.Text/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
+sed -i '' 's/@db.MediumText/@db.Text/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
+
+# Compile Seed Script (TS -> JS) for Production
+echo "       Compiling Seed Script..."
+cd "$PROJECT_DIR/backend"
+npx tsc prisma/seed.ts --outDir "$RELEASE_DIR/backend/prisma" --module commonjs --target es2018 --skipLibCheck --esModuleInterop
+# Rename to seed.js if nested
+if [ -f "$RELEASE_DIR/backend/prisma/prisma/seed.js" ]; then
+    mv "$RELEASE_DIR/backend/prisma/prisma/seed.js" "$RELEASE_DIR/backend/prisma/seed.js"
+    rm -rf "$RELEASE_DIR/backend/prisma/prisma"
+fi
+cd "$PROJECT_DIR"
+
+# Modify package.json to run JS seed
+echo "       Update package.json for prod seed..."
+node -e "
+const fs = require('fs');
+const pkg = require('$RELEASE_DIR/backend/package.json');
+pkg.scripts.seed = 'node prisma/seed.js';
+if (pkg.prisma) pkg.prisma.seed = 'node prisma/seed.js';
+fs.writeFileSync('$RELEASE_DIR/backend/package.json', JSON.stringify(pkg, null, 2));
+"
+
 
 # Copy Dockerfile
 cp "$TEMPLATES_DIR/Dockerfile.backend" "$RELEASE_DIR/backend/Dockerfile"

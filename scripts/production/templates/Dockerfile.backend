@@ -11,6 +11,9 @@ RUN npm install --omit=dev
 # Copy Prisma Schema
 COPY prisma ./prisma/
 
+# Generate Prisma Client (Critical for Linux/Alpine)
+RUN npx prisma generate
+
 # Copy Pre-built Code
 COPY dist ./dist/
 
@@ -21,7 +24,7 @@ RUN mkdir -p uploads
 EXPOSE 3001
 
 # Start Command
-# 1. Run Migrations (Deploy mode = safe for prod)
-# 2. Seed Database (Safe to run multiple times? We should check)
+# 1. Push Schema (Sync DB)
+# 2. Seed Data (Ensure superadmin exists)
 # 3. Start App
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+CMD ["sh", "-c", "npx prisma db push && node prisma/seed.js && node dist/src/main"]
