@@ -19,6 +19,8 @@ set PROJECT_DIR=%SCRIPT_DIR%..\..
 set RELEASE_DIR=%PROJECT_DIR%\release_build
 set OUTPUT_DIR=%PROJECT_DIR%\releases
 set ZIP_NAME=school-management-system-release.zip
+set HELPERS_DIR=%SCRIPT_DIR%helpers\
+set LAUNCHERS_DIR=%SCRIPT_DIR%launchers\
 
 REM Navigate to project directory
 cd /d "%PROJECT_DIR%"
@@ -75,7 +77,8 @@ mkdir "%RELEASE_DIR%\backend\uploads"
 
 REM Convert Schema to SQLite
 echo        Converting Prisma Schema to SQLite...
-node "%SCRIPT_DIR%convert-schema-sqlite.js" "%PROJECT_DIR%\backend\prisma\schema.prisma" "%RELEASE_DIR%\backend\prisma\schema.prisma"
+echo        Converting Prisma Schema to SQLite...
+node "%HELPERS_DIR%convert-schema-sqlite.js" "%PROJECT_DIR%\backend\prisma\schema.prisma" "%RELEASE_DIR%\backend\prisma\schema.prisma"
 
 REM Compile Seed Script (ts -> js)
 echo        Compiling Seed Script...
@@ -97,10 +100,11 @@ copy /Y "%PROJECT_DIR%\frontend\server.js" "%RELEASE_DIR%\frontend\" >nul
 
 REM --- Runner Scripts ---
 echo        Adding runner scripts...
-copy /Y "%SCRIPT_DIR%templates\run-release-mac.command" "%RELEASE_DIR%\run_app_mac.command" >nul
-copy /Y "%SCRIPT_DIR%templates\run-release-windows.bat" "%RELEASE_DIR%\run_app_windows.bat" >nul
-copy /Y "%SCRIPT_DIR%templates\stop-release-mac.command" "%RELEASE_DIR%\stop_app_mac.command" >nul
-copy /Y "%SCRIPT_DIR%templates\stop-release-windows.bat" "%RELEASE_DIR%\stop_app_windows.bat" >nul
+echo        Adding runner scripts...
+copy /Y "%LAUNCHERS_DIR%run-release-mac.command" "%RELEASE_DIR%\run_app_mac.command" >nul
+copy /Y "%LAUNCHERS_DIR%run-release-windows.bat" "%RELEASE_DIR%\run_app_windows.bat" >nul
+copy /Y "%LAUNCHERS_DIR%stop-release-mac.command" "%RELEASE_DIR%\stop_app_mac.command" >nul
+copy /Y "%LAUNCHERS_DIR%stop-release-windows.bat" "%RELEASE_DIR%\stop_app_windows.bat" >nul
 
 REM 5. Modify Backend package.json for Production
 echo  [5/7] Configuring production package.json...

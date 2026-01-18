@@ -13,6 +13,8 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RELEASE_DIR="$PROJECT_DIR/release_build"
 OUTPUT_DIR="$PROJECT_DIR/releases"
 ZIP_NAME="school-management-system-release.zip"
+HELPERS_DIR="$SCRIPT_DIR/helpers"
+LAUNCHERS_DIR="$SCRIPT_DIR/launchers"
 
 echo ""
 echo " ========================================"
@@ -52,7 +54,7 @@ mkdir -p "$RELEASE_DIR/backend/prisma"
 mkdir -p "$RELEASE_DIR/backend/uploads"
 # Convert Schema
 echo "       Converting Prisma Schema to SQLite..."
-node "$SCRIPT_DIR/convert-schema-sqlite.js" "$PROJECT_DIR/backend/prisma/schema.prisma" "$RELEASE_DIR/backend/prisma/schema.prisma"
+node "$HELPERS_DIR/convert-schema-sqlite.js" "$PROJECT_DIR/backend/prisma/schema.prisma" "$RELEASE_DIR/backend/prisma/schema.prisma"
 
 # Compile Seed Script (ts -> js)
 echo "       Compiling Seed Script..."
@@ -78,10 +80,10 @@ cp "$PROJECT_DIR/frontend/server.js" "$RELEASE_DIR/frontend/"
 
 # --- Runner Scripts ---
 echo "       Adding runner scripts..."
-cp "$SCRIPT_DIR/templates/run-release-mac.command" "$RELEASE_DIR/run_app_mac.command"
-cp "$SCRIPT_DIR/templates/run-release-windows.bat" "$RELEASE_DIR/run_app_windows.bat"
-cp "$SCRIPT_DIR/templates/stop-release-mac.command" "$RELEASE_DIR/stop_app_mac.command"
-cp "$SCRIPT_DIR/templates/stop-release-windows.bat" "$RELEASE_DIR/stop_app_windows.bat"
+cp "$LAUNCHERS_DIR/run-release-mac.command" "$RELEASE_DIR/run_app_mac.command"
+cp "$LAUNCHERS_DIR/run-release-windows.bat" "$RELEASE_DIR/run_app_windows.bat"
+cp "$LAUNCHERS_DIR/stop-release-mac.command" "$RELEASE_DIR/stop_app_mac.command"
+cp "$LAUNCHERS_DIR/stop-release-windows.bat" "$RELEASE_DIR/stop_app_windows.bat"
 chmod +x "$RELEASE_DIR/run_app_mac.command"
 chmod +x "$RELEASE_DIR/stop_app_mac.command"
 

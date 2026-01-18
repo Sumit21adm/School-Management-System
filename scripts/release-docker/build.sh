@@ -13,7 +13,8 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RELEASE_DIR="$PROJECT_DIR/release_build_docker"
 OUTPUT_DIR="$PROJECT_DIR/releases"
 ZIP_NAME="school-management-system-docker.zip"
-TEMPLATES_DIR="$SCRIPT_DIR/templates"
+CONFIG_DIR="$SCRIPT_DIR/config"
+LAUNCHERS_DIR="$SCRIPT_DIR/launchers"
 
 echo ""
 echo " ========================================"
@@ -45,13 +46,13 @@ cd "$PROJECT_DIR"
 echo " [4/6] Assembling release content..."
 
 # --- Root Files ---
-cp "$TEMPLATES_DIR/docker-compose.yml" "$RELEASE_DIR/"
+cp "$CONFIG_DIR/docker-compose.yml" "$RELEASE_DIR/"
 
 # Copy and Setup Launcher Scripts
-cp "$TEMPLATES_DIR/run-release-mac-docker.command" "$RELEASE_DIR/start_app_mac.command"
-cp "$TEMPLATES_DIR/stop-release-mac-docker.command" "$RELEASE_DIR/stop_app_mac.command"
-cp "$TEMPLATES_DIR/run-release-windows-docker.bat" "$RELEASE_DIR/start_app_windows.bat"
-cp "$TEMPLATES_DIR/stop-release-windows-docker.bat" "$RELEASE_DIR/stop_app_windows.bat"
+cp "$LAUNCHERS_DIR/start_app_mac.command" "$RELEASE_DIR/start_app_mac.command"
+cp "$LAUNCHERS_DIR/stop_app_mac.command" "$RELEASE_DIR/stop_app_mac.command"
+cp "$LAUNCHERS_DIR/start_app_windows.bat" "$RELEASE_DIR/start_app_windows.bat"
+cp "$LAUNCHERS_DIR/stop_app_windows.bat" "$RELEASE_DIR/stop_app_windows.bat"
 
 chmod +x "$RELEASE_DIR/start_app_mac.command"
 chmod +x "$RELEASE_DIR/stop_app_mac.command"
@@ -96,7 +97,7 @@ fs.writeFileSync('$RELEASE_DIR/backend/package.json', JSON.stringify(pkg, null, 
 
 
 # Copy Dockerfile
-cp "$TEMPLATES_DIR/Dockerfile.backend" "$RELEASE_DIR/backend/Dockerfile"
+cp "$CONFIG_DIR/Dockerfile.backend" "$RELEASE_DIR/backend/Dockerfile"
 
 # Note: We do NOT copy node_modules. Docker will install them.
 
@@ -107,8 +108,8 @@ mkdir -p "$RELEASE_DIR/frontend"
 cp -r "$PROJECT_DIR/frontend/dist" "$RELEASE_DIR/frontend/"
 
 # Copy Configuration
-cp "$TEMPLATES_DIR/Dockerfile.frontend" "$RELEASE_DIR/frontend/Dockerfile"
-cp "$TEMPLATES_DIR/nginx.conf" "$RELEASE_DIR/frontend/nginx.conf"
+cp "$CONFIG_DIR/Dockerfile.frontend" "$RELEASE_DIR/frontend/Dockerfile"
+cp "$CONFIG_DIR/nginx.conf" "$RELEASE_DIR/frontend/nginx.conf"
 
 
 # 5. Zip the Release
