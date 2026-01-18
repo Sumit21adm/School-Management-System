@@ -67,7 +67,8 @@ fi
 # --- 3. Start Application ---
 echo ""
 echo " 🐳 Starting Containers..."
-docker-compose up -d
+# Use strict project name so data persists across folder renames
+docker-compose -p school_management_system up -d
 
 echo ""
 echo " ========================================"

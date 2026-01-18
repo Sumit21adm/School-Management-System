@@ -86,6 +86,7 @@ export class FeeTypesService {
                 description: createFeeTypeDto.description,
                 isActive: createFeeTypeDto.isActive ?? true,
                 isDefault: false, // Custom types are never default
+                frequency: createFeeTypeDto.frequency || 'Monthly',
             },
         });
     }

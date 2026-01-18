@@ -16,7 +16,8 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-docker-compose down
+# Use strict project name to target the correct containers
+docker-compose -p school_management_system down
 
 echo ""
 echo " ✅ Application Stopped."

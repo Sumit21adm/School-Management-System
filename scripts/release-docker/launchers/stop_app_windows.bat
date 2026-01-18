@@ -7,7 +7,7 @@ echo   Stopping School Management System...
 echo  ========================================
 echo.
 
-docker-compose down
+docker-compose -p school_management_system down
 
 echo.
 echo  [OK] Application Stopped.

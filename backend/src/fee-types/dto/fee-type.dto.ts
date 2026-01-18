@@ -13,6 +13,11 @@ export class CreateFeeTypeDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(20)
+    frequency?: string;
 }
 
 export class UpdateFeeTypeDto {
@@ -29,4 +34,9 @@ export class UpdateFeeTypeDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(20)
+    frequency?: string;
 }

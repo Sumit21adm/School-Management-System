@@ -37,7 +37,7 @@ echo.
 
 :: 2. Start Containers
 echo  Starting Application Containers...
-docker-compose up -d
+docker-compose -p school_management_system up -d
 
 echo.
 echo  ========================================
