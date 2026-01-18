@@ -127,12 +127,64 @@ export async function seedAdminUser() {
     console.log('   ✅ Super Admin created (User: superadmin / Pass: password123)');
 }
 
+// ============================================
+// PHASE 3: ACADEMIC STRUCTURE (Classes)
+// ============================================
+export async function seedClasses() {
+    logStep('Phase 3: Creating Classes & Sections');
+
+    const classes = [
+        { name: 'NC', displayName: 'NC', order: 1 },
+        { name: 'LKG', displayName: 'LKG', order: 2 },
+        { name: 'UKG', displayName: 'UKG', order: 3 },
+        { name: 'I', displayName: 'Class I', order: 4 },
+        { name: 'II', displayName: 'Class II', order: 5 },
+        { name: 'III', displayName: 'Class III', order: 6 },
+        { name: 'IV', displayName: 'Class IV', order: 7 },
+        { name: 'V', displayName: 'Class V', order: 8 },
+        { name: 'VI', displayName: 'Class VI', order: 9 },
+        { name: 'VII', displayName: 'Class VII', order: 10 },
+        { name: 'VIII', displayName: 'Class VIII', order: 11 },
+        { name: 'IX', displayName: 'Class IX', order: 12 },
+        { name: 'X', displayName: 'Class X', order: 13 },
+        { name: 'XI', displayName: 'Class XI', order: 14 },
+        { name: 'XII', displayName: 'Class XII', order: 15 },
+    ];
+
+    for (const cls of classes) {
+        // 1. Create Class
+        const classRecord = await prisma.schoolClass.upsert({
+            where: { name: cls.name },
+            update: { displayName: cls.displayName, order: cls.order },
+            create: { name: cls.name, displayName: cls.displayName, order: cls.order }
+        });
+
+        // 2. Create Default Section 'A'
+        await prisma.section.upsert({
+            where: {
+                classId_name: {
+                    name: 'A',
+                    classId: classRecord.id
+                }
+            },
+            update: {},
+            create: {
+                name: 'A',
+                classId: classRecord.id,
+                capacity: 40
+            }
+        });
+    }
+    console.log(`   ✅ ${classes.length} Classes (with Section A) created`);
+}
+
 // MAIN EXECUTION
 async function main() {
     console.log('🚀 Starting Default Seed (Essentials Only)...');
 
     await seedCoreSettings();
     await seedAdminUser();
+    await seedClasses();
 
     console.log('\n✨ Default Configuration Completed! The School is ready to run.');
 }
