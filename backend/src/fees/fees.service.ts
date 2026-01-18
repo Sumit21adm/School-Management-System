@@ -543,7 +543,7 @@ export class FeesService {
         // Fetch Transport Fee Type
         const transportFeeType = await this.prisma.feeType.findFirst({
             where: {
-                name: { contains: 'Transport' }, // robust search
+                name: { contains: 'Transport', ...(process.env.PRISMA_MODE === 'insensitive' && { mode: 'insensitive' as any }) }, // robust search
             }
         });
 
@@ -1105,7 +1105,8 @@ export class FeesService {
             whereClause.student = whereClause.student || {};
 
             if (query.studentName) {
-                whereClause.student.name = { contains: query.studentName };
+                const mode = process.env.PRISMA_MODE === 'insensitive' ? 'insensitive' : undefined;
+                whereClause.student.name = { contains: query.studentName, ...(mode && { mode: mode as any }) };
             }
             if (query.className) {
                 whereClause.student.className = query.className;

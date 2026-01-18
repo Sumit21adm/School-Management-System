@@ -16,6 +16,8 @@ export class AdmissionsService {
         const { search, className, section, status, sessionId, page = 1, limit = 10, sortBy, order = 'asc' } = params;
         const skip = (page - 1) * limit;
 
+        const mode = process.env.PRISMA_MODE === 'insensitive' ? 'insensitive' : undefined;
+
         const where: any = {
             AND: [
                 className ? { className } : {},
@@ -23,8 +25,8 @@ export class AdmissionsService {
                 sessionId ? { sessionId } : {},
                 search ? {
                     OR: [
-                        { name: { contains: search } },
-                        { studentId: { contains: search } },
+                        { name: { contains: search, ...(mode && { mode: mode as any }) } },
+                        { studentId: { contains: search, ...(mode && { mode: mode as any }) } },
                     ]
                 } : {},
                 status ? { status } : {} // Only filter by status if explicitly provided

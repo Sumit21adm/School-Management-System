@@ -31,6 +31,8 @@ services:
       JWT_SECRET: change_me_secret_key_12345
       # CORS settings
       FRONTEND_URL: http://localhost:3000
+      # Enable case-insensitive search for Postgres
+      PRISMA_MODE: insensitive
     depends_on:
       postgres:
         condition: service_healthy
