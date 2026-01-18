@@ -105,6 +105,7 @@ export default function SchoolSettings() {
                 admitCardNote: settings.admitCardNote || '',
                 transferCertNote: settings.transferCertNote || '',
                 idCardNote: settings.idCardNote || '',
+                timezone: settings.timezone || 'Asia/Kolkata',
             });
         }
     }, [settings]);
@@ -155,6 +156,7 @@ export default function SchoolSettings() {
             admitCardNote: formData.admitCardNote || undefined,
             transferCertNote: formData.transferCertNote || undefined,
             idCardNote: formData.idCardNote || undefined,
+            timezone: formData.timezone || undefined,
         });
     };
 

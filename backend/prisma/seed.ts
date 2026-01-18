@@ -1,26 +1,56 @@
 
-import { PrismaClient, UserRole, BillStatus, DiscountType } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { faker } from '@faker-js/faker';
 
 const prisma = new PrismaClient();
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 function logStep(step: string) {
     console.log(`\n🔹 [STEP] ${step}`);
 }
 
-function randomItem<T>(arr: T[]): T {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-
 // ============================================
-// PHASE 1: CORE SETTINGS (The Skeleton)
+// PHASE 1: CORE CONFIGURATION (Required for App)
 // ============================================
-async function seedCoreSettings() {
+export async function seedCoreSettings() {
     logStep('Phase 1: Establishing Core Settings');
+
+    // 1.0 Role Settings (CRITICAL)
+    const ROLE_DEFINITIONS = [
+        // Administrative Roles
+        { role: 'SUPER_ADMIN', displayName: 'Super Administrator', description: 'Full system access', isEnabled: true, sortOrder: 1 },
+        { role: 'PRINCIPAL', displayName: 'Principal', description: 'School head', isEnabled: true, sortOrder: 2 },
+        { role: 'VICE_PRINCIPAL', displayName: 'Vice Principal', description: 'Deputy head', isEnabled: true, sortOrder: 3 },
+        { role: 'ADMIN', displayName: 'Administrator', description: 'School admin', isEnabled: true, sortOrder: 4 },
+        // Academic Roles
+        { role: 'HEAD_OF_DEPARTMENT', displayName: 'Head of Department', description: 'HOD', isEnabled: true, sortOrder: 10 },
+        { role: 'COORDINATOR', displayName: 'Coordinator', description: 'Academic coordinator', isEnabled: true, sortOrder: 11 },
+        { role: 'SECTION_INCHARGE', displayName: 'Section In-charge', description: 'Class teacher', isEnabled: true, sortOrder: 12 },
+        { role: 'TEACHER', displayName: 'Teacher', description: 'Teaching staff', isEnabled: true, sortOrder: 13 },
+        // Finance & Office
+        { role: 'ACCOUNTANT', displayName: 'Accountant', description: 'Finance & Fees', isEnabled: true, sortOrder: 20 },
+        { role: 'RECEPTIONIST', displayName: 'Receptionist', description: 'Front desk', isEnabled: true, sortOrder: 21 },
+        { role: 'LIBRARIAN', displayName: 'Librarian', description: 'Library', isEnabled: true, sortOrder: 22 },
+        { role: 'LAB_ASSISTANT', displayName: 'Lab Assistant', description: 'Lab support', isEnabled: false, sortOrder: 23 },
+        { role: 'OFFICE_STAFF', displayName: 'Office Staff', description: 'General staff', isEnabled: true, sortOrder: 24 },
+        { role: 'CLERK', displayName: 'Clerk', description: 'Clerical work', isEnabled: false, sortOrder: 25 },
+        // Transport & Support
+        { role: 'DRIVER', displayName: 'Driver', description: 'Bus driver', isEnabled: true, sortOrder: 30 },
+        { role: 'CONDUCTOR', displayName: 'Conductor', description: 'Bus support', isEnabled: true, sortOrder: 31 },
+        { role: 'SECURITY', displayName: 'Security Guard', description: 'Security', isEnabled: true, sortOrder: 32 },
+        { role: 'PEON', displayName: 'Peon', description: 'Support', isEnabled: false, sortOrder: 33 },
+        // External
+        { role: 'PARENT', displayName: 'Parent', description: 'Parent Portal', isEnabled: false, sortOrder: 90 },
+        { role: 'STUDENT', displayName: 'Student', description: 'Student Portal', isEnabled: false, sortOrder: 91 },
+    ];
+
+    for (const roleDef of ROLE_DEFINITIONS) {
+        await prisma.roleSettings.upsert({
+            where: { role: roleDef.role },
+            update: { displayName: roleDef.displayName, sortOrder: roleDef.sortOrder },
+            create: roleDef
+        });
+    }
+    console.log('   ✅ Role Settings configured');
 
     // 1.1 Print Settings (School Identity)
     const schoolName = 'Global Excellence Academy';
@@ -29,15 +59,11 @@ async function seedCoreSettings() {
         update: { schoolName },
         create: {
             schoolName,
-            schoolAddress: 'Campus 12, Tech Park Road, Innovation City - 560100',
+            schoolAddress: 'Campus 12, Tech Park Road, Update Your Address',
             phone: '+91 98765 43210',
-            email: 'admissions@gea.edu.in',
-            website: 'www.gea.edu.in',
-            tagline: 'Empowering Future Leaders',
-            affiliationNo: 'CBSE/AFF/2024/998877',
-            affiliationNote: 'Affiliated to CBSE, New Delhi (Up to Senior Secondary)',
-            demandBillNote: 'Please pay fees before the 10th of every month to avoid late penalties.',
-            feeReceiptNote: 'Electronic Receipt. Signature not required.',
+            email: 'admin@school.com',
+            website: 'www.school.com',
+            tagline: 'Excellence in Education',
             timezone: 'Asia/Kolkata',
         }
     });
@@ -53,7 +79,7 @@ async function seedCoreSettings() {
     for (const s of sessions) {
         await prisma.academicSession.upsert({
             where: { name: s.name },
-            update: { isActive: s.isActive, isSetupMode: s.isSetupMode || false },
+            update: { isActive: s.isActive },
             create: s
         });
     }
@@ -68,6 +94,7 @@ async function seedCoreSettings() {
         { name: 'Exam Fee', frequency: 'Yearly', isRecurring: false },
         { name: 'Computer Fee', frequency: 'Monthly', isRecurring: true },
         { name: 'Late Fee', frequency: 'One-time', description: 'Penalty for overdue payment' },
+        { name: 'Advance Payment', frequency: 'One-time', description: 'Advance fee payment for future use', isRecurring: false },
     ];
 
     for (const f of feeTypes) {
@@ -79,13 +106,12 @@ async function seedCoreSettings() {
     }
     console.log(`   ✅ ${feeTypes.length} Fee Types defined`);
 
-    // 1.4 Classes & Sections
+    // 1.4 Classes & Sections (Basic Structure)
     const classesConfig = [
         { name: 'Mount-1', displayName: 'Nursery', order: 1 },
         { name: 'Mount-2', displayName: 'LKG', order: 2 },
         { name: 'Mount-3', displayName: 'UKG', order: 3 },
         { name: 'Class-1', displayName: 'Grade 1', order: 4 },
-        { name: 'Class-5', displayName: 'Grade 5', order: 8 },
         { name: 'Class-10', displayName: 'Grade 10', order: 13 },
         { name: 'Class-12', displayName: 'Grade 12', order: 15 },
     ];
@@ -97,20 +123,19 @@ async function seedCoreSettings() {
             create: { ...c, capacity: 40 }
         });
 
-        for (const secName of ['A', 'B']) {
-            await prisma.section.upsert({
-                where: { classId_name: { classId: cls.id, name: secName } },
-                update: {},
-                create: {
-                    classId: cls.id,
-                    name: secName,
-                    capacity: 35,
-                    roomNo: `Block-${c.order}-${secName}`
-                }
-            });
-        }
+        // Default 'A' section
+        await prisma.section.upsert({
+            where: { classId_name: { classId: cls.id, name: 'A' } },
+            update: {},
+            create: {
+                classId: cls.id,
+                name: 'A',
+                capacity: 35,
+                roomNo: `Block-${c.order}-A`
+            }
+        });
     }
-    console.log(`   ✅ Classes & Sections setup complete`);
+    console.log(`   ✅ Basic Classes & Sections setup complete`);
 
     // 1.5 Subjects
     const subjects = [
@@ -120,7 +145,6 @@ async function seedCoreSettings() {
         { name: 'Social Studies', code: 'SST01', color: '#fbbc05' },
         { name: 'Computer Applications', code: 'CS01', color: '#4285f4' },
         { name: 'Hindi', code: 'HIN01', color: '#ff6d01' },
-        { name: 'Physics', code: 'PHY11', color: '#46bdc6' },
     ];
 
     for (const sub of subjects) {
@@ -134,410 +158,44 @@ async function seedCoreSettings() {
 }
 
 // ============================================
-// PHASE 2: STAFF & INFRASTRUCTURE
+// PHASE 2: SUPER ADMIN USER
 // ============================================
-async function seedStaffAndTransport() {
-    logStep('Phase 2: Staff & Transport Infrastructure');
+export async function seedAdminUser() {
+    logStep('Phase 2: Creating Super Admin');
     const password = await bcrypt.hash('password123', 10);
 
-    // 2.1 Users & Roles
-    const staffData = [
-        { username: 'superadmin', name: 'System Admin', role: UserRole.SUPER_ADMIN, email: 'admin@school.com' },
-        { username: 'principal', name: 'Dr. Sarah Smith', role: UserRole.PRINCIPAL, email: 'principal@gea.edu.in' },
-        { username: 'admin_office', name: 'Mr. John Admin', role: UserRole.ADMIN, email: 'admin@gea.edu.in' },
-        { username: 'accounts_head', name: 'Mrs. Finance', role: UserRole.ACCOUNTANT, email: 'accounts@gea.edu.in' },
-        // Teachers
-        { username: 'math_teacher', name: 'Mr. Aryabhata', role: UserRole.TEACHER, email: 'math@gea.edu.in', qual: 'M.Sc Math' },
-        { username: 'sci_teacher', name: 'Mrs. Curie', role: UserRole.TEACHER, email: 'science@gea.edu.in', qual: 'M.Sc Physics' },
-        { username: 'eng_teacher', name: 'Ms. Shakespeare', role: UserRole.TEACHER, email: 'english@gea.edu.in', qual: 'MA English' },
-        // Drivers
-        { username: 'driver_ram', name: 'Ram Singh', role: UserRole.DRIVER, phone: '9000011111' },
-        { username: 'driver_sham', name: 'Sham Lal', role: UserRole.DRIVER, phone: '9000022222' },
-    ];
-
-    for (const s of staffData) {
-        const user = await prisma.user.upsert({
-            where: { username: s.username },
-            update: {},
-            create: {
-                username: s.username,
-                password,
-                name: s.name,
-                email: s.email,
-                phone: s.phone,
-                role: s.role,
-                active: true
-            }
-        });
-
-        if (s.role === UserRole.TEACHER) {
-            await prisma.teacherProfile.upsert({
-                where: { userId: user.id },
-                update: {},
-                create: {
-                    userId: user.id,
-                    qualification: s.qual,
-                    experience: '5+ years',
-                    specialization: 'Academics'
-                }
-            });
-        }
-    }
-    console.log(`   ✅ Staff Users & Profiles created`);
-
-    // 2.2 Transport Logic
-    const fareSlabs = [
-        { min: 0, max: 2, fee: 800, desc: 'Zone A (0-2 km)' },
-        { min: 2, max: 5, fee: 1200, desc: 'Zone B (2-5 km)' },
-        { min: 5, max: 10, fee: 1800, desc: 'Zone C (5-10 km)' },
-        { min: 10, max: 20, fee: 2500, desc: 'Zone D (10-20 km)' },
-    ];
-
-    for (const slab of fareSlabs) {
-        await prisma.transportFareSlab.upsert({
-            // Assuming ID auto-increment. We rely on upsert by description if ID unknown or update
-            // Since we don't have unique constraint on min/max in schema (only index), we use findFirst
-            where: { id: -1 }, // Hack: We can't upsert easily without unique ID.
-            // Actually, upsert needs a unique where input.
-            // Let's use findFirst + create/update manually for this demo script
-            update: {},
-            create: {
-                minDistance: slab.min,
-                maxDistance: slab.max,
-                monthlyFee: slab.fee,
-                description: slab.desc
-            }
-        }).catch(async (e) => {
-            // Fallback: check if exists
-            const existing = await prisma.transportFareSlab.findFirst({
-                where: { minDistance: slab.min, maxDistance: slab.max }
-            });
-            if (!existing) {
-                await prisma.transportFareSlab.create({
-                    data: { minDistance: slab.min, maxDistance: slab.max, monthlyFee: slab.fee, description: slab.desc }
-                });
-            }
-        });
-    }
-
-    // 2.3 Vehicles & Routes
-    const driver = await prisma.user.findUnique({ where: { username: 'driver_ram' } });
-
-    const bus1 = await prisma.vehicle.upsert({
-        where: { vehicleNo: 'KA-01-BUS-1001' },
+    await prisma.user.upsert({
+        where: { username: 'superadmin' },
         update: {},
         create: {
-            vehicleNo: 'KA-01-BUS-1001',
-            vehicleType: 'School Bus',
-            capacity: 40,
-            driverId: driver?.id
+            username: 'superadmin',
+            password, // password123
+            name: 'System Administrator',
+            email: 'admin@school.com',
+            role: UserRole.SUPER_ADMIN,
+            active: true
         }
     });
-
-    const route1 = await prisma.route.upsert({
-        where: { routeCode: 'R-01' },
-        update: {},
-        create: {
-            routeCode: 'R-01',
-            routeName: 'North City Express',
-            startPoint: 'City Center',
-            endPoint: 'School Campus',
-            vehicleId: bus1.id
-        }
-    });
-
-    // Steps for Route 1
-    const stops = [
-        { name: 'Central Mall (1km)', order: 1, dist: 1.0 },
-        { name: 'Housing Society (4km)', order: 2, dist: 4.0 },
-        { name: 'Tech Park Gate (8km)', order: 3, dist: 8.0 },
-    ];
-
-    for (const stop of stops) {
-        await prisma.routeStop.upsert({
-            where: { routeId_stopOrder: { routeId: route1.id, stopOrder: stop.order } },
-            update: {},
-            create: {
-                routeId: route1.id,
-                stopName: stop.name,
-                stopOrder: stop.order,
-                distanceFromSchool: stop.dist,
-                pickupTime: '07:30',
-                dropTime: '15:30'
-            }
-        });
-    }
-    console.log(`   ✅ Transport System (Slabs, Bus, Route, Stops) configured`);
+    console.log('   ✅ Super Admin created (User: superadmin / Pass: password123)');
 }
-
-// ============================================
-// PHASE 3: FINANCIAL FRAMEWORK
-// ============================================
-async function seedFinancialStructure() {
-    logStep('Phase 3: Financial Structure (Fee Rules)');
-
-    const activeSession = await prisma.academicSession.findFirst({ where: { isActive: true } });
-    if (!activeSession) throw new Error("No active session found!");
-
-    const tuitionFee = await prisma.feeType.findFirst({ where: { name: 'Tuition Fee' } });
-    const annualFee = await prisma.feeType.findFirst({ where: { name: 'Annual Charges' } });
-
-    if (!tuitionFee || !annualFee) {
-        console.log('⚠️ Warning: Tuition/Annual Fee types not found. Skipping fee structure.');
-        return;
-    }
-
-    const feeMap: Record<string, number> = {
-        'Mount-1': 2500, 'Mount-2': 2500, 'Mount-3': 2500,
-        'Class-1': 3000, 'Class-5': 3500,
-        'Class-10': 4500, 'Class-12': 5500
-    };
-
-    const classes = await prisma.schoolClass.findMany();
-
-    for (const cls of classes) {
-        const structure = await prisma.feeStructure.upsert({
-            where: { sessionId_className: { sessionId: activeSession.id, className: cls.name } },
-            update: {},
-            create: {
-                sessionId: activeSession.id,
-                className: cls.name,
-                description: `Standard Fee Structure for ${cls.displayName}`
-            }
-        });
-
-        const tuitionAmount = feeMap[cls.name] || 3000;
-
-        await prisma.feeStructureItem.upsert({
-            where: { structureId_feeTypeId: { structureId: structure.id, feeTypeId: tuitionFee.id } },
-            update: { amount: tuitionAmount },
-            create: { structureId: structure.id, feeTypeId: tuitionFee.id, amount: tuitionAmount, frequency: 'Monthly' }
-        });
-
-        await prisma.feeStructureItem.upsert({
-            where: { structureId_feeTypeId: { structureId: structure.id, feeTypeId: annualFee.id } },
-            update: { amount: 8000 },
-            create: { structureId: structure.id, feeTypeId: annualFee.id, amount: 8000, frequency: 'Yearly' }
-        });
-    }
-    console.log(`   ✅ Fee Structures mapped for all classes`);
-}
-
-// ============================================
-// PHASE 4: STUDENTS & ADMISSIONS
-// ============================================
-async function seedStudents() {
-    logStep('Phase 4: Student Admissions (Happy Path & Edge Cases)');
-
-    const activeSession = await prisma.academicSession.findFirst({ where: { isActive: true } });
-    const route = await prisma.route.findFirst();
-    const stop = await prisma.routeStop.findFirst({ where: { routeId: route?.id } });
-
-    // 4.1 Happy Path Student
-    const happyStudentId = 'STU-2024-0001';
-    await prisma.studentDetails.upsert({
-        where: { studentId: happyStudentId },
-        update: {},
-        create: {
-            studentId: happyStudentId,
-            name: 'Rohan Sharma',
-            fatherName: 'Mr. Amit Sharma',
-            motherName: 'Mrs. Priya Sharma',
-            dob: new Date('2018-05-10'),
-            gender: 'Male',
-            className: 'Class-1',
-            section: 'A',
-            rollNumber: '1',
-            admissionDate: new Date('2024-04-01'),
-            address: '123 Palm Grove, City',
-            phone: '9876543210',
-            status: 'active',
-            sessionId: activeSession?.id,
-            guardianName: 'Amit Sharma',
-            guardianRelation: 'Father'
-        }
-    });
-
-    if (route && stop) {
-        await prisma.studentTransport.upsert({
-            where: { studentId: happyStudentId },
-            update: {},
-            create: {
-                studentId: happyStudentId,
-                routeId: route.id,
-                pickupStopId: stop.id,
-                dropStopId: stop.id,
-                transportType: 'both',
-                startDate: new Date('2024-04-01'),
-                status: 'active'
-            }
-        });
-    }
-
-    // 4.2 Sibling Case
-    const siblingId = 'STU-2024-0002';
-    await prisma.studentDetails.upsert({
-        where: { studentId: siblingId },
-        update: {},
-        create: {
-            studentId: siblingId,
-            name: 'Riya Sharma',
-            fatherName: 'Mr. Amit Sharma',
-            motherName: 'Mrs. Priya Sharma',
-            dob: new Date('2016-08-15'),
-            gender: 'Female',
-            className: 'Class-5',
-            section: 'A',
-            rollNumber: '1',
-            admissionDate: new Date('2024-04-01'),
-            address: '123 Palm Grove, City',
-            phone: '9876543210',
-            status: 'active',
-            sessionId: activeSession?.id
-        }
-    });
-
-    // 4.3 Defaulter Student
-    const defaulterId = 'STU-2024-0099';
-    await prisma.studentDetails.upsert({
-        where: { studentId: defaulterId },
-        update: {},
-        create: {
-            studentId: defaulterId,
-            name: 'Karan Defaulter',
-            fatherName: 'Mr. Late Payer',
-            motherName: 'Mrs. Payer',
-            dob: new Date('2017-01-01'),
-            gender: 'Male',
-            className: 'Class-1',
-            section: 'B',
-            rollNumber: '10',
-            admissionDate: new Date('2024-04-01'),
-            address: 'No Money Road',
-            phone: '9999988888',
-            status: 'active',
-            sessionId: activeSession?.id
-        }
-    });
-
-    console.log(`   ✅ Students created: Standard, Sibling, and Test Cases`);
-}
-
-// ============================================
-// PHASE 5: TRANSACTIONS & BILLS
-// ============================================
-async function seedTransactions() {
-    logStep('Phase 5: Financial Transactions & Bills');
-
-    const activeSession = await prisma.academicSession.findFirst({ where: { isActive: true } });
-
-    // 5.1 Generate Bill for Defaulter (April)
-    const defaulterId = 'STU-2024-0099';
-    const billNo = 'BILL-APR-0099';
-    const tuitionFee = await prisma.feeType.findFirst({ where: { name: 'Tuition Fee' } });
-
-    if (!tuitionFee) return;
-
-    await prisma.demandBill.upsert({
-        where: { billNo },
-        update: {},
-        create: {
-            billNo,
-            studentId: defaulterId,
-            sessionId: activeSession!.id,
-            month: 4,
-            year: 2024,
-            billDate: new Date('2024-04-01'),
-            dueDate: new Date('2024-04-10'),
-            totalAmount: 5000,
-            netAmount: 5000,
-            paidAmount: 2000,
-            status: BillStatus.PARTIALLY_PAID,
-            sentDate: new Date('2024-04-01')
-        }
-    });
-
-    // 5.2 Transaction
-    try {
-        await prisma.feeTransaction.create({
-            data: {
-                transactionId: 'TXN-001-PARTIAL',
-                studentId: defaulterId,
-                sessionId: activeSession!.id,
-                receiptNo: 'RCP-001-PARTIAL',
-                amount: 2000,
-                description: 'Partial payment for April',
-                date: new Date('2024-04-05'),
-                yearId: 2024,
-                collectedBy: 'Accountant',
-                paymentDetails: {
-                    create: {
-                        feeTypeId: tuitionFee.id,
-                        amount: 2000,
-                        netAmount: 2000
-                    }
-                }
-            }
-        });
-    } catch (e) {
-        console.log('   ℹ️  Transaction already exists (skipped)');
-    }
-
-    console.log(`   ✅ Financial History seeded (Defaulter case created)`);
-}
-
-// ============================================
-// PHASE 6: ACADEMICS & EXAMS
-// ============================================
-async function seedAcademics() {
-    logStep('Phase 6: Academics (Exams & Results)');
-    const activeSession = await prisma.academicSession.findFirst({ where: { isActive: true } });
-
-    // 6.1 Create Exam Type
-    const term1 = await prisma.examType.upsert({
-        where: { name: 'Half-Yearly' },
-        update: {},
-        create: { name: 'Half-Yearly', description: 'Term 1 End Exam' }
-    });
-
-    // 6.2 Schedule Exam
-    const existingExam = await prisma.exam.findFirst({ where: { name: 'Half Yearly Exam 2024' } });
-    if (!existingExam) {
-        await prisma.exam.create({
-            data: {
-                name: 'Half Yearly Exam 2024',
-                examTypeId: term1.id,
-                sessionId: activeSession!.id,
-                startDate: new Date('2024-09-15'),
-                endDate: new Date('2024-09-30'),
-                status: 'COMPLETED'
-            }
-        });
-    }
-
-    console.log(`   ✅ Exam Data configured`);
-}
-
 
 // MAIN EXECUTION
 async function main() {
-    console.log('🚀 Starting A-to-Z Comprehensive Seeding...');
+    console.log('🚀 Starting Default Seed (Essentials Only)...');
 
     await seedCoreSettings();
-    await seedStaffAndTransport();
-    await seedFinancialStructure();
-    await seedStudents();
-    await seedTransactions();
-    await seedAcademics();
+    await seedAdminUser();
 
-    console.log('\n✨ All Phases Completed Successfully! The School is ready for demo.');
+    console.log('\n✨ Default Configuration Completed! The School is ready to run.');
 }
 
-main()
-    .catch((e) => {
-        console.error(e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+if (require.main === module) {
+    main()
+        .catch((e) => {
+            console.error(e);
+            process.exit(1);
+        })
+        .finally(async () => {
+            await prisma.$disconnect();
+        });
+}

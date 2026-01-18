@@ -81,6 +81,7 @@ model StudentDetails {
   demandBills      DemandBill[]
   academicHistory  StudentAcademicHistory[]
   transport        StudentTransport?         // Optional transport assignment
+  examResults      ExamResult[]
 
   @@index([className])
   @@index([section])
@@ -542,6 +543,7 @@ model Subject {
   classSubjects ClassSubject[]
   allocations   SubjectTeacherAllocation[]
   routines      ClassRoutine[]
+  examResults   ExamResult[]
   
   @@map("subjects")
 }
@@ -579,6 +581,7 @@ model Exam {
   examType    ExamType        @relation(fields: [examTypeId], references: [id])
   session     AcademicSession @relation(fields: [sessionId], references: [id])
   schedules   ExamSchedule[]
+  results     ExamResult[]
 
   @@index([examTypeId])
   @@index([sessionId])
@@ -603,6 +606,28 @@ model ExamSchedule {
   @@index([examId])
   @@index([subjectId])
   @@map("exam_schedules")
+}
+
+model ExamResult {
+  id            Int      @id @default(autoincrement())
+  examId        Int
+  studentId     String   @db.VarChar(20)
+  subjectId     Int
+  
+  marksObtained Decimal  @db.Decimal(5, 2)
+  maxMarks      Decimal  @db.Decimal(5, 2)
+  grade         String?  @db.VarChar(5)
+  remarks       String?  @db.VarChar(100)
+  
+  exam          Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student       StudentDetails @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  subject       Subject        @relation(fields: [subjectId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([examId, studentId, subjectId])
+  @@map("exam_results")
 }
 
 // Class Management Models

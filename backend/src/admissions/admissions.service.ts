@@ -233,6 +233,8 @@ export class AdmissionsService {
             { header: 'Address', key: 'address', width: 30 },
             { header: 'Phone', key: 'phone', width: 15 },
             { header: 'Email', key: 'email', width: 25 },
+            { header: 'Previous Dues', key: 'previousDues', width: 15 },
+            { header: 'Advance Balance', key: 'advanceBalance', width: 15 },
         ];
 
         // Add a sample row
@@ -248,7 +250,9 @@ export class AdmissionsService {
             admissionDate: '2025-04-01',
             address: '123 Main St, City',
             phone: '9876543210',
-            email: 'john@example.com'
+            email: 'john@example.com',
+            previousDues: 0,
+            advanceBalance: 0
         });
 
         return await workbook.xlsx.writeBuffer();
@@ -260,7 +264,16 @@ export class AdmissionsService {
         await workbook.xlsx.load(file.buffer);
         const worksheet = workbook.getWorksheet(1);
 
-        const students: Prisma.StudentDetailsCreateInput[] = [];
+        // Fetch active session
+        const activeSession = await this.prisma.academicSession.findFirst({
+            where: { isActive: true },
+        });
+
+        if (!activeSession) {
+            return { success: false, errors: ['No active academic session found. Please activate a session first.'], imported: 0 };
+        }
+
+        const students: any[] = [];
         const errors: string[] = [];
 
         worksheet.eachRow((row, rowNumber) => {
@@ -279,11 +292,13 @@ export class AdmissionsService {
                 address: row.getCell(10).text,
                 phone: row.getCell(11).text,
                 email: row.getCell(12).text,
+                previousDues: parseFloat(row.getCell(13).text || '0'),
+                advanceBalance: parseFloat(row.getCell(14).text || '0'),
             };
 
             // Basic validation
             if (!rowData.studentId || !rowData.name || !rowData.className) {
-                errors.push(`Row ${rowNumber}: Missing required fields`);
+                errors.push(`Row ${rowNumber}: Missing required fields (ID, Name, Class)`);
                 return;
             }
 
@@ -301,10 +316,15 @@ export class AdmissionsService {
                     address: rowData.address,
                     phone: rowData.phone,
                     email: rowData.email,
-                    status: 'active'
+                    status: 'active',
+                    sessionId: activeSession.id, // Link to active session
+                    _meta: { // Temporary storage for fee data
+                        previousDues: isNaN(rowData.previousDues) ? 0 : rowData.previousDues,
+                        advanceBalance: isNaN(rowData.advanceBalance) ? 0 : rowData.advanceBalance
+                    }
                 });
             } catch (e) {
-                errors.push(`Row ${rowNumber}: Invalid data format`);
+                errors.push(`Row ${rowNumber}: Invalid data format (Check Dates)`);
             }
         });
 
@@ -312,20 +332,97 @@ export class AdmissionsService {
             return { success: false, errors, imported: 0 };
         }
 
+        // Fetch 'Advance Payment' fee type if needed
+        const advanceFeeType = await this.prisma.feeType.findUnique({
+            where: { name: 'Advance Payment' }
+        });
+
+        // Fetch a default fee type for Opening Balance bills (e.g., Tuition Fee or first available)
+        const defaultFeeType = await this.prisma.feeType.findFirst({
+            where: { name: 'Tuition Fee' }
+        }) || await this.prisma.feeType.findFirst();
+
         let importedCount = 0;
-        for (const student of students) {
+        for (const studentData of students) {
             try {
                 // Check if student exists
                 const existing = await this.prisma.studentDetails.findUnique({
-                    where: { studentId: student.studentId }
+                    where: { studentId: studentData.studentId }
                 });
 
                 if (!existing) {
-                    await this.prisma.studentDetails.create({ data: student });
+                    const { _meta, ...dbData } = studentData;
+
+                    // Create Student
+                    await this.prisma.studentDetails.create({ data: dbData });
+
+                    // Handle Previous Dues (Opening Balance Bill)
+                    if (_meta.previousDues > 0) {
+                        const now = new Date();
+                        // Generate a unique bill number
+                        const billNo = `OB-${studentData.studentId}-${Date.now()}`;
+
+                        await this.prisma.demandBill.create({
+                            data: {
+                                billNo,
+                                studentId: studentData.studentId,
+                                sessionId: activeSession.id,
+                                month: now.getMonth() + 1,
+                                year: now.getFullYear(),
+                                billDate: now,
+                                dueDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), // +7 days
+                                totalAmount: _meta.previousDues,
+                                previousDues: _meta.previousDues,
+                                netAmount: _meta.previousDues,
+                                status: 'PENDING',
+                                billItems: {
+                                    create: {
+                                        // We need a fee type for "Opening Balance" or similar. 
+                                        // For now, attaching to the bill as 'previousDues' handles the logic, 
+                                        // but bill items require a feeTypeId.
+                                        // Let's assume ID 1 or find a generic one.
+                                        // Ideally, 'Tuition Fee' or 'Arrears'.
+                                        // To satisfy the schema, let's try to find a default fee type.
+                                        feeTypeId: defaultFeeType?.id || 1, // Fallback to 1 if absolutely nothing found
+                                        amount: 0, // checking previousDues on Bill level
+                                        description: 'Opening Balance Import'
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // Handle Advance Balance
+                    if (_meta.advanceBalance > 0 && advanceFeeType) {
+                        const now = new Date();
+                        const transactionId = `TRX-ADV-${studentData.studentId}-${Date.now()}`;
+                        const receiptNo = `REC-ADV-${studentData.studentId}-${Date.now()}`;
+
+                        await this.prisma.feeTransaction.create({
+                            data: {
+                                transactionId,
+                                studentId: studentData.studentId,
+                                sessionId: activeSession.id,
+                                receiptNo,
+                                amount: _meta.advanceBalance,
+                                description: 'Imported Advance Balance',
+                                date: now,
+                                yearId: now.getFullYear(),
+                                paymentDetails: {
+                                    create: {
+                                        feeTypeId: advanceFeeType.id,
+                                        amount: _meta.advanceBalance,
+                                        netAmount: _meta.advanceBalance
+                                    }
+                                }
+                            }
+                        });
+                    }
+
                     importedCount++;
                 }
             } catch (e) {
-                console.error(`Failed to import student ${student.studentId}`, e);
+                console.error(`Failed to import student ${studentData.studentId}`, e);
             }
         }
 

@@ -18,8 +18,7 @@ import {
     Divider
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+
 import { feeService } from '../../lib/api';
 
 interface CollectFeeDialogProps {
@@ -122,93 +121,93 @@ const CollectFeeDialog: React.FC<CollectFeeDialogProps> = ({
     // Let's fix this in next iteration if it fails. For now, assuming ID 1 exists (usually Tuition Fee).
 
     return (
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-                <DialogTitle>
-                    Collect Fee
-                    <Typography variant="subtitle2" color="text.secondary">
-                        {student.name} ({student.studentId})
-                    </Typography>
-                </DialogTitle>
-                <DialogContent dividers>
-                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                    {bill && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                            Paying against Bill <strong>{bill.billNo}</strong> (Balance: ₹{bill.balance})
-                        </Alert>
-                    )}
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle>
+                Collect Fee
+                <Typography variant="subtitle2" color="text.secondary">
+                    {student.name} ({student.studentId})
+                </Typography>
+            </DialogTitle>
+            <DialogContent dividers>
+                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                    <Grid container spacing={2} sx={{ mt: 0.5 }}>
-                        <Grid item xs={12}>
-                            <TextField
-                                autoFocus
-                                label="Amount"
-                                type="number"
-                                fullWidth
-                                required
-                                value={amount}
-                                onChange={(e) => {
-                                    setAmount(e.target.value);
-                                    if (error) setError(null); // Clear error on change
-                                }}
-                                error={!!error && error.includes('amount')}
-                                helperText={error && error.includes('amount') ? error : undefined}
-                                InputProps={{
-                                    startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Payment Mode</InputLabel>
-                                <Select
-                                    value={paymentMode}
-                                    label="Payment Mode"
-                                    onChange={(e) => setPaymentMode(e.target.value)}
-                                >
-                                    <MenuItem value="CASH">Cash</MenuItem>
-                                    <MenuItem value="ONLINE">Online / UPI</MenuItem>
-                                    <MenuItem value="CHEQUE">Cheque</MenuItem>
-                                    <MenuItem value="DD">Demand Draft</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <DatePicker
-                                label="Payment Date"
-                                value={date}
-                                onChange={(newValue) => setDate(newValue)}
-                                slotProps={{
-                                    textField: { fullWidth: true }
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                label="Remarks"
-                                fullWidth
-                                multiline
-                                rows={2}
-                                value={remarks}
-                                onChange={(e) => setRemarks(e.target.value)}
-                            />
-                        </Grid>
+                {bill && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        Paying against Bill <strong>{bill.billNo}</strong> (Balance: ₹{bill.balance})
+                    </Alert>
+                )}
+
+                <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                    <Grid item xs={12}>
+                        <TextField
+                            autoFocus
+                            label="Amount"
+                            type="number"
+                            fullWidth
+                            required
+                            value={amount}
+                            onChange={(e) => {
+                                setAmount(e.target.value);
+                                if (error) setError(null); // Clear error on change
+                            }}
+                            error={!!error && error.includes('amount')}
+                            helperText={error && error.includes('amount') ? error : undefined}
+                            InputProps={{
+                                startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>
+                            }}
+                        />
                     </Grid>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={onClose}>Cancel</Button>
-                    <Button
-                        onClick={handleSubmit}
-                        variant="contained"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={20} /> : null}
-                    >
-                        Collect Payment
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </LocalizationProvider>
+                    <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                            <InputLabel>Payment Mode</InputLabel>
+                            <Select
+                                value={paymentMode}
+                                label="Payment Mode"
+                                onChange={(e) => setPaymentMode(e.target.value)}
+                            >
+                                <MenuItem value="CASH">Cash</MenuItem>
+                                <MenuItem value="ONLINE">Online / UPI</MenuItem>
+                                <MenuItem value="CHEQUE">Cheque</MenuItem>
+                                <MenuItem value="DD">Demand Draft</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <DatePicker
+                            label="Payment Date"
+                            value={date}
+                            onChange={(newValue) => setDate(newValue)}
+                            slotProps={{
+                                textField: { fullWidth: true }
+                            }}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField
+                            label="Remarks"
+                            fullWidth
+                            multiline
+                            rows={2}
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                        />
+                    </Grid>
+                </Grid>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Cancel</Button>
+                <Button
+                    onClick={handleSubmit}
+                    variant="contained"
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={20} /> : null}
+                >
+                    Collect Payment
+                </Button>
+            </DialogActions>
+        </Dialog>
+
     );
 };
 

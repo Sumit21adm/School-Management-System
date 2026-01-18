@@ -62,5 +62,12 @@ export class UpdatePrintSettingsDto {
 
     @IsOptional()
     @IsString()
+    @IsOptional()
+    @IsString()
     idCardNote?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(50)
+    timezone?: string;
 }

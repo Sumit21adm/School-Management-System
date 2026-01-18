@@ -21,6 +21,7 @@ export class PrintSettingsService {
                 website: '',
                 logoUrl: null,
                 tagline: '',
+                timezone: 'Asia/Kolkata',
             };
         }
 

@@ -27,8 +27,7 @@ import {
     CheckCircle as ActivateIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+
 import { sessionService } from '../../lib/api';
 import { format, parse } from 'date-fns';
 import PageHeader from '../../components/PageHeader';
@@ -261,66 +260,66 @@ export default function SessionsManagement() {
                     {editingSession ? 'Edit Session' : 'Add New Session'}
                 </DialogTitle>
                 <DialogContent>
-                    <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                            {error && (
-                                <Alert severity="error" onClose={() => setError('')}>
-                                    {error}
-                                </Alert>
-                            )}
-                            <TextField
-                                label="Session Name"
-                                value={formData.name}
-                                fullWidth
-                                disabled
-                                helperText={!formData.name ? "Select start and end dates to auto-generate Session Names" : ""}
-                                InputProps={{
-                                    readOnly: true,
-                                }}
-                            />
-                            <DatePicker
-                                label="Start Date"
-                                value={formData.startDate ? parse(formData.startDate, 'yyyy-MM-dd', new Date()) : null}
-                                onChange={(date) => {
-                                    const newStartDate = date ? format(date, 'yyyy-MM-dd') : '';
-                                    const newName = generateSessionName(newStartDate, formData.endDate);
-                                    setFormData({
-                                        ...formData,
-                                        startDate: newStartDate,
-                                        name: newName || formData.name,
-                                    });
-                                }}
-                                slotProps={{
-                                    textField: {
-                                        fullWidth: true,
-                                        helperText: 'Academic year starts (usually April 1st)',
-                                    },
-                                }}
-                            />
-                            <DatePicker
-                                label="End Date"
-                                value={formData.endDate ? parse(formData.endDate, 'yyyy-MM-dd', new Date()) : null}
-                                onChange={(date) => {
-                                    const newEndDate = date ? format(date, 'yyyy-MM-dd') : '';
-                                    const newName = generateSessionName(formData.startDate, newEndDate);
-                                    setFormData({
-                                        ...formData,
-                                        endDate: newEndDate,
-                                        name: newName || formData.name,
-                                    });
-                                }}
-                                slotProps={{
-                                    textField: {
-                                        fullWidth: true,
-                                        helperText: 'Academic year ends (usually March 31st)',
-                                    },
-                                }}
-                            />
-                            <Alert severity="info" sx={{ mt: 1 }}>
-                                Academic sessions typically run from April 1st to March 31st of the following year.
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                        {error && (
+                            <Alert severity="error" onClose={() => setError('')}>
+                                {error}
                             </Alert>
-                        </Box>
-                    </LocalizationProvider>
+                        )}
+                        <TextField
+                            label="Session Name"
+                            value={formData.name}
+                            fullWidth
+                            disabled
+                            helperText={!formData.name ? "Select start and end dates to auto-generate Session Names" : ""}
+                            InputProps={{
+                                readOnly: true,
+                            }}
+                        />
+                        <DatePicker
+                            label="Start Date"
+                            value={formData.startDate ? parse(formData.startDate, 'yyyy-MM-dd', new Date()) : null}
+                            onChange={(date) => {
+                                const newStartDate = date ? format(date, 'yyyy-MM-dd') : '';
+                                const newName = generateSessionName(newStartDate, formData.endDate);
+                                setFormData({
+                                    ...formData,
+                                    startDate: newStartDate,
+                                    name: newName || formData.name,
+                                });
+                            }}
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    helperText: 'Academic year starts (usually April 1st)',
+                                },
+                            }}
+                        />
+                        <DatePicker
+                            label="End Date"
+                            value={formData.endDate ? parse(formData.endDate, 'yyyy-MM-dd', new Date()) : null}
+                            onChange={(date) => {
+                                const newEndDate = date ? format(date, 'yyyy-MM-dd') : '';
+                                const newName = generateSessionName(formData.startDate, newEndDate);
+                                setFormData({
+                                    ...formData,
+                                    endDate: newEndDate,
+                                    name: newName || formData.name,
+                                });
+                            }}
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    helperText: 'Academic year ends (usually March 31st)',
+                                },
+                            }}
+                        />
+                        <Alert severity="info" sx={{ mt: 1 }}>
+                            Academic sessions typically run from April 1st to March 31st of the following year.
+                        </Alert>
+                    </Box>
+
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDialog}>Cancel</Button>

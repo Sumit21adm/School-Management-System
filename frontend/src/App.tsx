@@ -18,6 +18,10 @@ import FeeStructure from './pages/settings/FeeStructure';
 import SessionsManagement from './pages/settings/SessionsManagement';
 import SchoolSettings from './pages/settings/SchoolSettings';
 import StudentDiscountsPage from './pages/students/StudentDiscountsPage';
+
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enGB } from 'date-fns/locale/en-GB';
 import StudentPromotions from './pages/promotions/StudentPromotions';
 import { processSyncQueue } from './lib/db';
 import { SessionProvider } from './contexts/SessionContext';
@@ -92,67 +96,69 @@ function AppContent() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <SessionProvider>
-          <Routes>
-            <Route path="/login" element={
-              !isAuthenticated ? (
-                <Login onLogin={() => setIsAuthenticated(true)} />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            } />
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
+          <SessionProvider>
+            <Routes>
+              <Route path="/login" element={
+                !isAuthenticated ? (
+                  <Login onLogin={() => setIsAuthenticated(true)} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } />
 
-            {/* Protected Routes */}
-            <Route element={isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
-              <Route path="/" element={<Dashboard />} />
+              {/* Protected Routes */}
+              <Route element={isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
+                <Route path="/" element={<Dashboard />} />
 
-              {/* Admissions Routes */}
-              <Route path="/admissions" element={<AdmissionList />} />
-              <Route path="/admissions/new" element={<AdmissionForm />} />
-              <Route path="/admissions/edit/:id" element={<AdmissionForm />} />
+                {/* Admissions Routes */}
+                <Route path="/admissions" element={<AdmissionList />} />
+                <Route path="/admissions/new" element={<AdmissionForm />} />
+                <Route path="/admissions/edit/:id" element={<AdmissionForm />} />
 
-              {/* Fee Management Routes */}
-              <Route path="/fees/collection" element={<FeeCollection />} />
-              <Route path="/fees/reports" element={<FeeReports />} />
-              <Route path="/fees/collection-enhanced" element={<EnhancedFeeCollection />} />
-              <Route path="/fees/demand-bills" element={<DemandBillGeneration />} />
+                {/* Fee Management Routes */}
+                <Route path="/fees/collection" element={<FeeCollection />} />
+                <Route path="/fees/reports" element={<FeeReports />} />
+                <Route path="/fees/collection-enhanced" element={<EnhancedFeeCollection />} />
+                <Route path="/fees/demand-bills" element={<DemandBillGeneration />} />
 
-              {/* Examination Routes */}
-              <Route path="/exams" element={<ExamList />} />
-              <Route path="/exams/:id" element={<ExamDetails />} />
-              <Route path="/examination/configuration" element={<ExamConfiguration />} />
+                {/* Examination Routes */}
+                <Route path="/exams" element={<ExamList />} />
+                <Route path="/exams/:id" element={<ExamDetails />} />
+                <Route path="/examination/configuration" element={<ExamConfiguration />} />
 
-              {/* Settings Routes */}
-              <Route path="/settings/fee-structure" element={<FeeStructure />} />
-              <Route path="/settings/sessions" element={<SessionsManagement />} />
-              <Route path="/settings/print" element={<SchoolSettings />} />
-              <Route path="/settings/users" element={<UserManagement />} />
-              <Route path="/settings/roles" element={<RoleSettings />} />
-              <Route path="/settings/classes" element={<ClassManagement />} />
-              <Route path="/settings/backup" element={<BackupRestore />} />
-              <Route path="/classes/:id" element={<ClassDetails />} />
-              <Route path="/promotions" element={<StudentPromotions />} />
-              <Route path="/settings/subjects" element={<SubjectList />} />
+                {/* Settings Routes */}
+                <Route path="/settings/fee-structure" element={<FeeStructure />} />
+                <Route path="/settings/sessions" element={<SessionsManagement />} />
+                <Route path="/settings/print" element={<SchoolSettings />} />
+                <Route path="/settings/users" element={<UserManagement />} />
+                <Route path="/settings/roles" element={<RoleSettings />} />
+                <Route path="/settings/classes" element={<ClassManagement />} />
+                <Route path="/settings/backup" element={<BackupRestore />} />
+                <Route path="/classes/:id" element={<ClassDetails />} />
+                <Route path="/promotions" element={<StudentPromotions />} />
+                <Route path="/settings/subjects" element={<SubjectList />} />
 
-              {/* Student Routes */}
-              <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
+                {/* Student Routes */}
+                <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
 
-              {/* Transport Routes */}
-              <Route path="/transport/vehicles" element={<VehicleList />} />
-              <Route path="/transport/drivers" element={<DriverList />} />
-              <Route path="/transport/routes" element={<RouteList />} />
-              <Route path="/transport/assignments" element={<TransportAssignments />} />
-              <Route path="/transport/reports" element={<TransportReports />} />
-              <Route path="/transport/fare-slabs" element={<FareSlabs />} />
+                {/* Transport Routes */}
+                <Route path="/transport/vehicles" element={<VehicleList />} />
+                <Route path="/transport/drivers" element={<DriverList />} />
+                <Route path="/transport/routes" element={<RouteList />} />
+                <Route path="/transport/assignments" element={<TransportAssignments />} />
+                <Route path="/transport/reports" element={<TransportReports />} />
+                <Route path="/transport/fare-slabs" element={<FareSlabs />} />
 
-              {/* Staff/Users Routes */}
-              <Route path="/users" element={<Users />} />
-            </Route>
+                {/* Staff/Users Routes */}
+                <Route path="/users" element={<Users />} />
+              </Route>
 
-            {/* Catch all redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </SessionProvider>
+              {/* Catch all redirect */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </SessionProvider>
+        </LocalizationProvider>
       </SnackbarProvider>
     </ThemeProvider>
   );

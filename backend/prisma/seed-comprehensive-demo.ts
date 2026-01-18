@@ -22,6 +22,44 @@ function randomItem<T>(arr: T[]): T {
 async function seedCoreSettings() {
     logStep('Phase 1: Establishing Core Settings');
 
+    // 1.0 Role Settings (New Requirement)
+    const ROLE_DEFINITIONS = [
+        // Administrative Roles
+        { role: 'SUPER_ADMIN', displayName: 'Super Administrator', description: 'Full system access', isEnabled: true, sortOrder: 1 },
+        { role: 'PRINCIPAL', displayName: 'Principal', description: 'School head', isEnabled: true, sortOrder: 2 },
+        { role: 'VICE_PRINCIPAL', displayName: 'Vice Principal', description: 'Deputy head', isEnabled: true, sortOrder: 3 },
+        { role: 'ADMIN', displayName: 'Administrator', description: 'School admin', isEnabled: true, sortOrder: 4 },
+        // Academic Roles
+        { role: 'HEAD_OF_DEPARTMENT', displayName: 'Head of Department', description: 'HOD', isEnabled: true, sortOrder: 10 },
+        { role: 'COORDINATOR', displayName: 'Coordinator', description: 'Academic coordinator', isEnabled: true, sortOrder: 11 },
+        { role: 'SECTION_INCHARGE', displayName: 'Section In-charge', description: 'Class teacher', isEnabled: true, sortOrder: 12 },
+        { role: 'TEACHER', displayName: 'Teacher', description: 'Teaching staff', isEnabled: true, sortOrder: 13 },
+        // Finance & Office
+        { role: 'ACCOUNTANT', displayName: 'Accountant', description: 'Finance & Fees', isEnabled: true, sortOrder: 20 },
+        { role: 'RECEPTIONIST', displayName: 'Receptionist', description: 'Front desk', isEnabled: true, sortOrder: 21 },
+        { role: 'LIBRARIAN', displayName: 'Librarian', description: 'Library', isEnabled: true, sortOrder: 22 },
+        { role: 'LAB_ASSISTANT', displayName: 'Lab Assistant', description: 'Lab support', isEnabled: false, sortOrder: 23 },
+        { role: 'OFFICE_STAFF', displayName: 'Office Staff', description: 'General staff', isEnabled: true, sortOrder: 24 },
+        { role: 'CLERK', displayName: 'Clerk', description: 'Clerical work', isEnabled: false, sortOrder: 25 },
+        // Transport & Support
+        { role: 'DRIVER', displayName: 'Driver', description: 'Bus driver', isEnabled: true, sortOrder: 30 },
+        { role: 'CONDUCTOR', displayName: 'Conductor', description: 'Bus support', isEnabled: true, sortOrder: 31 },
+        { role: 'SECURITY', displayName: 'Security Guard', description: 'Security', isEnabled: true, sortOrder: 32 },
+        { role: 'PEON', displayName: 'Peon', description: 'Support', isEnabled: false, sortOrder: 33 },
+        // External
+        { role: 'PARENT', displayName: 'Parent', description: 'Parent Portal', isEnabled: false, sortOrder: 90 },
+        { role: 'STUDENT', displayName: 'Student', description: 'Student Portal', isEnabled: false, sortOrder: 91 },
+    ];
+
+    for (const roleDef of ROLE_DEFINITIONS) {
+        await prisma.roleSettings.upsert({
+            where: { role: roleDef.role },
+            update: { displayName: roleDef.displayName, sortOrder: roleDef.sortOrder },
+            create: roleDef
+        });
+    }
+    console.log('   ✅ Role Settings configured');
+
     // 1.1 Print Settings (School Identity)
     const schoolName = 'Global Excellence Academy';
     await prisma.printSettings.upsert({
@@ -68,6 +106,7 @@ async function seedCoreSettings() {
         { name: 'Exam Fee', frequency: 'Yearly', isRecurring: false },
         { name: 'Computer Fee', frequency: 'Monthly', isRecurring: true },
         { name: 'Late Fee', frequency: 'One-time', description: 'Penalty for overdue payment' },
+        { name: 'Advance Payment', frequency: 'One-time', description: 'Advance fee payment for future use', isRecurring: false },
     ];
 
     for (const f of feeTypes) {
@@ -484,6 +523,31 @@ async function seedTransactions() {
     }
 
     console.log(`   ✅ Financial History seeded (Defaulter case created)`);
+
+    // 5.3 Fee Discounts
+    const siblingStudentId = 'STU-2024-0002'; // Riya Sharma
+    const tuitionFeeId = tuitionFee.id;
+
+    await prisma.studentFeeDiscount.upsert({
+        where: {
+            studentId_feeTypeId_sessionId: {
+                studentId: siblingStudentId,
+                feeTypeId: tuitionFeeId,
+                sessionId: activeSession!.id
+            }
+        },
+        update: {},
+        create: {
+            studentId: siblingStudentId,
+            feeTypeId: tuitionFeeId,
+            sessionId: activeSession!.id,
+            discountType: DiscountType.PERCENTAGE,
+            discountValue: 50.00, // 50% Sibling Discount
+            reason: 'Sibling Concession',
+            approvedBy: 'Principal'
+        }
+    });
+    console.log(`   ✅ Sibling Discount applied to ${siblingStudentId}`);
 }
 
 // ============================================
@@ -499,6 +563,27 @@ async function seedAcademics() {
         update: {},
         create: { name: 'Half-Yearly', description: 'Term 1 End Exam' }
     });
+
+    // 6.1.5 Class-Subject Mapping (New)
+    const class1 = await prisma.schoolClass.findUnique({ where: { name: 'Class-1' } });
+    const subjects = await prisma.subject.findMany();
+
+    if (class1 && subjects.length > 0) {
+        for (const sub of subjects) {
+            await prisma.classSubject.upsert({
+                where: { classId_subjectId: { classId: class1.id, subjectId: sub.id } },
+                update: {},
+                create: {
+                    classId: class1.id,
+                    subjectId: sub.id,
+                    isCompulsory: true,
+                    weeklyPeriods: 5,
+                    order: 1
+                }
+            });
+        }
+        console.log(`   ✅ Subjects mapped to Class-1`);
+    }
 
     // 6.2 Schedule Exam
     const existingExam = await prisma.exam.findFirst({ where: { name: 'Half Yearly Exam 2024' } });
@@ -516,6 +601,41 @@ async function seedAcademics() {
     }
 
     console.log(`   ✅ Exam Data configured`);
+
+    // 6.3 Exam Results (New)
+    const exam = await prisma.exam.findFirst({ where: { name: 'Half Yearly Exam 2024' } });
+    const student = await prisma.studentDetails.findFirst({ where: { studentId: 'STU-2024-0001' } }); // Rohan
+
+    if (exam && student) {
+        // Find subjects for Class-1
+        const classSubjects = await prisma.classSubject.findMany({
+            where: { classId: (await prisma.schoolClass.findUnique({ where: { name: 'Class-1' } }))?.id },
+            include: { subject: true }
+        });
+
+        for (const cs of classSubjects) {
+            await prisma.examResult.upsert({
+                where: {
+                    examId_studentId_subjectId: {
+                        examId: exam.id,
+                        studentId: student.studentId,
+                        subjectId: cs.subjectId
+                    }
+                },
+                update: {}, // Don't overwrite if exists
+                create: {
+                    examId: exam.id,
+                    studentId: student.studentId,
+                    subjectId: cs.subjectId,
+                    marksObtained: Math.floor(Math.random() * (100 - 60) + 60), // Random 60-100
+                    maxMarks: 100,
+                    grade: 'A',
+                    remarks: 'Good Performance'
+                }
+            });
+        }
+        console.log(`   ✅ Exam Results entered for ${student.name}`);
+    }
 }
 
 
