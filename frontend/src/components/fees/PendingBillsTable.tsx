@@ -133,7 +133,7 @@ const Row = (props: { bill: Bill, onPay: (bill: Bill) => void }) => {
 const PendingBillsTable: React.FC<PendingBillsTableProps> = ({ bills, onPay }) => {
     if (bills.length === 0) {
         return (
-            <Box p={3} textAlign="center" bgcolor="grey.50" borderRadius={1}>
+            <Box p={3} textAlign="center" bgcolor="background.default" borderRadius={1}>
                 <Typography variant="body1" color="text.secondary">No pending bills found.</Typography>
             </Box>
         );
@@ -142,7 +142,7 @@ const PendingBillsTable: React.FC<PendingBillsTableProps> = ({ bills, onPay }) =
     return (
         <TableContainer component={Paper} variant="outlined">
             <Table>
-                <TableHead sx={{ bgcolor: 'grey.100' }}>
+                <TableHead>
                     <TableRow>
                         <TableCell />
                         <TableCell sx={{ fontWeight: 'bold' }}>Bill No</TableCell>

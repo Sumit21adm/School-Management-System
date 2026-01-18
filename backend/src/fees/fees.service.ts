@@ -489,6 +489,23 @@ export class FeesService {
             throw new NotFoundException('Session not found');
         }
 
+        // Determine target months
+        const targetMonths: number[] = dto.months && dto.months.length > 0
+            ? dto.months.sort((a, b) => a - b)
+            : (dto.month ? [dto.month] : []);
+
+        if (targetMonths.length === 0) {
+            throw new Error('No months selected for bill generation');
+        }
+
+        // Month names for period label
+        const monthNames = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        // e.g. "Apr-Jun 2026"
+        const periodLabel = targetMonths.map(m => monthNames[m - 1]).join('-') + ` ${dto.year}`;
+        const coveredMonthsStr = targetMonths.join(',');
+
         // Determine which students to generate bills for
         let students: any[] = [];
         const studentInclude = {
@@ -529,6 +546,7 @@ export class FeesService {
                 name: { contains: 'Transport' }, // robust search
             }
         });
+
         const results: Array<{
             studentId: string;
             billNo?: string;
@@ -536,14 +554,16 @@ export class FeesService {
             amount?: number;
             reason?: string;
         }> = [];
+
         const billDate = new Date();
-        // Due date: 10th of the month following the bill month
+        // Due date: 10th of the month following the LAST bill month
         let dueDate: Date;
         if (dto.dueDate) {
             dueDate = new Date(dto.dueDate);
         } else {
-            // Calculate next month from bill month/year
-            let dueMonth = dto.month + 1;
+            // Calculate next month from last bill month
+            const lastMonth = targetMonths[targetMonths.length - 1]; // Safe as length > 0 checked above
+            let dueMonth = lastMonth + 1;
             let dueYear = dto.year;
             if (dueMonth > 12) {
                 dueMonth = 1;
@@ -554,23 +574,39 @@ export class FeesService {
 
         for (const student of students) {
             try {
-                // Check if bill already exists
-                const existing = await this.prisma.demandBill.findUnique({
+                // Check for Overlaps with EXISTING bills
+                // We check if any of our targetMonths are already covered by existing bills
+                const existingBills = await this.prisma.demandBill.findMany({
                     where: {
-                        studentId_sessionId_month_year: {
-                            studentId: student.studentId,
-                            sessionId: dto.sessionId,
-                            month: dto.month,
-                            year: dto.year,
-                        },
+                        studentId: student.studentId,
+                        sessionId: dto.sessionId,
+                        year: dto.year // Assuming bills are within same year for simplicity of overlap check
                     },
+                    select: { month: true, coveredMonths: true, billNo: true }
                 });
 
-                if (existing) {
+                let overlapFound = false;
+                for (const bill of existingBills) {
+                    // Check 'month' field (start month)
+                    if (targetMonths.includes(bill.month)) {
+                        overlapFound = true;
+                        break;
+                    }
+                    // Check 'coveredMonths' if exists
+                    if (bill.coveredMonths) {
+                        const covered = bill.coveredMonths.split(',').map(Number);
+                        if (targetMonths.some(tm => covered.includes(tm))) {
+                            overlapFound = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (overlapFound) {
                     results.push({
                         studentId: student.studentId,
                         status: 'skipped',
-                        reason: 'Bill already exists',
+                        reason: 'Bill already exists for one or more selected months',
                     });
                     continue;
                 }
@@ -609,141 +645,132 @@ export class FeesService {
                     },
                 });
 
-                // Calculate previous dues
+                // Calculate previous dues (using start month reference)
+                const startMonth = targetMonths[0]; // Logic uses start month to determine "previous"
                 const previousDues = await this.calculatePreviousDues(
                     student.studentId,
                     dto.sessionId,
-                    dto.month,
+                    startMonth,
                     dto.year
                 );
 
-                // Calculate total and discounts
+                // --- CALCULATION LOOP ---
                 let totalAmount = 0;
                 let totalDiscount = 0;
                 const billItems: Array<{
                     feeTypeId: number;
                     amount: Decimal;
                     discountAmount: Decimal;
+                    description?: string;
                 }> = [];
 
-                // Filter fee structure items by selected fee types (if provided)
-                const itemsToInclude = dto.selectedFeeTypeIds && dto.selectedFeeTypeIds.length > 0
-                    ? feeStructure.feeItems.filter(item => dto.selectedFeeTypeIds!.includes(item.feeTypeId))
-                    : feeStructure.feeItems;
+                // We loop through each month in the period to aggregate fees
+                for (const m of targetMonths) {
+                    const monthName = monthNames[m - 1];
 
-                for (const item of itemsToInclude) {
-                    // Skip Transport Fee in this loop (it's handled dynamically below)
-                    if (transportFeeType && item.feeTypeId === transportFeeType.id) {
-                        continue;
-                    }
+                    // Filter fee structure items by selected fee types (if provided)
+                    const itemsToInclude = dto.selectedFeeTypeIds && dto.selectedFeeTypeIds.length > 0
+                        ? feeStructure.feeItems.filter(item => dto.selectedFeeTypeIds!.includes(item.feeTypeId))
+                        : feeStructure.feeItems;
 
-                    const amount = Number(item.amount);
-                    totalAmount += amount;
-
-                    let itemDiscount = 0;
-                    const discount = discounts.find(d => d.feeTypeId === item.feeTypeId);
-                    if (discount) {
-                        itemDiscount = discount.discountType === 'PERCENTAGE'
-                            ? (amount * Number(discount.discountValue)) / 100
-                            : Number(discount.discountValue);
-                        totalDiscount += itemDiscount;
-                    }
-
-                    billItems.push({
-                        feeTypeId: item.feeTypeId,
-                        amount: new Decimal(amount),
-                        discountAmount: new Decimal(itemDiscount),
-                    });
-                }
-
-                // Add Transport Fee if applicable
-                // Calculate based on stop distance using fare slabs
-                if (transportFeeType && student.transport && student.transport.status === 'active' && student.transport.route) {
-                    const shouldIncludeTransport = !dto.selectedFeeTypeIds || dto.selectedFeeTypeIds.includes(transportFeeType.id);
-
-                    if (shouldIncludeTransport) {
-                        // Get distances from pickup and drop stops
-                        const pickupDistance = student.transport.pickupStop?.distanceFromSchool
-                            ? Number(student.transport.pickupStop.distanceFromSchool)
-                            : 0;
-                        const dropDistance = student.transport.dropStop?.distanceFromSchool
-                            ? Number(student.transport.dropStop.distanceFromSchool)
-                            : 0;
-
-                        // Use the higher distance for billing (student travels this far)
-                        const maxDistance = Math.max(pickupDistance, dropDistance);
-
-                        // Lookup fare slab for this distance
-                        let transportAmount = 0;
-                        if (maxDistance > 0) {
-                            const fareSlab = await this.prisma.transportFareSlab.findFirst({
-                                where: {
-                                    isActive: true,
-                                    minDistance: { lte: maxDistance },
-                                    maxDistance: { gte: maxDistance }
-                                }
-                            });
-                            transportAmount = fareSlab ? Number(fareSlab.monthlyFee) : 0;
+                    for (const item of itemsToInclude) {
+                        // Skip Transport Fee in this loop (it's handled dynamically below)
+                        if (transportFeeType && item.feeTypeId === transportFeeType.id) {
+                            continue;
                         }
 
-                        // Removed fallback to route.monthlyFee as we are strictly distance-based now
-                        // if (transportAmount === 0 && student.transport.route.monthlyFee) {
-                        //     transportAmount = Number(student.transport.route.monthlyFee);
-                        // }
+                        // Check frequency? 
+                        // If Monthly -> Add for every month.
+                        // If Yearly -> Add ONLY for the first month of the period? Or distribute?
+                        // Assuming "Yearly" fees are usually added in specific months (e.g. April).
+                        // Logic: If user explicit selected this fee type (or "All"), we include it.
+                        // If frequency is 'Yearly', we should probably only add it ONCE per session.
+                        // But for now, we follow "Demand Bill" logic: user selects types to bill.
+                        // If user selects "Annual Charges" and generates for "Apr-May",
+                        // should it be charged twice? Usually NO.
+                        // FIX: If frequency is One-time/Yearly, add only ONCE (for the first month).
+                        const isRecurring = item.feeType.frequency === 'Monthly';
+                        if (!isRecurring && m !== targetMonths[0]) {
+                            // Skip non-recurring fees for subsequent months in the batch
+                            continue;
+                        }
 
-                        totalAmount += transportAmount;
+                        const amount = Number(item.amount);
+                        totalAmount += amount;
 
-                        // Implement Transport Discount
-                        let transportDiscount = 0;
-                        if (student.discounts && student.discounts.length > 0) {
-                            const discountRecord = student.discounts.find(
-                                d => d.feeTypeId === transportFeeType.id && d.sessionId === dto.sessionId
-                            );
-
-                            if (discountRecord) {
-                                if (discountRecord.discountType === 'PERCENTAGE') {
-                                    transportDiscount = (transportAmount * Number(discountRecord.discountValue)) / 100;
-                                } else {
-                                    transportDiscount = Number(discountRecord.discountValue);
-                                }
-                                // Cap discount at total amount
-                                transportDiscount = Math.min(transportDiscount, transportAmount);
-                            }
+                        let itemDiscount = 0;
+                        const discount = discounts.find(d => d.feeTypeId === item.feeTypeId);
+                        if (discount) {
+                            itemDiscount = discount.discountType === 'PERCENTAGE'
+                                ? (amount * Number(discount.discountValue)) / 100
+                                : Number(discount.discountValue);
+                            totalDiscount += itemDiscount;
                         }
 
                         billItems.push({
-                            feeTypeId: transportFeeType.id,
-                            amount: new Decimal(transportAmount),
-                            discountAmount: new Decimal(transportDiscount),
+                            feeTypeId: item.feeTypeId,
+                            amount: new Decimal(amount),
+                            discountAmount: new Decimal(itemDiscount),
+                            description: isRecurring && targetMonths.length > 1 ? `${item.feeType.name} (${monthName})` : undefined
                         });
                     }
-                }
 
-                // Auto-calculate and add late fees based on NUMBER OF OVERDUE MONTHS
-                // Late Fee = (Late Fee Rate) × (Number of Overdue Months)
+                    // Add Transport Fee if applicable (Monthly)
+                    if (transportFeeType && student.transport && student.transport.status === 'active') {
+                        const shouldIncludeTransport = !dto.selectedFeeTypeIds || dto.selectedFeeTypeIds.includes(transportFeeType.id);
+
+                        if (shouldIncludeTransport) {
+                            // Transport is strictly monthly, so add for each month
+                            // Get distances...
+                            const pickupDistance = student.transport.pickupStop?.distanceFromSchool ? Number(student.transport.pickupStop.distanceFromSchool) : 0;
+                            const dropDistance = student.transport.dropStop?.distanceFromSchool ? Number(student.transport.dropStop.distanceFromSchool) : 0;
+                            const maxDistance = Math.max(pickupDistance, dropDistance);
+
+                            let transportAmount = 0;
+                            if (maxDistance > 0) {
+                                const fareSlab = await this.prisma.transportFareSlab.findFirst({
+                                    where: { isActive: true, minDistance: { lte: maxDistance }, maxDistance: { gte: maxDistance } }
+                                });
+                                transportAmount = fareSlab ? Number(fareSlab.monthlyFee) : 0;
+                            }
+
+                            if (transportAmount > 0) {
+                                totalAmount += transportAmount;
+
+                                let transportDiscount = 0;
+                                if (student.discounts) {
+                                    const discountRecord = student.discounts.find(d => d.feeTypeId === transportFeeType.id && d.sessionId === dto.sessionId);
+                                    if (discountRecord) {
+                                        transportDiscount = discountRecord.discountType === 'PERCENTAGE'
+                                            ? (transportAmount * Number(discountRecord.discountValue)) / 100
+                                            : Number(discountRecord.discountValue);
+                                        transportDiscount = Math.min(transportDiscount, transportAmount);
+                                    }
+                                }
+
+                                billItems.push({
+                                    feeTypeId: transportFeeType.id,
+                                    amount: new Decimal(transportAmount),
+                                    discountAmount: new Decimal(transportDiscount),
+                                    description: targetMonths.length > 1 ? `Transport Fee (${monthName})` : undefined
+                                });
+                            }
+                        }
+                    }
+                } // End month loop
+
+                // Auto-calculate Late Fee (Once per bill, typically based on previous dues)
                 if (dto.autoCalculateLateFees !== false) {
-                    // Get late fee from fee structure for this class
-                    const lateFeeItem = feeStructure.feeItems.find(
-                        item => item.feeType.name === 'Late Fee'
-                    );
-
+                    const lateFeeItem = feeStructure.feeItems.find(item => item.feeType.name === 'Late Fee');
                     if (lateFeeItem) {
-                        // Count how many previous months have unpaid balance
-                        const overdueMonths = await this.countOverdueMonths(
-                            student.studentId,
-                            dto.sessionId,
-                            dto.month,
-                            dto.year
-                        );
-
+                        const overdueMonths = await this.countOverdueMonths(student.studentId, dto.sessionId, startMonth, dto.year);
                         if (overdueMonths > 0) {
-                            const lateFeePerMonth = Number(lateFeeItem.amount);
-                            const totalLateFee = lateFeePerMonth * overdueMonths;
-
+                            const totalLateFee = Number(lateFeeItem.amount) * overdueMonths;
                             billItems.push({
                                 feeTypeId: lateFeeItem.feeTypeId,
                                 amount: new Decimal(totalLateFee),
                                 discountAmount: new Decimal(0),
+                                description: `Late Fee (${overdueMonths} months overdue)`
                             });
                             totalAmount += totalLateFee;
                         }
@@ -751,9 +778,10 @@ export class FeesService {
                 }
 
                 const netAmount = totalAmount - totalDiscount + previousDues;
-                const billNo = `BILL${dto.year}${String(dto.month).padStart(2, '0')}${Date.now()}`;
+                // Unique Bill Number
+                const billNo = `BILL${dto.year}${String(startMonth).padStart(2, '0')}${Date.now()}`;
 
-                // Calculate available advance (overpayment) and apply to bill
+                // Calculate available advance
                 const availableAdvance = await this.calculateAdvanceBalance(student.studentId, dto.sessionId);
                 const advanceToApply = Math.min(availableAdvance, netAmount);
                 const finalNetAmount = netAmount - advanceToApply;
@@ -764,8 +792,10 @@ export class FeesService {
                         billNo,
                         studentId: student.studentId,
                         sessionId: dto.sessionId,
-                        month: dto.month,
+                        month: startMonth, // Start month of the period
                         year: dto.year,
+                        coveredMonths: coveredMonthsStr, // "4,5,6"
+                        periodLabel: periodLabel,        // "Apr-Jun 2026"
                         billDate,
                         dueDate,
                         totalAmount: new Decimal(totalAmount),

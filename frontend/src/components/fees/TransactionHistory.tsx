@@ -10,12 +10,10 @@ import {
     Button,
     Chip,
     Typography,
-    Box,
-    IconButton
+    Box
 } from '@mui/material';
 import {
-    Download as DownloadIcon,
-    Receipt as ReceiptIcon
+    Download as DownloadIcon
 } from '@mui/icons-material';
 import { feeService } from '../../lib/api';
 
@@ -39,7 +37,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transactions })
 
     if (transactions.length === 0) {
         return (
-            <Box p={3} textAlign="center" bgcolor="grey.50" borderRadius={1}>
+            <Box p={3} textAlign="center" bgcolor="background.default" borderRadius={1}>
                 <Typography variant="body1" color="text.secondary">No transaction history found.</Typography>
             </Box>
         );
@@ -48,7 +46,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transactions })
     return (
         <TableContainer component={Paper} variant="outlined">
             <Table>
-                <TableHead sx={{ bgcolor: 'grey.100' }}>
+                <TableHead>
                     <TableRow>
                         <TableCell sx={{ fontWeight: 'bold' }}>Receipt No</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>

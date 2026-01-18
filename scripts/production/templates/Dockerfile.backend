@@ -1,0 +1,27 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package definition
+COPY package.json ./
+
+# Install ONLY production dependencies
+RUN npm install --omit=dev
+
+# Copy Prisma Schema
+COPY prisma ./prisma/
+
+# Copy Pre-built Code
+COPY dist ./dist/
+
+# Create Uploads Directory
+RUN mkdir -p uploads
+
+# Expose Port
+EXPOSE 3001
+
+# Start Command
+# 1. Run Migrations (Deploy mode = safe for prod)
+# 2. Seed Database (Safe to run multiple times? We should check)
+# 3. Start App
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]

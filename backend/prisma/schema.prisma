@@ -88,6 +88,7 @@ model StudentDetails {
   @@index([status])
   @@index([sessionId])
   @@map("student_details")
+  @@unique([className, section, rollNumber])
 }
 
 // Fee Tables
@@ -174,6 +175,9 @@ model DemandBill {
   student       StudentDetails  @relation(fields: [studentId], references: [studentId])
   session       AcademicSession @relation(fields: [sessionId], references: [id])
   billItems     DemandBillItem[]
+
+  coveredMonths String?  @db.VarChar(50) // e.g. "4,5,6"
+  periodLabel   String?  @db.VarChar(50) // e.g. "Apr-Jun 2026"
 
   @@unique([studentId, sessionId, month, year])
   @@index([studentId])

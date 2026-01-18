@@ -120,13 +120,21 @@ async function seedCoreSettings() {
 
     // 1.4 Classes & Sections
     const classesConfig = [
-        { name: 'Mount-1', displayName: 'Nursery', order: 1 },
+        { name: 'Mount-1', displayName: 'NC', order: 1 },
         { name: 'Mount-2', displayName: 'LKG', order: 2 },
         { name: 'Mount-3', displayName: 'UKG', order: 3 },
-        { name: 'Class-1', displayName: 'Grade 1', order: 4 },
-        { name: 'Class-5', displayName: 'Grade 5', order: 8 },
-        { name: 'Class-10', displayName: 'Grade 10', order: 13 },
-        { name: 'Class-12', displayName: 'Grade 12', order: 15 },
+        { name: 'Class-1', displayName: 'I', order: 4 },
+        { name: 'Class-2', displayName: 'II', order: 5 },
+        { name: 'Class-3', displayName: 'III', order: 6 },
+        { name: 'Class-4', displayName: 'IV', order: 7 },
+        { name: 'Class-5', displayName: 'V', order: 8 },
+        { name: 'Class-6', displayName: 'VI', order: 9 },
+        { name: 'Class-7', displayName: 'VII', order: 10 },
+        { name: 'Class-8', displayName: 'VIII', order: 11 },
+        { name: 'Class-9', displayName: 'IX', order: 12 },
+        { name: 'Class-10', displayName: 'X', order: 13 },
+        { name: 'Class-11', displayName: 'XI', order: 14 },
+        { name: 'Class-12', displayName: 'XII', order: 15 },
     ];
 
     for (const c of classesConfig) {
@@ -386,7 +394,7 @@ async function seedStudents() {
             gender: 'Male',
             className: 'Class-1',
             section: 'A',
-            rollNumber: '1',
+            // rollNumber: '1',
             admissionDate: new Date('2024-04-01'),
             address: '123 Palm Grove, City',
             phone: '9876543210',
@@ -427,7 +435,7 @@ async function seedStudents() {
             gender: 'Female',
             className: 'Class-5',
             section: 'A',
-            rollNumber: '1',
+            // rollNumber: '1',
             admissionDate: new Date('2024-04-01'),
             address: '123 Palm Grove, City',
             phone: '9876543210',
@@ -450,7 +458,7 @@ async function seedStudents() {
             gender: 'Male',
             className: 'Class-1',
             section: 'B',
-            rollNumber: '10',
+            // rollNumber: '10',
             admissionDate: new Date('2024-04-01'),
             address: 'No Money Road',
             phone: '9999988888',
@@ -459,7 +467,89 @@ async function seedStudents() {
         }
     });
 
-    console.log(`   ✅ Students created: Standard, Sibling, and Test Cases`);
+    // 4.4 Bulk Students (Faker)
+    const classes = await prisma.schoolClass.findMany();
+    const headers = ['A', 'B']; // Sections
+
+    console.log('   ... Generating bulk student data (5 per class)');
+
+    for (const cls of classes) {
+        for (let i = 0; i < 5; i++) {
+            const isMale = Math.random() > 0.5;
+            const firstName = faker.person.firstName(isMale ? 'male' : 'female');
+            const lastName = faker.person.lastName();
+            const fullName = `${firstName} ${lastName}`;
+            // Shorten ID to fit VarChar(20). E.g: S24-C1-100
+            const shortClass = cls.name.replace('Class-', 'C').replace('Mount-', 'M');
+            const stdId = `S24-${shortClass}-${100 + i}`;
+
+            // Create Student
+            const student = await prisma.studentDetails.upsert({
+                where: { studentId: stdId },
+                update: {},
+                create: {
+                    studentId: stdId,
+                    name: fullName,
+                    fatherName: faker.person.fullName({ sex: 'male' }),
+                    motherName: faker.person.fullName({ sex: 'female' }),
+                    dob: faker.date.birthdate({ min: 5, max: 18, mode: 'age' }),
+                    gender: isMale ? 'Male' : 'Female',
+                    className: cls.name,
+                    section: i % 2 === 0 ? 'A' : 'B', // Alternate sections
+                    // rollNumber: (20 + i).toString(), // REMOVED: Managed via frontend
+                    admissionDate: new Date('2024-04-01'),
+                    address: faker.location.streetAddress(),
+                    phone: faker.string.numeric(10),
+                    status: 'active',
+                    sessionId: activeSession?.id
+                }
+            });
+
+            // Random Transport (30% chance)
+            if (route && stop && Math.random() > 0.7) {
+                await prisma.studentTransport.upsert({
+                    where: { studentId: stdId },
+                    update: {},
+                    create: {
+                        studentId: stdId,
+                        routeId: route.id,
+                        pickupStopId: stop.id,
+                        dropStopId: stop.id,
+                        transportType: 'both',
+                        startDate: new Date('2024-04-01'),
+                        status: 'active'
+                    }
+                });
+            }
+
+            // Create April Bill (For everyone)
+            const billNo = `BILL-APR-${stdId}`;
+            // 50% paid, 50% unpaid
+            const isPaid = Math.random() > 0.5;
+            const totalFee = 3000 + (cls.name === 'Class-10' ? 1500 : 0); // Approx
+
+            await prisma.demandBill.upsert({
+                where: { billNo },
+                update: {},
+                create: {
+                    billNo,
+                    studentId: stdId,
+                    sessionId: activeSession!.id,
+                    month: 4,
+                    year: 2024,
+                    billDate: new Date('2024-04-01'),
+                    dueDate: new Date('2024-04-10'),
+                    totalAmount: totalFee,
+                    netAmount: totalFee,
+                    paidAmount: isPaid ? totalFee : 0,
+                    status: isPaid ? BillStatus.PAID : BillStatus.PENDING,
+                    sentDate: new Date('2024-04-01')
+                }
+            });
+        }
+    }
+
+    console.log(`   ✅ Students created: Standard, Sibling, and Test Cases + Bulk Data`);
 }
 
 // ============================================
@@ -467,87 +557,148 @@ async function seedStudents() {
 // ============================================
 async function seedTransactions() {
     logStep('Phase 5: Financial Transactions & Bills');
-
     const activeSession = await prisma.academicSession.findFirst({ where: { isActive: true } });
-
-    // 5.1 Generate Bill for Defaulter (April)
-    const defaulterId = 'STU-2024-0099';
-    const billNo = 'BILL-APR-0099';
     const tuitionFee = await prisma.feeType.findFirst({ where: { name: 'Tuition Fee' } });
 
-    if (!tuitionFee) return;
+    // 5.1 Generate Bill for Defaulter (April) - Explicit Case
+    const defaulterId = 'STU-2024-0099';
+    const defaulterBillNo = 'BILL-APR-0099';
 
-    await prisma.demandBill.upsert({
-        where: { billNo },
-        update: {},
-        create: {
-            billNo,
-            studentId: defaulterId,
-            sessionId: activeSession!.id,
-            month: 4,
-            year: 2024,
-            billDate: new Date('2024-04-01'),
-            dueDate: new Date('2024-04-10'),
-            totalAmount: 5000,
-            netAmount: 5000,
-            paidAmount: 2000,
-            status: BillStatus.PARTIALLY_PAID,
-            sentDate: new Date('2024-04-01')
-        }
-    });
-
-    // 5.2 Transaction
-    try {
-        await prisma.feeTransaction.create({
-            data: {
-                transactionId: 'TXN-001-PARTIAL',
+    if (tuitionFee && activeSession) {
+        await prisma.demandBill.upsert({
+            where: { billNo: defaulterBillNo },
+            update: {},
+            create: {
+                billNo: defaulterBillNo,
                 studentId: defaulterId,
-                sessionId: activeSession!.id,
-                receiptNo: 'RCP-001-PARTIAL',
-                amount: 2000,
-                description: 'Partial payment for April',
-                date: new Date('2024-04-05'),
-                yearId: 2024,
-                collectedBy: 'Accountant',
-                paymentDetails: {
-                    create: {
-                        feeTypeId: tuitionFee.id,
-                        amount: 2000,
-                        netAmount: 2000
-                    }
-                }
+                sessionId: activeSession.id,
+                month: 4,
+                year: 2024,
+                billDate: new Date('2024-04-01'),
+                dueDate: new Date('2024-04-10'),
+                totalAmount: 5000,
+                netAmount: 5000,
+                paidAmount: 2000,
+                status: BillStatus.PARTIALLY_PAID,
+                sentDate: new Date('2024-04-01')
             }
         });
-    } catch (e) {
-        console.log('   ℹ️  Transaction already exists (skipped)');
+
+        // 5.2 Transaction for Defaulter
+        try {
+            await prisma.feeTransaction.create({
+                data: {
+                    transactionId: 'TXN-001-PARTIAL',
+                    studentId: defaulterId,
+                    sessionId: activeSession.id,
+                    receiptNo: 'RCP-001-PARTIAL',
+                    amount: 2000,
+                    description: 'Partial payment for April',
+                    date: new Date('2024-04-05'),
+                    yearId: 2024,
+                    collectedBy: 'Accountant',
+                    paymentDetails: {
+                        create: {
+                            feeTypeId: tuitionFee.id,
+                            amount: 2000,
+                            netAmount: 2000
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            // Ignore duplicate
+        }
     }
 
-    console.log(`   ✅ Financial History seeded (Defaulter case created)`);
+    // 5.2.1 Advance Payment (New Feature Test)
+    const advanceFeeType = await prisma.feeType.findFirst({ where: { name: 'Advance Payment' } });
+    if (advanceFeeType) {
+        try {
+            await prisma.feeTransaction.create({
+                data: {
+                    transactionId: 'TXN-ADV-001',
+                    studentId: 'STU-2024-0001', // Rohan (Happy Path)
+                    sessionId: activeSession!.id,
+                    receiptNo: 'RCP-ADV-001',
+                    amount: 5000,
+                    description: 'Advance deposited for future adjustment',
+                    date: new Date('2024-04-02'),
+                    yearId: 2024,
+                    collectedBy: 'Accountant',
+                    paymentDetails: {
+                        create: {
+                            feeTypeId: advanceFeeType.id,
+                            amount: 5000,
+                            netAmount: 5000
+                        }
+                    }
+                }
+            });
+            console.log(`   ✅ Advance Payment (5000) seeded for Rohan`);
+        } catch (e) {
+            console.log('   ℹ️  Advance Transaction already exists');
+        }
+    }
+
+    // 5.2.2 Previous Session Dues (Test Case)
+    // Create a bill for 2023-2024 session
+    const prevSession = await prisma.academicSession.findFirst({ where: { name: '2023-2024' } });
+    if (prevSession && tuitionFee) {
+        const prevBillNo = 'BILL-MAR-2024-0099';
+        try {
+            await prisma.demandBill.upsert({
+                where: { billNo: prevBillNo },
+                update: {},
+                create: {
+                    billNo: prevBillNo,
+                    studentId: defaulterId,
+                    sessionId: prevSession.id,
+                    month: 3, // March 2024
+                    year: 2024,
+                    billDate: new Date('2024-03-01'),
+                    dueDate: new Date('2024-03-10'),
+                    totalAmount: 4000,
+                    netAmount: 4000,
+                    paidAmount: 0,
+                    status: BillStatus.PENDING,
+                    sentDate: new Date('2024-03-01')
+                }
+            });
+            console.log(`   ✅ Previous Session Dues (March 2024) seeded for Defaulter`);
+        } catch (e) {
+            console.log('   ℹ️  Previous Session Dues already exists');
+        }
+    }
+
+    console.log(`   ✅ Financial History seeded (Defaulter, Advance, Previous Dues)`);
 
     // 5.3 Fee Discounts
-    const siblingStudentId = 'STU-2024-0002'; // Riya Sharma
-    const tuitionFeeId = tuitionFee.id;
+    if (tuitionFee) {
+        const siblingStudentId = 'STU-2024-0002'; // Riya Sharma
+        const tuitionFeeId = tuitionFee.id;
 
-    await prisma.studentFeeDiscount.upsert({
-        where: {
-            studentId_feeTypeId_sessionId: {
+        await prisma.studentFeeDiscount.upsert({
+            where: {
+                studentId_feeTypeId_sessionId: {
+                    studentId: siblingStudentId,
+                    feeTypeId: tuitionFeeId,
+                    sessionId: activeSession!.id
+                }
+            },
+            update: {},
+            create: {
                 studentId: siblingStudentId,
                 feeTypeId: tuitionFeeId,
-                sessionId: activeSession!.id
+                sessionId: activeSession!.id,
+                discountType: DiscountType.PERCENTAGE,
+                discountValue: 50.00, // 50% Sibling Discount
+                reason: 'Sibling Concession',
+                approvedBy: 'Principal'
             }
-        },
-        update: {},
-        create: {
-            studentId: siblingStudentId,
-            feeTypeId: tuitionFeeId,
-            sessionId: activeSession!.id,
-            discountType: DiscountType.PERCENTAGE,
-            discountValue: 50.00, // 50% Sibling Discount
-            reason: 'Sibling Concession',
-            approvedBy: 'Principal'
-        }
-    });
-    console.log(`   ✅ Sibling Discount applied to ${siblingStudentId}`);
+        });
+        console.log(`   ✅ Sibling Discount applied to ${siblingStudentId}`);
+    }
 }
 
 // ============================================
@@ -604,37 +755,46 @@ async function seedAcademics() {
 
     // 6.3 Exam Results (New)
     const exam = await prisma.exam.findFirst({ where: { name: 'Half Yearly Exam 2024' } });
-    const student = await prisma.studentDetails.findFirst({ where: { studentId: 'STU-2024-0001' } }); // Rohan
 
-    if (exam && student) {
+    // Find all students in Class-1
+    const class1Students = await prisma.studentDetails.findMany({
+        where: {
+            className: 'Class-1',
+            status: 'active'
+        }
+    });
+
+    if (exam && class1Students.length > 0) {
         // Find subjects for Class-1
         const classSubjects = await prisma.classSubject.findMany({
             where: { classId: (await prisma.schoolClass.findUnique({ where: { name: 'Class-1' } }))?.id },
             include: { subject: true }
         });
 
-        for (const cs of classSubjects) {
-            await prisma.examResult.upsert({
-                where: {
-                    examId_studentId_subjectId: {
+        for (const stu of class1Students) {
+            for (const cs of classSubjects) {
+                await prisma.examResult.upsert({
+                    where: {
+                        examId_studentId_subjectId: {
+                            examId: exam.id,
+                            studentId: stu.studentId,
+                            subjectId: cs.subjectId
+                        }
+                    },
+                    update: {}, // Don't overwrite if exists
+                    create: {
                         examId: exam.id,
-                        studentId: student.studentId,
-                        subjectId: cs.subjectId
+                        studentId: stu.studentId,
+                        subjectId: cs.subjectId,
+                        marksObtained: Math.floor(Math.random() * (100 - 45) + 45), // Random 45-100
+                        maxMarks: 100,
+                        grade: 'A', // Simplified for demo
+                        remarks: 'Automated Result'
                     }
-                },
-                update: {}, // Don't overwrite if exists
-                create: {
-                    examId: exam.id,
-                    studentId: student.studentId,
-                    subjectId: cs.subjectId,
-                    marksObtained: Math.floor(Math.random() * (100 - 60) + 60), // Random 60-100
-                    maxMarks: 100,
-                    grade: 'A',
-                    remarks: 'Good Performance'
-                }
-            });
+                });
+            }
         }
-        console.log(`   ✅ Exam Results entered for ${student.name}`);
+        console.log(`   ✅ Exam Results entered for ${class1Students.length} Students in Class-1`);
     }
 }
 

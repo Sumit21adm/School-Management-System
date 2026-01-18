@@ -161,15 +161,15 @@ export default function FeeTypeAnalysis({ sessionId, classes }: FeeTypeAnalysisP
             <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden' }}>
                 <TableContainer>
                     <Table>
-                        <TableHead sx={{ bgcolor: 'primary.main' }}>
+                        <TableHead>
                             <TableRow>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Fee Type</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Frequency</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Demanded</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Discount</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Collected</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Pending</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600, minWidth: 150 }}>Collection Rate</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>Fee Type</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>Frequency</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="right">Demanded</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="right">Discount</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="right">Collected</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="right">Pending</TableCell>
+                                <TableCell sx={{ fontWeight: 600, minWidth: 150 }}>Collection Rate</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>

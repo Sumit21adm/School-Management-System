@@ -216,8 +216,8 @@ cd "$API_DIR"
 npx prisma generate --schema=prisma/schema.prisma
 npx prisma db push --accept-data-loss
 
-echo " Seeding database with default data..."
-npx prisma db seed || npm run seed || echo " [WARN] Seeding skipped (may already exist)"
+echo " Seeding database with comprehensive demo data..."
+npx ts-node prisma/seed-comprehensive-demo.ts || echo " [WARN] Seeding encountered issues"
 
 echo " [OK] Database ready"
 echo ""

@@ -28,7 +28,13 @@ export class GenerateDemandBillDto {
     @IsNumber()
     @Min(1)
     @Max(12)
-    month: number;
+    @IsOptional()
+    month?: number;
+
+    @IsOptional()
+    @IsArray()
+    @IsNumber({}, { each: true })
+    months?: number[];
 
     @IsNumber()
     year: number;

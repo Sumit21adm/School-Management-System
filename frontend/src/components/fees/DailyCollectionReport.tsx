@@ -33,7 +33,7 @@ import {
     FirstPage,
     LastPage,
 } from '@mui/icons-material';
-import { apiClient } from '../../lib/api';
+import { apiClient, feeService } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/utils';
 
 interface Transaction {
@@ -369,7 +369,7 @@ export default function DailyCollectionReport({ sessionId, classes }: DailyColle
                     direction="row"
                     justifyContent="space-between"
                     alignItems="center"
-                    sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'grey.50' }}
+                    sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}
                 >
                     <Typography variant="body2" color="text.secondary">
                         Showing {paginatedTransactions.length} of {filteredTransactions.length} receipts
@@ -411,7 +411,7 @@ export default function DailyCollectionReport({ sessionId, classes }: DailyColle
 
                 <TableContainer>
                     <Table>
-                        <TableHead sx={{ bgcolor: 'grey.100' }}>
+                        <TableHead>
                             <TableRow>
                                 <TableCell sx={{ fontWeight: 600 }}>Receipt No</TableCell>
                                 <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>

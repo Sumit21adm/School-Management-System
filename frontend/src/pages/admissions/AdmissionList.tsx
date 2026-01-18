@@ -819,7 +819,22 @@ export default function AdmissionList() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {student.className}-{student.section}
+                        {(() => {
+                          const cls = student.className;
+                          const section = student.section;
+                          let display = cls;
+                          if (cls === 'Mount-1') display = 'NC';
+                          else if (cls === 'Mount-2') display = 'LKG';
+                          else if (cls === 'Mount-3') display = 'UKG';
+                          else if (cls.startsWith('Class-')) {
+                            const num = parseInt(cls.split('-')[1]);
+                            if (!isNaN(num)) {
+                              const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+                              if (roman[num - 1]) display = roman[num - 1];
+                            }
+                          }
+                          return `${display}-${section}`;
+                        })()}
                       </Typography>
                     </TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>

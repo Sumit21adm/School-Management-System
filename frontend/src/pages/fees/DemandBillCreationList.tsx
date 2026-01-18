@@ -16,7 +16,8 @@ import {
     InputAdornment,
     TableSortLabel,
 } from '@mui/material';
-import { Printer, Download, Search } from 'lucide-react';
+import { Printer, Download, Search, Trash2, Edit } from 'lucide-react';
+import { IconButton, Tooltip } from '@mui/material';
 
 interface BillItem {
     feeType: string;
@@ -33,6 +34,7 @@ interface BillData {
     amount: number;
     previousDues?: number;
     advanceUsed?: number;
+    paidAmount?: number;
     status: string;
     items: BillItem[];
 }
@@ -41,12 +43,13 @@ interface CreationListProps {
     batchId: string;
     bills: BillData[];
     loading?: boolean;
+    onDelete?: (billNo: string) => void;
 }
 
 type SortColumn = 'studentId' | 'studentName' | 'class' | 'totalDue' | null;
 type SortDirection = 'asc' | 'desc';
 
-const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, loading }) => {
+const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, loading, onDelete }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortColumn, setSortColumn] = useState<SortColumn>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -245,6 +248,9 @@ const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, l
                                     Total Due
                                 </TableSortLabel>
                             </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 700, bgcolor: 'grey.100' }}>
+                                Actions
+                            </TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -275,6 +281,20 @@ const DemandBillCreationList: React.FC<CreationListProps> = ({ batchId, bills, l
                                 </TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 700, bgcolor: 'info.light', color: 'info.dark' }}>
                                     {bill.totalDue.toLocaleString()}
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Tooltip title={(bill.paidAmount && bill.paidAmount > 0) ? "Cannot delete: Payment received" : "Delete Bill"}>
+                                        <span>
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => onDelete && onDelete(bill.billNo)}
+                                                disabled={Boolean(bill.paidAmount && bill.paidAmount > 0)}
+                                            >
+                                                <Trash2 size={16} />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
                                 </TableCell>
                             </TableRow>
                         ))}

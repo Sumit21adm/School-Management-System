@@ -475,7 +475,7 @@ export const routineService = {
 };
 
 export const studentsService = {
-  assignRollNumbers: async (data: { classId: number; sectionId: number; sortBy: 'NAME' | 'ADMISSION_DATE' }) => {
+  assignRollNumbers: async (data: { classId: number; sectionId: number; sortBy: 'NAME' | 'ADMISSION_DATE'; studentIds?: number[] }) => {
     const response = await apiClient.post('/students/assign-roll-numbers', data);
     return response.data;
   }

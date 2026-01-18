@@ -85,16 +85,14 @@ export async function seedCoreSettings() {
     }
     console.log(`   ✅ ${sessions.length} Academic Sessions synced`);
 
-    // 1.3 Fee Types
+    // 1.3 Fee Types (System Standards)
     const feeTypes = [
         { name: 'Tuition Fee', frequency: 'Monthly', isRecurring: true, isDefault: true },
         { name: 'Transport Fee', frequency: 'Monthly', isRecurring: true, description: 'Bus/Van Charges' },
         { name: 'Annual Charges', frequency: 'Yearly', isRecurring: false },
         { name: 'Admission Fee', frequency: 'One-time', isRecurring: false },
-        { name: 'Exam Fee', frequency: 'Yearly', isRecurring: false },
-        { name: 'Computer Fee', frequency: 'Monthly', isRecurring: true },
         { name: 'Late Fee', frequency: 'One-time', description: 'Penalty for overdue payment' },
-        { name: 'Advance Payment', frequency: 'One-time', description: 'Advance fee payment for future use', isRecurring: false },
+        { name: 'Advance Payment', frequency: 'One-time', description: 'Advance fee payment (System)', isRecurring: false },
     ];
 
     for (const f of feeTypes) {
@@ -104,57 +102,7 @@ export async function seedCoreSettings() {
             create: f
         });
     }
-    console.log(`   ✅ ${feeTypes.length} Fee Types defined`);
-
-    // 1.4 Classes & Sections (Basic Structure)
-    const classesConfig = [
-        { name: 'Mount-1', displayName: 'Nursery', order: 1 },
-        { name: 'Mount-2', displayName: 'LKG', order: 2 },
-        { name: 'Mount-3', displayName: 'UKG', order: 3 },
-        { name: 'Class-1', displayName: 'Grade 1', order: 4 },
-        { name: 'Class-10', displayName: 'Grade 10', order: 13 },
-        { name: 'Class-12', displayName: 'Grade 12', order: 15 },
-    ];
-
-    for (const c of classesConfig) {
-        const cls = await prisma.schoolClass.upsert({
-            where: { name: c.name },
-            update: { displayName: c.displayName, order: c.order },
-            create: { ...c, capacity: 40 }
-        });
-
-        // Default 'A' section
-        await prisma.section.upsert({
-            where: { classId_name: { classId: cls.id, name: 'A' } },
-            update: {},
-            create: {
-                classId: cls.id,
-                name: 'A',
-                capacity: 35,
-                roomNo: `Block-${c.order}-A`
-            }
-        });
-    }
-    console.log(`   ✅ Basic Classes & Sections setup complete`);
-
-    // 1.5 Subjects
-    const subjects = [
-        { name: 'Mathematics', code: 'MATH01', color: '#1a73e8' },
-        { name: 'English Literature', code: 'ENG01', color: '#ea4335' },
-        { name: 'Science', code: 'SCI01', color: '#34a853' },
-        { name: 'Social Studies', code: 'SST01', color: '#fbbc05' },
-        { name: 'Computer Applications', code: 'CS01', color: '#4285f4' },
-        { name: 'Hindi', code: 'HIN01', color: '#ff6d01' },
-    ];
-
-    for (const sub of subjects) {
-        await prisma.subject.upsert({
-            where: { name: sub.name },
-            update: { color: sub.color, code: sub.code },
-            create: sub
-        });
-    }
-    console.log(`   ✅ ${subjects.length} Subjects cataloged`);
+    console.log(`   ✅ ${feeTypes.length} System Fee Types defined`);
 }
 
 // ============================================

@@ -88,7 +88,7 @@ function BatchRow({ batch }: { batch: HistoryBatch }) {
                 sx={{
                     '& > *': { borderBottom: 'unset' },
                     cursor: 'pointer',
-                    '&:hover': { bgcolor: 'grey.50' }
+                    '&:hover': { bgcolor: 'action.hover' }
                 }}
                 onClick={() => setOpen(!open)}
             >
@@ -138,7 +138,7 @@ function BatchRow({ batch }: { batch: HistoryBatch }) {
                             </Typography>
                             <Table size="small">
                                 <TableHead>
-                                    <TableRow sx={{ bgcolor: 'grey.100' }}>
+                                    <TableRow>
                                         <TableCell sx={{ fontWeight: 600 }}>Bill No</TableCell>
                                         <TableCell sx={{ fontWeight: 600 }}>Student ID</TableCell>
                                         <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
@@ -242,15 +242,15 @@ export default function BillHistoryReport({ sessionId }: BillHistoryReportProps)
             <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden' }}>
                 <TableContainer>
                     <Table>
-                        <TableHead sx={{ bgcolor: 'primary.main' }}>
+                        <TableHead>
                             <TableRow>
-                                <TableCell sx={{ color: 'white', width: 50 }} />
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Generated At</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Type</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }}>For Month</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Classes</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="center">Students</TableCell>
-                                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Total Amount</TableCell>
+                                <TableCell sx={{ width: 50 }} />
+                                <TableCell sx={{ fontWeight: 600 }}>Generated At</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>For Month</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>Classes</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="center">Students</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="right">Total Amount</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>

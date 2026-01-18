@@ -3,7 +3,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from 'react-router-dom';
 import { useSession } from '../../contexts/SessionContext';
 import {
   Box,
@@ -36,6 +35,7 @@ import {
   TableRow,
   Tooltip,
   Autocomplete,
+  FormHelperText,
 } from '@mui/material';
 import { FileText, Download, Send, Printer } from 'lucide-react';
 import { apiClient, feeService, classService, admissionService } from '../../lib/api';
@@ -52,9 +52,26 @@ const demandBillSchema = z.object({
   className: z.string().optional(),
   section: z.string().optional(),
   sessionId: z.number().min(1),
-  month: z.number().min(1).max(12),
+  billPeriodType: z.enum(['single', 'multiple']),
+  month: z.number().min(1).max(12).optional(),
+  months: z.array(z.number()).optional(),
   year: z.number().min(2020),
   dueDate: z.string(),
+}).superRefine((data, ctx) => {
+  if (data.billPeriodType === 'single' && !data.month) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Month is required",
+      path: ["month"]
+    });
+  }
+  if (data.billPeriodType === 'multiple' && (!data.months || data.months.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "At least one month must be selected",
+      path: ["months"]
+    });
+  }
 });
 
 type DemandBillFormData = z.infer<typeof demandBillSchema>;
@@ -83,7 +100,8 @@ export default function DemandBillGeneration() {
   const [selectedFeeTypes, setSelectedFeeTypes] = useState<number[]>([]);
   const [autoCalculateLateFees, setAutoCalculateLateFees] = useState(true);
   const [viewBatch, setViewBatch] = useState<any>(null); // State for viewing creation list
-  const [deleteConfirmBatch, setDeleteConfirmBatch] = useState<any>(null); // State for delete confirmation
+  const [deleteConfirmBatch, setDeleteConfirmBatch] = useState<any>(null); // State for batch delete confirmation
+  const [deleteConfirmBill, setDeleteConfirmBill] = useState<string | null>(null); // State for single bill delete confirmation
 
   // Get user role and permissions
   const [userRole, setUserRole] = useState<string>('');
@@ -115,7 +133,9 @@ export default function DemandBillGeneration() {
       className: '',
       section: '',
       sessionId: selectedSession?.id || 1,
+      billPeriodType: 'single',
       month: currentMonth,
+      months: [],
       year: currentYear,
       // Default due date: 10th of next month
       dueDate: (() => {
@@ -150,8 +170,17 @@ export default function DemandBillGeneration() {
     }
   }, [watchedMonth, watchedYear, setValue]);
 
+  // Ensure months is initialized as array when switching to multiple
+  const watchedBillPeriodType = watch('billPeriodType');
+  const watchedMonths = watch('months');
+
+  useEffect(() => {
+    if (watchedBillPeriodType === 'multiple' && !Array.isArray(watchedMonths)) {
+      setValue('months', []);
+    }
+  }, [watchedBillPeriodType, watchedMonths, setValue]);
+
   const watchedClassName = watch('className');
-  const watchedStudentId = watch('studentId');
 
   // Determine the class to use for fee structure lookup
   // For 'single' type, we need to lookup the student's class (would need student info)
@@ -250,6 +279,7 @@ export default function DemandBillGeneration() {
       const payload: any = {
         sessionId: data.sessionId,
         month: data.month,
+        months: data.billPeriodType === 'multiple' ? data.months : undefined,
         year: data.year,
         dueDate: data.dueDate,
         selectedFeeTypeIds: selectedFeeTypes,
@@ -290,10 +320,42 @@ export default function DemandBillGeneration() {
       // Refresh history
       queryClient.invalidateQueries({ queryKey: ['bill-generation-history', selectedSession?.id] });
       setDeleteConfirmBatch(null);
+      // Close creation list if open and it was this batch
+      if (viewBatch && viewBatch.timestamp === deleteConfirmBatch.timestamp) {
+        setViewBatch(null);
+      }
     } catch (err: any) {
       console.error('Delete error', err);
       // Optional: show error toast/alert
       alert(err.response?.data?.message || 'Failed to delete batch');
+    }
+  };
+
+  const handleDeleteSingleBill = async () => {
+    if (!deleteConfirmBill) return;
+
+    try {
+      await apiClient.delete('/fees/demand-bills/batch', {
+        data: { billNumbers: [deleteConfirmBill] }
+      });
+
+      // Refresh history and update the viewBatch list locally if open
+      await queryClient.invalidateQueries({ queryKey: ['bill-generation-history', selectedSession?.id] });
+
+      // If we are viewing a batch, we need to refresh that view. 
+      // Since fetching history updates everything, we might need to close or re-fetch.
+      // Ideally, we update viewBatch state to remove the deleted bill.
+      if (viewBatch) {
+        setViewBatch((prev: any) => ({
+          ...prev,
+          bills: prev.bills.filter((b: any) => b.billNo !== deleteConfirmBill)
+        }));
+      }
+
+      setDeleteConfirmBill(null);
+    } catch (err: any) {
+      console.error('Delete error', err);
+      alert(err.response?.data?.message || 'Failed to delete bill');
     }
   };
 
@@ -391,25 +453,50 @@ export default function DemandBillGeneration() {
               )}
 
               <Stack spacing={3}>
-                {/* Generation Type */}
-                <Controller
-                  name="generationType"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl component="fieldset">
-                      <FormLabel component="legend">
-                        <Typography variant="subtitle1" fontWeight={600}>
-                          Bill Generation Type
-                        </Typography>
-                      </FormLabel>
-                      <RadioGroup {...field} row>
-                        <FormControlLabel value="single" control={<Radio />} label="Single Student" />
-                        <FormControlLabel value="class" control={<Radio />} label="Entire Class" />
-                        <FormControlLabel value="all" control={<Radio />} label="All Students" />
-                      </RadioGroup>
-                    </FormControl>
-                  )}
-                />
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    {/* Generation Type */}
+                    <Controller
+                      name="generationType"
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl component="fieldset">
+                          <FormLabel component="legend">
+                            <Typography variant="subtitle1" fontWeight={600}>
+                              Demand Bill Generation Type
+                            </Typography>
+                          </FormLabel>
+                          <RadioGroup {...field} row>
+                            <FormControlLabel value="single" control={<Radio />} label="Student" />
+                            <FormControlLabel value="class" control={<Radio />} label="Class" />
+                            <FormControlLabel value="all" control={<Radio />} label="All" />
+                          </RadioGroup>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    {/* Bill Period Type */}
+                    <Controller
+                      name="billPeriodType"
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl component="fieldset">
+                          <FormLabel component="legend">
+                            <Typography variant="subtitle1" fontWeight={600}>
+                              Bill Period
+                            </Typography>
+                          </FormLabel>
+                          <RadioGroup {...field} row>
+                            <FormControlLabel value="single" control={<Radio />} label="Single Month" />
+                            <FormControlLabel value="multiple" control={<Radio />} label="Combined Bill" />
+                          </RadioGroup>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                </Grid>
 
                 {/* Conditional Fields */}
                 {generationType === 'class' && (
@@ -577,22 +664,55 @@ export default function DemandBillGeneration() {
                     />
                   </Grid>
                   <Grid size={{ xs: 12, md: generationType === 'single' ? 3 : 4 }}>
-                    <Controller
-                      name="month"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth required>
-                          <InputLabel>Month</InputLabel>
-                          <Select {...field} label="Month">
-                            {MONTHS.map((month, index) => (
-                              <MenuItem key={month} value={index + 1}>
-                                {month}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      )}
-                    />
+                    {watch('billPeriodType') === 'multiple' ? (
+                      <Controller
+                        name="months"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth required error={!!errors.months}>
+                            <InputLabel>Select Months</InputLabel>
+                            <Select
+                              {...field}
+                              label="Select Months"
+                              multiple
+                              value={Array.isArray(field.value) ? field.value : []}
+                              renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {(Array.isArray(selected) ? selected : []).sort((a: any, b: any) => a - b).map((value: any) => (
+                                    <Chip key={value} label={MONTHS[value - 1]} size="small" />
+                                  ))}
+                                </Box>
+                              )}
+                            >
+                              {MONTHS.map((month, index) => (
+                                <MenuItem key={month} value={index + 1}>
+                                  {month}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {errors.months && <FormHelperText>{errors.months.message}</FormHelperText>}
+                          </FormControl>
+                        )}
+                      />
+                    ) : (
+                      <Controller
+                        name="month"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth required error={!!errors.month}>
+                            <InputLabel>Month</InputLabel>
+                            <Select {...field} label="Month">
+                              {MONTHS.map((month, index) => (
+                                <MenuItem key={month} value={index + 1}>
+                                  {month}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {errors.month && <FormHelperText>{errors.month.message}</FormHelperText>}
+                          </FormControl>
+                        )}
+                      />
+                    )}
                   </Grid>
                   <Grid size={{ xs: 12, md: generationType === 'single' ? 3 : 4 }}>
                     <Controller
@@ -1036,6 +1156,7 @@ export default function DemandBillGeneration() {
             <DemandBillCreationList
               batchId={viewBatch.timestamp}
               bills={viewBatch.bills}
+              onDelete={(billNo) => setDeleteConfirmBill(billNo)}
             />
           </Box>
         )}
@@ -1057,6 +1178,27 @@ export default function DemandBillGeneration() {
         <DialogActions>
           <Button onClick={() => setDeleteConfirmBatch(null)}>Cancel</Button>
           <Button onClick={handleDeleteBatch} color="error" variant="contained" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Single Bill Delete Confirmation Dialog */}
+      <Dialog
+        open={!!deleteConfirmBill}
+        onClose={() => setDeleteConfirmBill(null)}
+      >
+        <DialogTitle>Delete Bill?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this bill?
+            <br /><br />
+            <strong>Note:</strong> This checks if any payments have been received. If payments exist, deletion will be blocked.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmBill(null)}>Cancel</Button>
+          <Button onClick={handleDeleteSingleBill} color="error" variant="contained" autoFocus>
             Delete
           </Button>
         </DialogActions>

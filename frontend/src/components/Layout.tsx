@@ -51,6 +51,8 @@ import {
   LocalPrintshop as PrintIcon,
   Class as ClassIcon,
   EventNote as SessionIcon,
+  HelpOutline as HelpIcon,
+  PriceChange as FareIcon,
 } from '@mui/icons-material';
 import { useColorMode } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
@@ -58,6 +60,7 @@ import { printSettingsService, dashboardService } from '../lib/api';
 import { backupService } from '../lib/backup-service';
 import { format } from 'date-fns';
 import SessionSelector from './SessionSelector';
+import UserGuideDialog from './UserGuideDialog';
 
 interface LayoutProps {
   children?: ReactNode; // Make children optional
@@ -124,7 +127,7 @@ const menuItems: MenuItem[] = [
       { path: '/transport/routes', labelKey: 'sidebar.routes', icon: RouteIcon, requiredPermission: 'transport_view' },
       { path: '/transport/assignments', labelKey: 'sidebar.assignments', icon: AssignmentIcon, requiredPermission: 'transport_assign' },
       { path: '/transport/reports', labelKey: 'sidebar.transportReports', icon: PrintIcon, requiredPermission: 'transport_reports' },
-      { path: '/transport/fare-slabs', labelKey: 'sidebar.fareSlabs', icon: RouteIcon, requiredPermission: 'transport_manage' },
+      { path: '/transport/fare-slabs', labelKey: 'sidebar.fareSlabs', icon: FareIcon, requiredPermission: 'transport_manage' },
     ],
   },
   {
@@ -145,6 +148,7 @@ import { getCurrentUserPermissions, hasPermission } from '../utils/permissions';
 export default function Layout({ children, onLogout }: LayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [isDrawerHovered, setIsDrawerHovered] = useState(false);
   const [isDrawerPinned, setIsDrawerPinned] = useState(() => {
     const saved = localStorage.getItem('sidebarPinned');
@@ -531,6 +535,17 @@ export default function Layout({ children, onLogout }: LayoutProps) {
 
           <Box sx={{ flexGrow: 1 }} />
 
+          {/* User Guide Button */}
+          <Tooltip title="User Guide / Help">
+            <IconButton
+              color="inherit"
+              onClick={() => setGuideOpen(true)}
+              sx={{ ml: 1, border: '1px solid', borderColor: 'divider', borderRadius: '8px' }}
+            >
+              <HelpIcon color="primary" />
+            </IconButton>
+          </Tooltip>
+
           {/* Theme Toggle */}
           <IconButton
             color="inherit"
@@ -753,6 +768,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         <Toolbar /> {/* Spacer for fixed AppBar */}
         {children || <Outlet />}
       </Box>
+      <UserGuideDialog open={guideOpen} onClose={() => setGuideOpen(false)} />
     </Box>
   );
 }

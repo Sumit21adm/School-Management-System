@@ -17,7 +17,8 @@ import {
     TableHead,
     TableRow,
     Alert,
-    Dialog
+    Dialog,
+    TableSortLabel
 } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
@@ -26,12 +27,33 @@ import {
     School as SchoolIcon,
     Refresh as RefreshIcon,
     Numbers as NumbersIcon,
-    Book as BookIcon
+    Book as BookIcon,
+    DragIndicator as DragHandleIcon,
+    Save as SaveIcon
 } from '@mui/icons-material';
 import RoutineManager from '../../components/routine/RoutineManager';
 import ClassSubjectsManager from '../../components/classes/ClassSubjectsManager';
 import { useSession } from '../../contexts/SessionContext';
 import { classService, admissionService, studentsService, sectionsService, usersService } from '../../lib/api';
+
+// DND Imports
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Section {
     id: number;
@@ -55,6 +77,61 @@ interface ClassData {
     sections: Section[];
 }
 
+// Sortable Row Component
+const SortableRow = ({ student, ...props }: { student: any;[key: string]: any }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: student.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        backgroundColor: isDragging ? '#f5f5f5' : undefined,
+        zIndex: isDragging ? 2 : undefined,
+        position: 'relative' as const,
+    };
+
+    return (
+        <TableRow ref={setNodeRef} style={style} {...props}>
+            <TableCell>
+                <div
+                    {...attributes}
+                    {...listeners}
+                    style={{ cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                    <DragHandleIcon fontSize="small" color="action" />
+                </div>
+            </TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                {student.rollNumber || '-'}
+            </TableCell>
+            <TableCell>{student.studentId}</TableCell>
+            <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
+                        {student.name[0]}
+                    </Avatar>
+                    {student.name}
+                </Box>
+            </TableCell>
+            <TableCell>{student.fatherName}</TableCell>
+            <TableCell>
+                <Chip
+                    label={student.status}
+                    size="small"
+                    color={student.status === 'active' ? 'success' : 'default'}
+                    variant="outlined"
+                />
+            </TableCell>
+        </TableRow>
+    );
+};
+
 const ClassDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -68,9 +145,35 @@ const ClassDetails = () => {
     const [assigningTeacher, setAssigningTeacher] = useState(false);
     const [targetSectionId, setTargetSectionId] = useState<number | null>(null);
 
+    // DND Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     useEffect(() => {
         loadTeachers();
     }, []);
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (active.id !== over?.id) {
+            setStudents((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over?.id);
+                const newItems = arrayMove(items, oldIndex, newIndex);
+
+                // Update roll numbers to match new order (1, 2, 3...)
+                return newItems.map((item, index) => ({
+                    ...item,
+                    rollNumber: (index + 1).toString()
+                }));
+            });
+        }
+    };
 
     const loadTeachers = async () => {
         try {
@@ -141,23 +244,56 @@ const ClassDetails = () => {
         }
     };
 
+    // Sorting State
+    const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+    const [orderBy, setOrderBy] = useState<string>('rollNumber');
+
+    const handleRequestSort = (property: string) => {
+        const isAsc = orderBy === property && order === 'asc';
+        const newOrder = isAsc ? 'desc' : 'asc';
+        setOrder(newOrder);
+        setOrderBy(property);
+
+        const sortedStudents = [...students].sort((a, b) => {
+            let aVal = a[property];
+            let bVal = b[property];
+
+            // Handle Roll Numbers (Numeric Sort)
+            if (property === 'rollNumber') {
+                aVal = parseInt(aVal) || Number.MAX_SAFE_INTEGER;
+                bVal = parseInt(bVal) || Number.MAX_SAFE_INTEGER;
+            }
+
+            if (bVal < aVal) return newOrder === 'asc' ? 1 : -1;
+            if (bVal > aVal) return newOrder === 'asc' ? -1 : 1;
+            return 0;
+        });
+        setStudents(sortedStudents);
+    };
+
     const loadStudents = async () => {
         if (!selectedSectionId || !classData) return;
-
         const sectionName = classData.sections.find(s => s.id === selectedSectionId)?.name;
         if (!sectionName) return;
 
         setStudentsLoading(true);
         try {
-            // admissionService.getStudents returns the Axios response object
             const response = await admissionService.getStudents({
                 className: classData.name,
                 section: sectionName,
                 status: 'active'
             });
-            // The actual data payload is in response.data, which contains { data: [], meta: {} }
-            // We need to extract the array from response.data.data
-            setStudents(response.data.data || []);
+
+            const rawData = response.data.data || [];
+
+            // Default Sort: Roll Number Ascending
+            const sortedData = rawData.sort((a: any, b: any) => {
+                const rA = parseInt(a.rollNumber) || Number.MAX_SAFE_INTEGER;
+                const rB = parseInt(b.rollNumber) || Number.MAX_SAFE_INTEGER;
+                return rA - rB;
+            });
+
+            setStudents(sortedData);
         } catch (error) {
             console.error('Failed to load students', error);
         } finally {
@@ -167,13 +303,20 @@ const ClassDetails = () => {
 
     const handleAssignRollNumbers = async () => {
         if (!selectedSectionId || !classData) return;
-        if (!window.confirm('This will assign sequential roll numbers (1, 2, 3...) to all students in this section based on their name. Continue?')) return;
+
+        const hasRollNumbers = students.some(s => s.rollNumber && s.rollNumber !== '-');
+        const message = hasRollNumbers
+            ? 'Save this roll number order?'
+            : `This will assign default roll numbers (1 to ${students.length}) based on the current list order. Proceed?`;
+
+        if (!window.confirm(message)) return;
 
         try {
             await studentsService.assignRollNumbers({
                 classId: classData.id,
                 sectionId: selectedSectionId,
-                sortBy: 'NAME'
+                sortBy: 'NAME',
+                studentIds: students.map(s => s.id) // Send current order
             });
             alert('Roll numbers assigned successfully!');
             loadStudents(); // Refresh list
@@ -212,7 +355,7 @@ const ClassDetails = () => {
             </Box>
 
             <Paper sx={{ mb: 3 }}>
-                <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+                <Tabs value={activeTab} onChange={(_e, v) => setActiveTab(v)}>
                     <Tab icon={<SchoolIcon />} label="Sections & Students" iconPosition="start" />
                     <Tab icon={<BookIcon />} label="Subjects" iconPosition="start" />
                     <Tab icon={<CalendarIcon />} label="Routine / Timetable" iconPosition="start" />
@@ -288,11 +431,11 @@ const ClassDetails = () => {
                                     </Button>
                                     <Button
                                         variant="contained"
-                                        startIcon={<NumbersIcon />}
+                                        startIcon={<SaveIcon />}
                                         onClick={handleAssignRollNumbers}
                                         disabled={students.length === 0}
                                     >
-                                        Assign Roll No
+                                        Assign/Save Roll No
                                     </Button>
                                 </Box>
                             </Box>
@@ -303,44 +446,42 @@ const ClassDetails = () => {
                                 <Alert severity="info" variant="outlined">No students found in this section.</Alert>
                             ) : (
                                 <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                                    <Table size="small">
-                                        <TableHead sx={{ bgcolor: 'grey.50' }}>
-                                            <TableRow>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Roll No</TableCell>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Adm. No</TableCell>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Father's Name</TableCell>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {students.map((student) => (
-                                                <TableRow key={student.id} hover>
-                                                    <TableCell sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                                                        {student.rollNumber || '-'}
+                                    <DndContext
+                                        sensors={sensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <Table size="small">
+                                            <TableHead sx={{ bgcolor: 'grey.50' }}>
+                                                <TableRow>
+                                                    <TableCell width={50}></TableCell>
+                                                    <TableCell sx={{ fontWeight: 'bold' }}>
+                                                        <TableSortLabel
+                                                            active={orderBy === 'rollNumber'}
+                                                            direction={orderBy === 'rollNumber' ? order : 'asc'}
+                                                            onClick={() => handleRequestSort('rollNumber')}
+                                                        >
+                                                            Roll No
+                                                        </TableSortLabel>
                                                     </TableCell>
-                                                    <TableCell>{student.studentId}</TableCell>
-                                                    <TableCell>
-                                                        <Box display="flex" alignItems="center" gap={1}>
-                                                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
-                                                                {student.name[0]}
-                                                            </Avatar>
-                                                            {student.name}
-                                                        </Box>
-                                                    </TableCell>
-                                                    <TableCell>{student.fatherName}</TableCell>
-                                                    <TableCell>
-                                                        <Chip
-                                                            label={student.status}
-                                                            size="small"
-                                                            color={student.status === 'active' ? 'success' : 'default'}
-                                                            variant="outlined"
-                                                        />
-                                                    </TableCell>
+                                                    <TableCell sx={{ fontWeight: 'bold' }}>Adm. No</TableCell>
+                                                    <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
+                                                    <TableCell sx={{ fontWeight: 'bold' }}>Father's Name</TableCell>
+                                                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHead>
+                                            <TableBody>
+                                                <SortableContext
+                                                    items={students.map(s => s.id)}
+                                                    strategy={verticalListSortingStrategy}
+                                                >
+                                                    {students.map((student) => (
+                                                        <SortableRow key={student.id} student={student} hover />
+                                                    ))}
+                                                </SortableContext>
+                                            </TableBody>
+                                        </Table>
+                                    </DndContext>
                                 </TableContainer>
                             )}
                         </Paper>

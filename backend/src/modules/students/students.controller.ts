@@ -7,8 +7,8 @@ export class StudentsController {
 
     @Post('assign-roll-numbers')
     assignRollNumbers(
-        @Body() body: { classId: number; sectionId: number; sortBy?: 'NAME' | 'ADMISSION_DATE' }
+        @Body() body: { classId: number; sectionId: number; sortBy?: 'NAME' | 'ADMISSION_DATE'; studentIds?: number[] }
     ) {
-        return this.studentsService.assignRollNumbers(body.classId, body.sectionId, body.sortBy);
+        return this.studentsService.assignRollNumbers(body.classId, body.sectionId, body.sortBy, body.studentIds);
     }
 }
