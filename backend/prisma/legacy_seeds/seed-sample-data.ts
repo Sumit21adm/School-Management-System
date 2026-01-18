@@ -392,45 +392,51 @@ async function main() {
   console.log('💳 Creating fee transactions...');
 
   let transactionIndex = 1;
-  const paymentModes = ['Cash', 'UPI', 'Card', 'NetBanking', 'Cheque'];
-  const collectors = ['Rajesh Kumar', 'Anita Sharma', 'Pooja Yadav'];
+  const existingTransactionsCount = await prisma.feeTransaction.count();
+  if (existingTransactionsCount > 0) {
+    console.log('   ⚠️ Fee transactions already exist. Skipping transaction seeding to avoid duplicates.\n');
+    // Skip the transaction loop but keep the structure valid if needed later
+  } else {
+    const paymentModes = ['Cash', 'UPI', 'Card', 'NetBanking', 'Cheque'];
+    const collectors = ['Rajesh Kumar', 'Anita Sharma', 'Pooja Yadav'];
 
-  // Create transactions for most active students
-  for (const student of allStudents.slice(0, Math.floor(allStudents.length * 0.8))) {
-    // Create 2-4 transactions per student for different months
-    const numTransactions = Math.floor(Math.random() * 3) + 2;
+    // Create transactions for most active students
+    for (const student of allStudents.slice(0, Math.floor(allStudents.length * 0.8))) {
+      // Create 2-4 transactions per student for different months
+      const numTransactions = Math.floor(Math.random() * 3) + 2;
 
-    for (let month = 4; month < 4 + numTransactions && month <= 12; month++) {
-      const transaction = await prisma.feeTransaction.create({
-        data: {
-          transactionId: `TXN${Date.now()}${transactionIndex}`,
-          studentId: student.studentId,
-          sessionId: activeSession.id,
-          receiptNo: generateReceiptNo(transactionIndex++),
-          amount: 3500 + Math.floor(Math.random() * 2000),
-          description: `Fee payment for ${['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 4]} 2024`,
-          // paymentMode removed
+      for (let month = 4; month < 4 + numTransactions && month <= 12; month++) {
+        const transaction = await prisma.feeTransaction.create({
+          data: {
+            transactionId: `TXN${Date.now()}${transactionIndex}`,
+            studentId: student.studentId,
+            sessionId: activeSession.id,
+            receiptNo: generateReceiptNo(transactionIndex++),
+            amount: 3500 + Math.floor(Math.random() * 2000),
+            description: `Fee payment for ${['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 4]} 2024`,
+            // paymentMode removed
 
-          date: new Date(2024, month - 1, Math.floor(Math.random() * 25) + 1),
-          yearId: 2024,
-          collectedBy: randomItem(collectors),
-          remarks: Math.random() > 0.7 ? 'Partial payment' : null,
-        },
-      });
+            date: new Date(2024, month - 1, Math.floor(Math.random() * 25) + 1),
+            yearId: 2024,
+            collectedBy: randomItem(collectors),
+            remarks: Math.random() > 0.7 ? 'Partial payment' : null,
+          },
+        });
 
-      // Add payment details
-      await prisma.feePaymentDetail.create({
-        data: {
-          transactionId: transaction.id,
-          feeTypeId: createdFeeTypes['Tuition Fee'].id,
-          amount: 3000 + Math.floor(Math.random() * 1000),
-          discountAmount: Math.random() > 0.8 ? 300 : 0,
-          netAmount: 3000,
-        },
-      });
+        // Add payment details
+        await prisma.feePaymentDetail.create({
+          data: {
+            transactionId: transaction.id,
+            feeTypeId: createdFeeTypes['Tuition Fee'].id,
+            amount: 3000 + Math.floor(Math.random() * 1000),
+            discountAmount: Math.random() > 0.8 ? 300 : 0,
+            netAmount: 3000,
+          },
+        });
+      }
     }
+    console.log(`   ✅ Created ${transactionIndex - 1} fee transactions\n`);
   }
-  console.log(`   ✅ Created ${transactionIndex - 1} fee transactions\n`);
 
   // ============================================
   // 11. DEMAND BILLS
