@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to fetch all tags for versioning logic
+
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -40,9 +43,52 @@ jobs:
           chmod +x scripts/release-docker/build.sh
           ./scripts/release-docker/build.sh
 
-      - name: Upload Release Artifact
-        uses: actions/upload-artifact@v4
+
+      - name: Generate Release Tag
+        id: tag_logic
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            # Pre-release tag logic: test.<short_sha>
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            TAG_NAME="test.${SHORT_SHA}"
+            echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+            echo "Generated Test Tag: ${TAG_NAME}"
+          else
+            # Manual release logic: Auto-increment patch version
+            # Find the latest tag that matches release_v*
+            LAST_TAG=$(git tag --sort=-v:refname | grep -E '^release_v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+            
+            if [ -z "$LAST_TAG" ]; then
+              echo "No previous release tags found. Starting at release_v0.0.1"
+              NEW_TAG="release_v0.0.1"
+            else
+              echo "Latest tag found: ${LAST_TAG}"
+              # Extract numeric parts (assuming release_vX.Y.Z)
+              VERSION_PART=${LAST_TAG#release_v}
+              IFS='.' read -r -a PARTS <<< "$VERSION_PART"
+              MAJOR=${PARTS[0]}
+              MINOR=${PARTS[1]}
+              PATCH=${PARTS[2]}
+              
+              # Increment Patch
+              NEW_PATCH=$((PATCH + 1))
+              NEW_TAG="release_v${MAJOR}.${MINOR}.${NEW_PATCH}"
+            fi
+            
+            echo "TAG_NAME=${NEW_TAG}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+            echo "Generated Release Tag: ${NEW_TAG}"
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: school-management-system-docker
-          path: releases/school-management-system-docker.zip
-          retention-days: 7
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
+          files: releases/school-management-system-docker.zip
+          prerelease: ${{ env.IS_PRERELEASE }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
