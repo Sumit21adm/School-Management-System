@@ -46,7 +46,7 @@ export async function seedCoreSettings() {
     for (const roleDef of ROLE_DEFINITIONS) {
         await prisma.roleSettings.upsert({
             where: { role: roleDef.role },
-            update: { displayName: roleDef.displayName, sortOrder: roleDef.sortOrder },
+            update: {},
             create: roleDef
         });
     }
@@ -56,7 +56,7 @@ export async function seedCoreSettings() {
     const schoolName = 'Global Excellence Academy';
     await prisma.printSettings.upsert({
         where: { id: 1 },
-        update: { schoolName },
+        update: {},
         create: {
             schoolName,
             schoolAddress: 'Campus 12, Tech Park Road, Update Your Address',
@@ -71,15 +71,15 @@ export async function seedCoreSettings() {
 
     // 1.2 Academic Sessions
     const sessions = [
-        { name: '2023-2024', startDate: new Date('2023-04-01'), endDate: new Date('2024-03-31'), isActive: false },
-        { name: '2024-2025', startDate: new Date('2024-04-01'), endDate: new Date('2025-03-31'), isActive: true },
-        { name: '2025-2026', startDate: new Date('2025-04-01'), endDate: new Date('2026-03-31'), isActive: false, isSetupMode: true },
+        { name: 'APR 2023 - MAR 2024', startDate: new Date('2023-04-01'), endDate: new Date('2024-03-31'), isActive: false },
+        { name: 'APR 2024 - MAR 2025', startDate: new Date('2024-04-01'), endDate: new Date('2025-03-31'), isActive: true },
+        { name: 'APR 2025 - MAR 2026', startDate: new Date('2025-04-01'), endDate: new Date('2026-03-31'), isActive: false, isSetupMode: true },
     ];
 
     for (const s of sessions) {
         await prisma.academicSession.upsert({
             where: { name: s.name },
-            update: { isActive: s.isActive },
+            update: {},
             create: s
         });
     }
@@ -98,7 +98,7 @@ export async function seedCoreSettings() {
     for (const f of feeTypes) {
         await prisma.feeType.upsert({
             where: { name: f.name },
-            update: { frequency: f.frequency, isRecurring: f.isRecurring },
+            update: {},
             create: f
         });
     }
@@ -155,7 +155,7 @@ export async function seedClasses() {
         // 1. Create Class
         const classRecord = await prisma.schoolClass.upsert({
             where: { name: cls.name },
-            update: { displayName: cls.displayName, order: cls.order },
+            update: {},
             create: { name: cls.name, displayName: cls.displayName, order: cls.order }
         });
 

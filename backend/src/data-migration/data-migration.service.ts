@@ -46,6 +46,20 @@ function isValidDateFormat(dateStr: string): boolean {
         /^(\d{4})-(\d{1,2})-(\d{1,2})$/.test(dateStr);
 }
 
+
+/**
+ * Sanitize text input, treating 'None', 'N/A', etc. as null
+ */
+function sanitizeText(text: string | undefined | null): string | null {
+    if (!text) return null;
+    const trimmed = text.toString().trim();
+    if (!trimmed) return null;
+    if (['none', 'null', 'n/a', '-', 'na', 'nan'].includes(trimmed.toLowerCase())) {
+        return null;
+    }
+    return trimmed;
+}
+
 @Injectable()
 export class DataMigrationService {
     constructor(private prisma: PrismaService) { }
@@ -536,11 +550,36 @@ export class DataMigrationService {
         // Fetch reference data for validation
         const [classes, existingStudents] = await Promise.all([
             this.prisma.schoolClass.findMany({ where: { isActive: true } }),
-            this.prisma.studentDetails.findMany({ select: { studentId: true } }),
+            this.prisma.studentDetails.findMany({
+                select: {
+                    studentId: true,
+                    name: true,
+                    fatherName: true,
+                    aadharCardNo: true,
+                    className: true,
+                    section: true,
+                    rollNumber: true
+                },
+                where: { status: 'active' } // Check active students primarily
+            }),
         ]);
 
         const classNames = new Set(classes.map(c => c.name));
         const existingIds = new Set(existingStudents.map(s => s.studentId));
+        // Create map for smart duplicate detection
+        const existingStudentMap = new Map(existingStudents.map(s => [s.studentId, s]));
+
+        const existingAadhars = new Set(existingStudents.map(s => s.aadharCardNo).filter(Boolean));
+
+        // Create lookup for existing Class-Section-RollNo
+        const existingRollKeys = new Set(
+            existingStudents
+                .filter(s => s.className && s.section && s.rollNumber)
+                .map(s => `${s.className}-${s.section}-${s.rollNumber}`.toLowerCase())
+        );
+
+        const fileAadhars = new Set<string>();
+        const fileRollKeys = new Set<string>();
 
         worksheet.eachRow((row: any, rowNumber: number) => {
             if (rowNumber === 1) return; // Skip header
@@ -573,7 +612,26 @@ export class DataMigrationService {
 
             // Format validation
             if (studentId && existingIds.has(studentId)) {
-                errors.push({ row: rowNumber, field: 'studentId', value: studentId, message: `Student ID '${studentId}' already exists in system` });
+                // Smart Duplicate Check: If names match, treat as warning (skip), otherwise error
+                const existing = existingStudentMap.get(studentId);
+                const nameMatch = existing?.name?.toLowerCase().trim() === name?.toLowerCase().trim();
+                const fatherMatch = existing?.fatherName?.toLowerCase().trim() === fatherName?.toLowerCase().trim();
+
+                if (existing && nameMatch && fatherMatch) {
+                    warnings.push({
+                        row: rowNumber,
+                        field: 'studentId',
+                        value: studentId,
+                        message: `Student '${name}' (ID: ${studentId}) already exists with matching data. Record will be skipped.`
+                    });
+                } else {
+                    errors.push({
+                        row: rowNumber,
+                        field: 'studentId',
+                        value: studentId,
+                        message: `Student ID '${studentId}' exists but data mismatch (System: ${existing?.name}, File: ${name}).`
+                    });
+                }
             }
 
             if (gender && !['male', 'female', 'other'].includes(gender)) {
@@ -598,6 +656,35 @@ export class DataMigrationService {
 
             // Track IDs for duplicate detection within file
             existingIds.add(studentId);
+
+            // Roll Number Validation (within Class & Section)
+            const rollNumber = sanitizeText(row.getCell(9).text);
+            if (className && section && rollNumber) {
+                const rollKey = `${className}-${section}-${rollNumber}`.toLowerCase();
+
+                if (fileRollKeys.has(rollKey)) {
+                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Duplicate Roll Number '${rollNumber}' for Class '${className}' Section '${section}' in file` });
+                }
+
+                if (existingRollKeys.has(rollKey)) {
+                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Roll Number '${rollNumber}' already exists for Class '${className}' Section '${section}'` });
+                }
+
+                fileRollKeys.add(rollKey);
+            }
+
+            // Aadhar Validation
+            const aadhar = sanitizeText(row.getCell(18).text);
+
+            if (aadhar) {
+                if (fileAadhars.has(aadhar)) {
+                    errors.push({ row: rowNumber, field: 'aadharCardNo', value: aadhar, message: `Duplicate Aadhar Number '${aadhar}' in file` });
+                }
+                if (existingAadhars.has(aadhar)) {
+                    errors.push({ row: rowNumber, field: 'aadharCardNo', value: aadhar, message: `Aadhar Number '${aadhar}' already exists in system` });
+                }
+                fileAadhars.add(aadhar);
+            }
         });
 
         return {
@@ -665,6 +752,9 @@ export class DataMigrationService {
         for (const { row, rowNumber } of rows) {
             try {
                 const studentId = row.getCell(1).text?.trim();
+                const name = row.getCell(2).text?.trim() || '';
+                const fatherName = row.getCell(3).text?.trim() || '';
+
                 if (!studentId) {
                     skipped++;
                     continue;
@@ -673,45 +763,54 @@ export class DataMigrationService {
                 // Check if already exists
                 const existing = await this.prisma.studentDetails.findUnique({ where: { studentId } });
                 if (existing) {
+                    // Smart Skip: If data matches, just skip silently (as verified duplicate)
+                    const nameMatch = existing.name?.toLowerCase().trim() === name.toLowerCase().trim();
+                    const fatherMatch = existing.fatherName?.toLowerCase().trim() === fatherName.toLowerCase().trim();
+
+                    if (nameMatch && fatherMatch) {
+                        skipped++;
+                        continue;
+                    }
+
                     if (options?.skipOnError) {
                         skipped++;
                         continue;
                     }
-                    errors.push({ row: rowNumber, field: 'studentId', value: studentId, message: 'Already exists' });
+                    errors.push({ row: rowNumber, field: 'studentId', value: studentId, message: `Already exists (System: ${existing.name}, File: ${name})` });
                     continue;
                 }
 
-                // Parse all fields
+                // Parse remaining fields
                 const studentData = {
                     studentId,
-                    name: row.getCell(2).text?.trim() || '',
-                    fatherName: row.getCell(3).text?.trim() || '',
+                    name,
+                    fatherName,
                     motherName: row.getCell(4).text?.trim() || '',
                     dob: parseDateDDMMYYYY(row.getCell(5).text?.trim()) || new Date(),
                     gender: row.getCell(6).text?.trim()?.toLowerCase() || 'male',
                     className: row.getCell(7).text?.trim() || '',
                     section: row.getCell(8).text?.trim() || 'A',
-                    rollNumber: row.getCell(9).text?.trim() || null,
+                    rollNumber: sanitizeText(row.getCell(9).text),
                     admissionDate: parseDateDDMMYYYY(row.getCell(10).text?.trim()) || new Date(),
                     address: row.getCell(11).text?.trim() || '',
                     phone: row.getCell(12).text?.trim() || '',
-                    whatsAppNo: row.getCell(13).text?.trim() || null,
-                    email: row.getCell(14).text?.trim() || null,
+                    whatsAppNo: sanitizeText(row.getCell(13).text),
+                    email: sanitizeText(row.getCell(14).text),
                     status: row.getCell(15).text?.trim() || 'active',
                     category: row.getCell(16).text?.trim() || 'NA',
-                    religion: row.getCell(17).text?.trim() || null,
-                    aadharCardNo: row.getCell(18).text?.trim() || null,
-                    apaarId: row.getCell(19).text?.trim() || null,
-                    fatherOccupation: row.getCell(20).text?.trim() || null,
-                    fatherAadharNo: row.getCell(21).text?.trim() || null,
-                    fatherPanNo: row.getCell(22).text?.trim() || null,
-                    motherOccupation: row.getCell(23).text?.trim() || null,
-                    motherAadharNo: row.getCell(24).text?.trim() || null,
-                    motherPanNo: row.getCell(25).text?.trim() || null,
-                    guardianRelation: row.getCell(26).text?.trim() || null,
-                    guardianName: row.getCell(27).text?.trim() || null,
-                    guardianPhone: row.getCell(28).text?.trim() || null,
-                    guardianEmail: row.getCell(29).text?.trim() || null,
+                    religion: sanitizeText(row.getCell(17).text),
+                    aadharCardNo: sanitizeText(row.getCell(18).text),
+                    apaarId: sanitizeText(row.getCell(19).text),
+                    fatherOccupation: sanitizeText(row.getCell(20).text),
+                    fatherAadharNo: sanitizeText(row.getCell(21).text),
+                    fatherPanNo: sanitizeText(row.getCell(22).text),
+                    motherOccupation: sanitizeText(row.getCell(23).text),
+                    motherAadharNo: sanitizeText(row.getCell(24).text),
+                    motherPanNo: sanitizeText(row.getCell(25).text),
+                    guardianRelation: sanitizeText(row.getCell(26).text),
+                    guardianName: sanitizeText(row.getCell(27).text),
+                    guardianPhone: sanitizeText(row.getCell(28).text),
+                    guardianEmail: sanitizeText(row.getCell(29).text),
                     sessionId: activeSession.id,
                 };
 
@@ -774,7 +873,13 @@ export class DataMigrationService {
                     message: error.message || 'Unknown error during import',
                 });
                 if (!options?.skipOnError) {
-                    throw error;
+                    return {
+                        success: false,
+                        totalRows: rows.length,
+                        imported,
+                        skipped,
+                        errors,
+                    };
                 }
                 skipped++;
             }
@@ -915,7 +1020,15 @@ export class DataMigrationService {
                 imported++;
             } catch (error: any) {
                 errors.push({ row: rowNumber, field: 'general', value: '', message: error.message });
-                if (!options?.skipOnError) throw error;
+                if (!options?.skipOnError) {
+                    return {
+                        success: false,
+                        totalRows: rows.length,
+                        imported,
+                        skipped,
+                        errors,
+                    };
+                }
                 skipped++;
             }
         }
@@ -1043,7 +1156,15 @@ export class DataMigrationService {
                 imported++;
             } catch (error: any) {
                 errors.push({ row: rowNumber, field: 'general', value: '', message: error.message });
-                if (!options?.skipOnError) throw error;
+                if (!options?.skipOnError) {
+                    return {
+                        success: false,
+                        totalRows: rows.length,
+                        imported,
+                        skipped,
+                        errors,
+                    };
+                }
                 skipped++;
             }
         }
@@ -1155,7 +1276,15 @@ export class DataMigrationService {
                 imported++;
             } catch (error: any) {
                 errors.push({ row: rowNumber, field: 'general', value: '', message: error.message });
-                if (!options?.skipOnError) throw error;
+                if (!options?.skipOnError) {
+                    return {
+                        success: false,
+                        totalRows: rows.length,
+                        imported,
+                        skipped,
+                        errors,
+                    };
+                }
                 skipped++;
             }
         }

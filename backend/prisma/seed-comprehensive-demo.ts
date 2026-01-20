@@ -54,7 +54,7 @@ async function seedCoreSettings() {
     for (const roleDef of ROLE_DEFINITIONS) {
         await prisma.roleSettings.upsert({
             where: { role: roleDef.role },
-            update: { displayName: roleDef.displayName, sortOrder: roleDef.sortOrder },
+            update: {},
             create: roleDef
         });
     }
@@ -64,7 +64,7 @@ async function seedCoreSettings() {
     const schoolName = 'Global Excellence Academy';
     await prisma.printSettings.upsert({
         where: { id: 1 },
-        update: { schoolName },
+        update: {},
         create: {
             schoolName,
             schoolAddress: 'Campus 12, Tech Park Road, Innovation City - 560100',
@@ -91,7 +91,7 @@ async function seedCoreSettings() {
     for (const s of sessions) {
         await prisma.academicSession.upsert({
             where: { name: s.name },
-            update: { isActive: s.isActive, isSetupMode: s.isSetupMode || false },
+            update: {},
             create: s
         });
     }
@@ -112,7 +112,7 @@ async function seedCoreSettings() {
     for (const f of feeTypes) {
         await prisma.feeType.upsert({
             where: { name: f.name },
-            update: { frequency: f.frequency, isRecurring: f.isRecurring },
+            update: {},
             create: f
         });
     }
@@ -140,7 +140,7 @@ async function seedCoreSettings() {
     for (const c of classesConfig) {
         const cls = await prisma.schoolClass.upsert({
             where: { name: c.name },
-            update: { displayName: c.displayName, order: c.order },
+            update: {},
             create: { ...c, capacity: 40 }
         });
 
@@ -173,7 +173,7 @@ async function seedCoreSettings() {
     for (const sub of subjects) {
         await prisma.subject.upsert({
             where: { name: sub.name },
-            update: { color: sub.color, code: sub.code },
+            update: {},
             create: sub
         });
     }
@@ -357,13 +357,13 @@ async function seedFinancialStructure() {
 
         await prisma.feeStructureItem.upsert({
             where: { structureId_feeTypeId: { structureId: structure.id, feeTypeId: tuitionFee.id } },
-            update: { amount: tuitionAmount },
+            update: {},
             create: { structureId: structure.id, feeTypeId: tuitionFee.id, amount: tuitionAmount, frequency: 'Monthly' }
         });
 
         await prisma.feeStructureItem.upsert({
             where: { structureId_feeTypeId: { structureId: structure.id, feeTypeId: annualFee.id } },
-            update: { amount: 8000 },
+            update: {},
             create: { structureId: structure.id, feeTypeId: annualFee.id, amount: 8000, frequency: 'Yearly' }
         });
     }
