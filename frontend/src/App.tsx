@@ -35,6 +35,7 @@ import RoleSettings from './pages/settings/RoleSettings';
 import ClassManagement from './pages/settings/ClassManagement';
 import BackupRestore from './pages/settings/BackupRestore';
 import SubjectList from './pages/subjects/SubjectList';
+import DataMigration from './pages/settings/DataMigration';
 
 import VehicleList from './pages/transport/VehicleList';
 import DriverList from './pages/transport/DriverList';
@@ -138,6 +139,7 @@ function AppContent() {
                 <Route path="/classes/:id" element={<ClassDetails />} />
                 <Route path="/promotions" element={<StudentPromotions />} />
                 <Route path="/settings/subjects" element={<SubjectList />} />
+                <Route path="/settings/data-migration" element={<DataMigration />} />
 
                 {/* Student Routes */}
                 <Route path="/students/:studentId/discounts" element={<StudentDiscountsPage />} />
