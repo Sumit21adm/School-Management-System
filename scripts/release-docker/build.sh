@@ -33,6 +33,8 @@ mkdir -p "$OUTPUT_DIR"
 echo " [2/6] Building Backend..."
 cd "$PROJECT_DIR/backend"
 # Generate Prisma Client to ensure types exist
+# We provide a dummy URL because prisma generate validates the presence of the env var
+export DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 npx prisma generate
 npm run build
 cd "$PROJECT_DIR"
