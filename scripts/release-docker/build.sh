@@ -32,6 +32,8 @@ mkdir -p "$OUTPUT_DIR"
 # 2. Build Backend
 echo " [2/6] Building Backend..."
 cd "$PROJECT_DIR/backend"
+# Generate Prisma Client to ensure types exist
+npx prisma generate
 npm run build
 cd "$PROJECT_DIR"
 
