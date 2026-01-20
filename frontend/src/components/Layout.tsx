@@ -53,6 +53,7 @@ import {
   EventNote as SessionIcon,
   HelpOutline as HelpIcon,
   PriceChange as FareIcon,
+  CloudUpload as ImportIcon,
 } from '@mui/icons-material';
 import { useColorMode } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
@@ -139,6 +140,7 @@ const menuItems: MenuItem[] = [
       { path: '/settings/print', labelKey: 'sidebar.schoolSettings', icon: DomainIcon, requiredPermission: 'school_settings' },
       { path: '/settings/users', labelKey: 'sidebar.userManagement', icon: UserIcon, requiredPermission: 'users_manage' },
       { path: '/settings/roles', labelKey: 'sidebar.roleSettings', icon: Settings, requiredPermission: 'users_manage' },
+      { path: '/settings/data-migration', labelKey: 'sidebar.dataMigration', icon: ImportIcon, requiredPermission: 'school_settings' },
     ],
   },
 ];

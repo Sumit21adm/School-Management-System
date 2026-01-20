@@ -19,6 +19,7 @@
         "schoolSettings": "School Settings",
         "userManagement": "User Permissions",
         "roleSettings": "Role Settings",
+        "dataMigration": "Data Migration",
         "transport": "TRANSPORT",
         "vehicles": "Vehicles",
         "drivers": "Drivers",
