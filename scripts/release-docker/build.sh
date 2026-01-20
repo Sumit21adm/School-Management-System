@@ -68,15 +68,28 @@ cp -r "$PROJECT_DIR/backend/prisma" "$RELEASE_DIR/backend/"
 # Remove existing migrations (they are MySQL specific and will conflict)
 rm -rf "$RELEASE_DIR/backend/prisma/migrations"
 
+
+# 4a. Helper for cross-platform sed
+# ---------------------------------
+sedi() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "$@"
+    else
+        sed -i "$@"
+    fi
+}
+
 # Convert Prisma Schema to PostgreSQL for Docker Release
 echo "       Converting Schema to PostgreSQL..."
-sed -i '' 's/provider = "mysql"/provider = "postgresql"/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
-sed -i '' 's/@db.LongText/@db.Text/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
-sed -i '' 's/@db.MediumText/@db.Text/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
+sedi 's/provider = "mysql"/provider = "postgresql"/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
+sedi 's/@db.LongText/@db.Text/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
+sedi 's/@db.MediumText/@db.Text/g' "$RELEASE_DIR/backend/prisma/schema.prisma"
 
 # Compile Seed Script (TS -> JS) for Production
 echo "       Compiling Seed Script..."
 cd "$PROJECT_DIR/backend"
+# Ensure we have dependencies for tsc if running in CI without global install,
+# but usually npx handles it. We assume node_modules exists or npx downloads it.
 npx tsc prisma/seed.ts --outDir "$RELEASE_DIR/backend/prisma" --module commonjs --target es2018 --skipLibCheck --esModuleInterop
 # Rename to seed.js if nested
 if [ -f "$RELEASE_DIR/backend/prisma/prisma/seed.js" ]; then

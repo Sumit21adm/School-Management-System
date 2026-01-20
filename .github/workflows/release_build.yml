@@ -1,0 +1,50 @@
+name: Build Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # Permissions to checkout code
+      actions: write # Permissions to upload artifacts (implied by uploading-artifact, but good to be explicit for actions/upload-artifact@v4)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Release Build Script
+        run: |
+          chmod +x scripts/release-docker/build.sh
+          ./scripts/release-docker/build.sh
+
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: school-management-system-docker
+          path: releases/school-management-system-docker.zip
+          retention-days: 7
