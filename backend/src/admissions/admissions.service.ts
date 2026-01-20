@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -204,6 +204,30 @@ export class AdmissionsService {
     }
 
     async remove(id: number) {
+        const student = await this.prisma.studentDetails.findUnique({ where: { id } });
+        if (!student) throw new Error('Student not found');
+
+        if (student.status === 'archived') {
+            // Check for dependencies
+            const [transactions, bills, results, academics, discounts, transport] = await Promise.all([
+                this.prisma.feeTransaction.count({ where: { studentId: student.studentId } }),
+                this.prisma.demandBill.count({ where: { studentId: student.studentId } }),
+                this.prisma.examResult.count({ where: { studentId: student.studentId } }),
+                this.prisma.studentAcademicHistory.count({ where: { studentId: student.studentId } }),
+                this.prisma.studentFeeDiscount.count({ where: { studentId: student.studentId } }),
+                this.prisma.studentTransport.findUnique({ where: { studentId: student.studentId } }),
+            ]);
+
+            const hasDependencies = transactions > 0 || bills > 0 || results > 0 || academics > 0 || discounts > 0 || transport;
+
+            if (!hasDependencies) {
+                return this.prisma.studentDetails.delete({ where: { id } });
+            } else {
+                throw new ConflictException('Cannot delete student with existing records (Fees, Exams, etc.).');
+            }
+        }
+
+        // Soft delete
         return this.prisma.studentDetails.update({
             where: { id },
             data: { status: 'archived' },

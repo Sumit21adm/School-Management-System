@@ -55,3 +55,10 @@ To verify:
 3. Download template and verify 6 sheets
 4. Fill with test data and import
 5. Verify data in Admissions/Fees sections
+
+## Phase 7: Enhancements (Completed) ✅
+- [x] Fix Seed Script (PrintSettings reset)
+- [x] Implement Hard Delete for Archived Students
+- [x] Implement Smart Duplicate Detection (Skip identicals)
+- [x] Implement Roll Number Uniqueness Check (Class+Section)
+- [x] Enhanced Aadhar Validation (Ignore 'None')

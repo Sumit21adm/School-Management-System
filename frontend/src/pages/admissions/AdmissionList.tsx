@@ -1610,20 +1610,24 @@ export default function AdmissionList() {
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle sx={{ color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
           <AlertCircle size={24} />
-          Confirm Deletion
+          {studentToDelete?.status === 'archived' ? 'Confirm Permanent Deletion' : 'Confirm Deletion'}
         </DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete student <strong>{studentToDelete?.name}</strong>?
+            Are you sure you want to {studentToDelete?.status === 'archived' ? 'permanently ' : ''}delete student <strong>{studentToDelete?.name}</strong>?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            This action will move the student to the <strong>Archived</strong> list. They will no longer appear in the active student list.
+            {studentToDelete?.status === 'archived' ? (
+              <span>This action will <strong>PERMANENTLY DELETE</strong> the student record and remove all associated data. This action <strong>CANNOT BE UNDONE</strong>.</span>
+            ) : (
+              <span>This action will move the student to the <strong>Archived</strong> list. They will no longer appear in the active student list.</span>
+            )}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">Cancel</Button>
           <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
-            Confirm Delete
+            {studentToDelete?.status === 'archived' ? 'Delete Permanently' : 'Confirm Delete'}
           </Button>
         </DialogActions>
       </Dialog>
