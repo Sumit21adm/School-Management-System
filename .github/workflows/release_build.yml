@@ -48,9 +48,9 @@ jobs:
         id: tag_logic
         run: |
           if [ "${{ github.event_name }}" == "push" ]; then
-            # Pre-release tag logic: test.<short_sha>
+            # Pre-release tag logic: v1.<short_sha>
             SHORT_SHA=$(git rev-parse --short HEAD)
-            TAG_NAME="test.${SHORT_SHA}"
+            TAG_NAME="v1.${SHORT_SHA}"
             echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
             echo "IS_PRERELEASE=true" >> $GITHUB_ENV
             echo "Generated Test Tag: ${TAG_NAME}"
