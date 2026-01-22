@@ -106,6 +106,9 @@ export class DataMigrationService {
         // 6. Discounts Sheet
         this.createDiscountsSheet(workbook, feeTypes);
 
+        // 7. Academic History Sheet
+        this.createAcademicHistorySheet(workbook, classes);
+
         return await workbook.xlsx.writeBuffer();
     }
 
@@ -146,6 +149,7 @@ export class DataMigrationService {
             '   • Fee Receipts: Student ID, Receipt No, Receipt Date, Fee Type, Amount, Net Amount, Payment Mode',
             '   • Demand Bills: Student ID, Bill No, Bill Date, Due Date, Month, Year, Fee Type, Amount, Net Amount, Status',
             '   • Discounts: Student ID, Fee Type, Discount Type, Discount Value',
+            '   • Academic History: Student ID, Session, Class, Section, Roll No, Status',
             '',
             '5. REFERENCE DATA:',
             '   • Check the "Reference_Data" sheet for valid values for Classes, Sections, Fee Types, and Routes',
@@ -522,6 +526,56 @@ export class DataMigrationService {
         sheet.getRow(2).font = { italic: true, color: { argb: 'FF666666' } };
     }
 
+    private createAcademicHistorySheet(workbook: any, classes: any[]) {
+        const sheet = workbook.addWorksheet('Academic_History', {
+            properties: { tabColor: { argb: 'FF607D8B' } }
+        });
+
+        sheet.columns = [
+            { header: 'Student ID *', key: 'studentId', width: 15 },
+            { header: 'Session *', key: 'sessionName', width: 15 },
+            { header: 'Class *', key: 'className', width: 10 },
+            { header: 'Section *', key: 'section', width: 10 },
+            { header: 'Roll Number', key: 'rollNumber', width: 12 },
+            { header: 'Status *', key: 'status', width: 15 },
+            { header: 'Final Result', key: 'finalResult', width: 15 },
+        ];
+
+        // Style header
+        sheet.getRow(1).font = { bold: true };
+        sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCFD8DC' } };
+
+        // Class dropdown
+        const classNames = classes.map(c => c.name).join(',');
+        if (classNames) {
+            sheet.dataValidations.add('C2:C1000', {
+                type: 'list',
+                formulae: [`"${classNames}"`],
+                showErrorMessage: true,
+            });
+        }
+
+        // Status dropdown
+        sheet.dataValidations.add('F2:F1000', {
+            type: 'list',
+            formulae: ['"promoted,passed,detained,active"'],
+            showErrorMessage: true,
+        });
+
+        // Sample row
+        sheet.addRow({
+            studentId: 'STU2024001',
+            sessionName: '2023-2024',
+            className: classes[0]?.name || '1',
+            section: 'A',
+            rollNumber: '10',
+            status: 'promoted',
+            finalResult: '85%',
+        });
+
+        sheet.getRow(2).font = { italic: true, color: { argb: 'FF666666' } };
+    }
+
     // ============================================
     // VALIDATION
     // ============================================
@@ -548,7 +602,7 @@ export class DataMigrationService {
         let totalRows = 0;
 
         // Fetch reference data for validation
-        const [classes, existingStudents] = await Promise.all([
+        const [classes, existingStudents, allSessions] = await Promise.all([
             this.prisma.schoolClass.findMany({ where: { isActive: true } }),
             this.prisma.studentDetails.findMany({
                 select: {
@@ -558,11 +612,16 @@ export class DataMigrationService {
                     aadharCardNo: true,
                     className: true,
                     section: true,
-                    rollNumber: true
+                    rollNumber: true,
+                    sessionId: true, // Include session for roll key
                 },
                 where: { status: 'active' } // Check active students primarily
             }),
+            this.prisma.academicSession.findMany(), // Fetch all sessions
         ]);
+
+        // Create session ID -> Name map
+        const sessionIdToName = new Map(allSessions.map(s => [s.id, s.name]));
 
         const classNames = new Set(classes.map(c => c.name));
         const existingIds = new Set(existingStudents.map(s => s.studentId));
@@ -571,15 +630,27 @@ export class DataMigrationService {
 
         const existingAadhars = new Set(existingStudents.map(s => s.aadharCardNo).filter(Boolean));
 
-        // Create lookup for existing Class-Section-RollNo
+        // Create lookup for existing Session-Class-Section-RollNo
         const existingRollKeys = new Set(
             existingStudents
                 .filter(s => s.className && s.section && s.rollNumber)
-                .map(s => `${s.className}-${s.section}-${s.rollNumber}`.toLowerCase())
+                .map(s => {
+                    const sessionName = s.sessionId ? (sessionIdToName.get(s.sessionId) || '') : '';
+                    return `${sessionName}-${s.className}-${s.section}-${s.rollNumber}`.toLowerCase();
+                })
         );
 
         const fileAadhars = new Set<string>();
         const fileRollKeys = new Set<string>();
+
+        // Find Session Name Column dynamically
+        let sessionColIdx = -1;
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell: any, colNumber: number) => {
+            if (cell.text?.trim() === 'Session Name') {
+                sessionColIdx = colNumber;
+            }
+        });
 
         worksheet.eachRow((row: any, rowNumber: number) => {
             if (rowNumber === 1) return; // Skip header
@@ -600,8 +671,6 @@ export class DataMigrationService {
             // Required field validation
             if (!studentId) errors.push({ row: rowNumber, field: 'studentId', value: '', message: 'Student ID is required' });
             if (!name) errors.push({ row: rowNumber, field: 'name', value: '', message: 'Name is required' });
-            if (!fatherName) errors.push({ row: rowNumber, field: 'fatherName', value: '', message: 'Father Name is required' });
-            if (!motherName) errors.push({ row: rowNumber, field: 'motherName', value: '', message: 'Mother Name is required' });
             if (!dob) errors.push({ row: rowNumber, field: 'dob', value: '', message: 'Date of Birth is required' });
             if (!gender) errors.push({ row: rowNumber, field: 'gender', value: '', message: 'Gender is required' });
             if (!className) errors.push({ row: rowNumber, field: 'className', value: '', message: 'Class is required' });
@@ -638,7 +707,7 @@ export class DataMigrationService {
                 errors.push({ row: rowNumber, field: 'gender', value: gender, message: 'Gender must be: male, female, or other' });
             }
 
-            if (className && !classNames.has(className)) {
+            if (className && className !== 'PASS OUT' && !classNames.has(className)) {
                 errors.push({ row: rowNumber, field: 'className', value: className, message: `Class '${className}' not found. Check Reference_Data sheet for valid classes.` });
             }
 
@@ -657,17 +726,19 @@ export class DataMigrationService {
             // Track IDs for duplicate detection within file
             existingIds.add(studentId);
 
-            // Roll Number Validation (within Class & Section)
+            // Roll Number Validation (within Session + Class + Section)
             const rollNumber = sanitizeText(row.getCell(9).text);
+            const sessionName = sessionColIdx > 0 ? (row.getCell(sessionColIdx).text?.trim() || '') : '';
             if (className && section && rollNumber) {
-                const rollKey = `${className}-${section}-${rollNumber}`.toLowerCase();
+                // Include session in key to allow same roll across different years
+                const rollKey = `${sessionName}-${className}-${section}-${rollNumber}`.toLowerCase();
 
                 if (fileRollKeys.has(rollKey)) {
-                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Duplicate Roll Number '${rollNumber}' for Class '${className}' Section '${section}' in file` });
+                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Duplicate Roll Number '${rollNumber}' for Class '${className}' Section '${section}' Session '${sessionName}' in file` });
                 }
 
                 if (existingRollKeys.has(rollKey)) {
-                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Roll Number '${rollNumber}' already exists for Class '${className}' Section '${section}'` });
+                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Roll Number '${rollNumber}' already exists for Class '${className}' Section '${section}' Session '${sessionName}'` });
                 }
 
                 fileRollKeys.add(rollKey);
@@ -738,6 +809,10 @@ export class DataMigrationService {
         });
         const routeMap = new Map(routes.map(r => [r.routeCode, r]));
 
+        // Fetch all sessions for lookup
+        const allSessions = await this.prisma.academicSession.findMany();
+        const sessionMap = new Map(allSessions.map(s => [s.name, s]));
+
         const errors: ValidationErrorDto[] = [];
         let imported = 0;
         let skipped = 0;
@@ -781,14 +856,23 @@ export class DataMigrationService {
                 }
 
                 // Parse remaining fields
+                // Parse remaining fields
+                const className = row.getCell(7).text?.trim() || '';
+                let status = row.getCell(15).text?.trim() || 'active';
+
+                // Auto-set status to alumni if class is PASS OUT
+                if (className === 'PASS OUT' || className === 'Pass Out') {
+                    status = 'alumni';
+                }
+
                 const studentData = {
                     studentId,
                     name,
-                    fatherName,
+                    fatherName: fatherName || '',
                     motherName: row.getCell(4).text?.trim() || '',
                     dob: parseDateDDMMYYYY(row.getCell(5).text?.trim()) || new Date(),
                     gender: row.getCell(6).text?.trim()?.toLowerCase() || 'male',
-                    className: row.getCell(7).text?.trim() || '',
+                    className,
                     section: row.getCell(8).text?.trim() || 'A',
                     rollNumber: sanitizeText(row.getCell(9).text),
                     admissionDate: parseDateDDMMYYYY(row.getCell(10).text?.trim()) || new Date(),
@@ -796,7 +880,7 @@ export class DataMigrationService {
                     phone: row.getCell(12).text?.trim() || '',
                     whatsAppNo: sanitizeText(row.getCell(13).text),
                     email: sanitizeText(row.getCell(14).text),
-                    status: row.getCell(15).text?.trim() || 'active',
+                    status,
                     category: row.getCell(16).text?.trim() || 'NA',
                     religion: sanitizeText(row.getCell(17).text),
                     aadharCardNo: sanitizeText(row.getCell(18).text),
@@ -811,7 +895,14 @@ export class DataMigrationService {
                     guardianName: sanitizeText(row.getCell(27).text),
                     guardianPhone: sanitizeText(row.getCell(28).text),
                     guardianEmail: sanitizeText(row.getCell(29).text),
-                    sessionId: activeSession.id,
+                    sessionId: (() => {
+                        const fileSessionName = row.getCell(30).text?.trim();
+                        if (fileSessionName && sessionMap.has(fileSessionName)) {
+                            return sessionMap.get(fileSessionName)!.id;
+                        }
+                        // Fallback to active session if not found in file
+                        return activeSession.id;
+                    })(),
                 };
 
                 // Create student
@@ -940,96 +1031,157 @@ export class DataMigrationService {
             rows.push({ row, rowNumber });
         });
 
-        for (const { row, rowNumber } of rows) {
-            try {
-                const studentId = row.getCell(1).text?.trim();
-                const receiptNo = row.getCell(2).text?.trim();
-                const receiptDate = row.getCell(3).text?.trim();
-                const feeTypeName = row.getCell(4).text?.trim();
-                const amount = parseFloat(row.getCell(5).text) || 0;
-                const discount = parseFloat(row.getCell(6).text) || 0;
-                const netAmount = parseFloat(row.getCell(7).text) || 0;
-                const paymentMode = row.getCell(8).text?.trim()?.toLowerCase() || 'cash';
-                const paymentRef = row.getCell(9).text?.trim() || null;
-                const collectedBy = row.getCell(10).text?.trim() || null;
-                const remarks = row.getCell(11).text?.trim() || null;
+        // Find Session Name Column dynamically
+        let sessionColIdx = -1;
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell: any, colNumber: number) => {
+            if (cell.text?.trim() === 'Session Name') {
+                sessionColIdx = colNumber;
+            }
+        });
 
-                // Validate required fields
-                if (!studentId || !receiptNo || !feeTypeName) {
-                    errors.push({ row: rowNumber, field: 'required', value: '', message: 'Missing required fields' });
-                    skipped++;
+        // Fetch sessions map
+        const allSessions = await this.prisma.academicSession.findMany();
+        const sessionMap = new Map(allSessions.map(s => [s.name, s]));
+
+        // Group rows by receiptNo
+        const receiptGroups = new Map<string, {
+            receiptNo: string;
+            studentId: string;
+            receiptDate: string;
+            paymentMode: string;
+            paymentRef: string;
+            collectedBy: string;
+            remarks: string;
+            sessionName: string; // Add session tracking
+            items: any[];
+            rowNumbers: number[];
+        }>();
+
+        for (const { row, rowNumber } of rows) {
+            const receiptNo = row.getCell(2).text?.trim();
+            if (!receiptNo) continue;
+
+            if (!receiptGroups.has(receiptNo)) {
+                receiptGroups.set(receiptNo, {
+                    receiptNo,
+                    studentId: row.getCell(1).text?.trim(),
+                    receiptDate: row.getCell(3).text?.trim(),
+                    paymentMode: row.getCell(8).text?.trim()?.toLowerCase() || 'cash',
+                    paymentRef: row.getCell(9).text?.trim() || null,
+                    collectedBy: row.getCell(10).text?.trim() || null,
+                    remarks: row.getCell(11).text?.trim() || null,
+                    sessionName: sessionColIdx > 0 ? row.getCell(sessionColIdx).text?.trim() : '',
+                    items: [],
+                    rowNumbers: []
+                });
+            }
+            const group = receiptGroups.get(receiptNo)!;
+
+            // Add item details
+            group.items.push({
+                feeTypeName: row.getCell(4).text?.trim(),
+                amount: parseFloat(row.getCell(5).text) || 0,
+                discount: parseFloat(row.getCell(6).text) || 0,
+                netAmount: parseFloat(row.getCell(7).text) || 0,
+                rowNumber
+            });
+            group.rowNumbers.push(rowNumber);
+        }
+
+        // Process Groups
+        for (const group of receiptGroups.values()) {
+            const { receiptNo, studentId, items, rowNumbers } = group;
+            const firstRowNumber = rowNumbers[0];
+
+            try {
+                // Validate Header fields (from first row)
+                if (!studentId || !receiptNo) {
+                    errors.push({ row: firstRowNumber, field: 'required', value: '', message: 'Missing studentId or receiptNo' });
+                    skipped += items.length;
                     continue;
                 }
 
-                // Check student exists
+                // Check student
                 const student = await this.prisma.studentDetails.findUnique({ where: { studentId } });
                 if (!student) {
-                    errors.push({ row: rowNumber, field: 'studentId', value: studentId, message: 'Student not found. Import students first.' });
-                    skipped++;
+                    errors.push({ row: firstRowNumber, field: 'studentId', value: studentId, message: 'Student not found' });
+                    skipped += items.length;
                     continue;
                 }
 
-                // Check fee type
-                const feeType = feeTypeMap.get(feeTypeName);
-                if (!feeType) {
-                    errors.push({ row: rowNumber, field: 'feeTypeName', value: feeTypeName, message: 'Fee Type not found. Create it in Settings first.' });
-                    skipped++;
+                // Check duplicate receipt (Real check)
+                const existing = await this.prisma.feeTransaction.findUnique({ where: { receiptNo } });
+                if (existing) {
+                    errors.push({ row: firstRowNumber, field: 'receiptNo', value: receiptNo, message: 'Receipt already exists' });
+                    skipped += items.length;
                     continue;
                 }
 
-                // Check duplicate receipt
-                const existingReceipt = await this.prisma.feeTransaction.findUnique({ where: { receiptNo } });
-                if (existingReceipt) {
-                    errors.push({ row: rowNumber, field: 'receiptNo', value: receiptNo, message: 'Receipt number already exists' });
-                    skipped++;
-                    continue;
+                // Build Payment Details & Calculate Totals
+                const paymentDetailsCreate: any[] = [];
+                let totalAmount = 0;
+
+                for (const item of items) {
+                    const feeType = feeTypeMap.get(item.feeTypeName);
+                    if (!feeType) {
+                        errors.push({ row: item.rowNumber, field: 'feeTypeName', value: item.feeTypeName, message: 'Fee Type not found' });
+                        continue; // Skip invalid item or fail whole receipt? 
+                        // Better to skip item but log error.
+                    }
+
+                    paymentDetailsCreate.push({
+                        feeTypeId: feeType.id,
+                        amount: item.amount,
+                        discountAmount: item.discount,
+                        netAmount: item.netAmount
+                    });
+                    totalAmount += item.netAmount;
                 }
 
-                // Create transaction
+                if (paymentDetailsCreate.length === 0) {
+                    skipped += items.length;
+                    continue; // No valid items
+                }
+
+                // Resolve Session ID
+                let targetSessionId = activeSession.id;
+                if (group.sessionName && sessionMap.has(group.sessionName)) {
+                    targetSessionId = sessionMap.get(group.sessionName)!.id;
+                }
+
+                // Create Transaction
                 const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                const transaction = await this.prisma.feeTransaction.create({
+                await this.prisma.feeTransaction.create({
                     data: {
                         transactionId,
                         studentId,
-                        sessionId: activeSession.id,
+                        sessionId: targetSessionId,
                         receiptNo,
-                        amount: netAmount,
-                        description: `${feeTypeName} - Imported`,
-                        date: parseDateDDMMYYYY(receiptDate) || new Date(),
-                        yearId: activeSession.id,
-                        remarks,
-                        collectedBy,
+                        amount: totalAmount, // Sum of net amounts
+                        description: `Imported Receipt - ${items.length} items`,
+                        date: parseDateDDMMYYYY(group.receiptDate) || new Date(),
+                        yearId: targetSessionId,
+                        remarks: group.remarks,
+                        collectedBy: group.collectedBy,
                         paymentDetails: {
-                            create: {
-                                feeTypeId: feeType.id,
-                                amount,
-                                discountAmount: discount,
-                                netAmount,
-                            },
+                            create: paymentDetailsCreate
                         },
                         paymentModeDetails: {
                             create: {
-                                paymentMode,
-                                amount: netAmount,
-                                reference: paymentRef,
-                            },
-                        },
-                    },
+                                paymentMode: group.paymentMode,
+                                amount: totalAmount,
+                                reference: group.paymentRef
+                            }
+                        }
+                    }
                 });
 
-                imported++;
+                imported += items.length; // Count all rows as imported
+
             } catch (error: any) {
-                errors.push({ row: rowNumber, field: 'general', value: '', message: error.message });
-                if (!options?.skipOnError) {
-                    return {
-                        success: false,
-                        totalRows: rows.length,
-                        imported,
-                        skipped,
-                        errors,
-                    };
-                }
-                skipped++;
+                errors.push({ row: firstRowNumber, field: 'general', value: '', message: error.message });
+                skipped += items.length;
             }
         }
 
@@ -1072,6 +1224,10 @@ export class DataMigrationService {
         const feeTypes = await this.prisma.feeType.findMany();
         const feeTypeMap = new Map(feeTypes.map(f => [f.name, f]));
 
+        // Fetch sessions map
+        const allSessions = await this.prisma.academicSession.findMany();
+        const sessionMap = new Map(allSessions.map(s => [s.name, s]));
+
         const errors: ValidationErrorDto[] = [];
         let imported = 0;
         let skipped = 0;
@@ -1080,6 +1236,15 @@ export class DataMigrationService {
         worksheet.eachRow((row: any, rowNumber: number) => {
             if (rowNumber === 1) return;
             rows.push({ row, rowNumber });
+        });
+
+        // Find Session Name Column dynamically
+        let sessionColIdx = -1;
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell: any, colNumber: number) => {
+            if (cell.text?.trim() === 'Session Name') {
+                sessionColIdx = colNumber;
+            }
         });
 
         for (const { row, rowNumber } of rows) {
@@ -1098,6 +1263,7 @@ export class DataMigrationService {
                 const netAmount = parseFloat(row.getCell(12).text) || 0;
                 const paidAmount = parseFloat(row.getCell(13).text) || 0;
                 const status = row.getCell(14).text?.trim()?.toUpperCase() || 'PENDING';
+                const sessionName = sessionColIdx > 0 ? row.getCell(sessionColIdx).text?.trim() : '';
 
                 if (!studentId || !billNo || !feeTypeName) {
                     errors.push({ row: rowNumber, field: 'required', value: '', message: 'Missing required fields' });
@@ -1126,11 +1292,17 @@ export class DataMigrationService {
                     continue;
                 }
 
+                // Resolve Session ID
+                let targetSessionId = activeSession.id;
+                if (sessionName && sessionMap.has(sessionName)) {
+                    targetSessionId = sessionMap.get(sessionName)!.id;
+                }
+
                 await this.prisma.demandBill.create({
                     data: {
                         billNo,
                         studentId,
-                        sessionId: activeSession.id,
+                        sessionId: targetSessionId,
                         month,
                         year,
                         billDate: parseDateDDMMYYYY(billDate) || new Date(),
@@ -1270,6 +1442,120 @@ export class DataMigrationService {
                         discountValue,
                         reason,
                         approvedBy,
+                    },
+                });
+
+                imported++;
+            } catch (error: any) {
+                errors.push({ row: rowNumber, field: 'general', value: '', message: error.message });
+                if (!options?.skipOnError) {
+                    return {
+                        success: false,
+                        totalRows: rows.length,
+                        imported,
+                        skipped,
+                        errors,
+                    };
+                }
+                skipped++;
+            }
+        }
+
+        return {
+            success: errors.length === 0,
+            totalRows: rows.length,
+            imported,
+            skipped,
+            errors,
+        };
+    }
+    async importAcademicHistory(file: Express.Multer.File, options?: { skipOnError?: boolean }): Promise<ImportResultDto> {
+        const ExcelJS = require('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(file.buffer);
+        const worksheet = workbook.getWorksheet('Academic_History') || workbook.getWorksheet(1);
+
+        if (!worksheet) {
+            return {
+                success: false,
+                totalRows: 0,
+                imported: 0,
+                skipped: 0,
+                errors: [{ row: 0, field: 'file', value: '', message: 'No "Academic_History" sheet found' }],
+            };
+        }
+
+        // Fetch sessions and students for validation
+        const [sessions, students] = await Promise.all([
+            this.prisma.academicSession.findMany(),
+            this.prisma.studentDetails.findMany({ select: { studentId: true } }),
+        ]);
+
+        const sessionMap = new Map(sessions.map(s => [s.name, s]));
+        const studentSet = new Set(students.map(s => s.studentId));
+
+        const errors: ValidationErrorDto[] = [];
+        let imported = 0;
+        let skipped = 0;
+
+        const rows: any[] = [];
+        worksheet.eachRow((row: any, rowNumber: number) => {
+            if (rowNumber === 1) return;
+            rows.push({ row, rowNumber });
+        });
+
+        for (const { row, rowNumber } of rows) {
+            try {
+                const studentId = row.getCell(1).text?.trim();
+                const sessionName = row.getCell(2).text?.trim();
+                const className = row.getCell(3).text?.trim();
+                const section = row.getCell(4).text?.trim();
+                const rollNumber = sanitizeText(row.getCell(5).text);
+                const status = row.getCell(6).text?.trim()?.toLowerCase() || 'promoted';
+                const finalResult = sanitizeText(row.getCell(7).text);
+
+                if (!studentId || !sessionName || !className || !section) {
+                    errors.push({ row: rowNumber, field: 'required', value: '', message: 'Missing required fields' });
+                    skipped++;
+                    continue;
+                }
+
+                if (!studentSet.has(studentId)) {
+                    errors.push({ row: rowNumber, field: 'studentId', value: studentId, message: 'Student not found in system' });
+                    skipped++;
+                    continue;
+                }
+
+                const session = sessionMap.get(sessionName);
+                if (!session) {
+                    errors.push({ row: rowNumber, field: 'sessionName', value: sessionName, message: 'Session not found. Create it first.' });
+                    skipped++;
+                    continue;
+                }
+
+                // Upsert history record
+                await this.prisma.studentAcademicHistory.upsert({
+                    where: {
+                        studentId_sessionId: {
+                            studentId,
+                            sessionId: session.id,
+                        },
+                    },
+                    update: {
+                        className,
+                        section,
+                        rollNo: rollNumber,
+                        status,
+                        finalResult,
+                    },
+                    create: {
+                        studentId,
+                        sessionId: session.id,
+                        className,
+                        section,
+                        rollNo: rollNumber,
+                        status,
+                        finalResult,
                     },
                 });
 

@@ -294,6 +294,36 @@ export class ImportDiscountDto {
     approvedBy?: string;
 }
 
+
+// ============================================
+// ACADEMIC HISTORY IMPORT DTOs
+// ============================================
+
+export class ImportAcademicHistoryDto {
+    @IsString()
+    studentId: string;
+
+    @IsString()
+    sessionName: string; // e.g., "2022-2023" - will be mapped to sessionId
+
+    @IsString()
+    className: string;
+
+    @IsString()
+    section: string;
+
+    @IsString()
+    @IsOptional()
+    rollNumber?: string;
+
+    @IsString()
+    status: string; // 'promoted', 'passed', 'detained'
+
+    @IsString()
+    @IsOptional()
+    finalResult?: string; // '85%', 'Grade A'
+}
+
 // ============================================
 // VALIDATION & IMPORT RESULT DTOs
 // ============================================
@@ -304,6 +334,7 @@ export class ValidationErrorDto {
     value: string;
     message: string;
 }
+
 
 export class ValidationResultDto {
     isValid: boolean;

@@ -71,6 +71,14 @@ export async function seedCoreSettings() {
 
     // 1.2 Academic Sessions
     const sessions = [
+        { name: 'APR 2015 - MAR 2016', startDate: new Date('2015-04-01'), endDate: new Date('2016-03-31'), isActive: false },
+        { name: 'APR 2016 - MAR 2017', startDate: new Date('2016-04-01'), endDate: new Date('2017-03-31'), isActive: false },
+        { name: 'APR 2017 - MAR 2018', startDate: new Date('2017-04-01'), endDate: new Date('2018-03-31'), isActive: false },
+        { name: 'APR 2018 - MAR 2019', startDate: new Date('2018-04-01'), endDate: new Date('2019-03-31'), isActive: false },
+        { name: 'APR 2019 - MAR 2020', startDate: new Date('2019-04-01'), endDate: new Date('2020-03-31'), isActive: false },
+        { name: 'APR 2020 - MAR 2021', startDate: new Date('2020-04-01'), endDate: new Date('2021-03-31'), isActive: false },
+        { name: 'APR 2021 - MAR 2022', startDate: new Date('2021-04-01'), endDate: new Date('2022-03-31'), isActive: false },
+        { name: 'APR 2022 - MAR 2023', startDate: new Date('2022-04-01'), endDate: new Date('2023-03-31'), isActive: false },
         { name: 'APR 2023 - MAR 2024', startDate: new Date('2023-04-01'), endDate: new Date('2024-03-31'), isActive: false },
         { name: 'APR 2024 - MAR 2025', startDate: new Date('2024-04-01'), endDate: new Date('2025-03-31'), isActive: true },
         { name: 'APR 2025 - MAR 2026', startDate: new Date('2025-04-01'), endDate: new Date('2026-03-31'), isActive: false, isSetupMode: true },
@@ -92,7 +100,21 @@ export async function seedCoreSettings() {
         { name: 'Annual Charges', frequency: 'Yearly', isRecurring: false },
         { name: 'Admission Fee', frequency: 'One-time', isRecurring: false },
         { name: 'Late Fee', frequency: 'One-time', description: 'Penalty for overdue payment' },
+        { name: 'Late Fine', frequency: 'One-time', description: 'Migrated penalty' },
         { name: 'Advance Payment', frequency: 'One-time', description: 'Advance fee payment (System)', isRecurring: false },
+        // New Migrated Fee Types
+        { name: 'Computer Fee', frequency: 'Monthly', isRecurring: true },
+        { name: 'Smart Class', frequency: 'Monthly', isRecurring: true },
+        { name: 'Development Fee', frequency: 'Yearly', isRecurring: false },
+        { name: 'Exam Fee', frequency: 'Yearly', isRecurring: false },
+        { name: 'Library Fee', frequency: 'Yearly', isRecurring: false },
+        { name: 'Lab Fee', frequency: 'Monthly', isRecurring: true },
+        { name: 'Activity Fee', frequency: 'Yearly', isRecurring: false },
+        { name: 'Generator Fee', frequency: 'Monthly', isRecurring: true },
+        { name: 'Other Fee', frequency: 'One-time', isRecurring: false },
+        { name: 'Hostel Fee', frequency: 'Monthly', isRecurring: true },
+        { name: 'Dress Fee', frequency: 'One-time', isRecurring: false },
+        { name: 'Previous Dues', frequency: 'One-time', isRecurring: false },
     ];
 
     for (const f of feeTypes) {
@@ -148,7 +170,12 @@ export async function seedClasses() {
         { name: 'IX', displayName: 'Class IX', order: 12 },
         { name: 'X', displayName: 'Class X', order: 13 },
         { name: 'XI', displayName: 'Class XI', order: 14 },
-        { name: 'XII', displayName: 'Class XII', order: 15 },
+        { name: 'XI-Science', displayName: 'Class XI (Science)', order: 15 },
+        { name: 'XI-Com', displayName: 'Class XI (Commerce)', order: 16 },
+        { name: 'XII', displayName: 'Class XII', order: 17 },
+        { name: 'XII-Science', displayName: 'Class XII (Science)', order: 18 },
+        { name: 'XII-Com', displayName: 'Class XII (Commerce)', order: 19 },
+        { name: 'PASS OUT', displayName: 'Pass Out (Alumni)', order: 99 },
     ];
 
     for (const cls of classes) {

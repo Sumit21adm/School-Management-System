@@ -136,4 +136,21 @@ export class DataMigrationController {
             skipOnError: options?.skipOnError === true || options?.skipOnError === 'true' as any,
         });
     }
+
+    /**
+     * Import academic history from Excel file
+     */
+    @Post('import/academic-history')
+    @UseInterceptors(FileInterceptor('file'))
+    async importAcademicHistory(
+        @UploadedFile() file: Express.Multer.File,
+        @Body() options: ImportOptionsDto
+    ): Promise<ImportResultDto> {
+        if (!file) {
+            throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+        }
+        return this.dataMigrationService.importAcademicHistory(file, {
+            skipOnError: options?.skipOnError === true || options?.skipOnError === 'true' as any,
+        });
+    }
 }
