@@ -957,6 +957,16 @@ export class DataMigrationService {
 
                 imported++;
             } catch (error: any) {
+                // Check if it's a duplicate/unique constraint error - skip gracefully
+                const isDuplicateError = error.code === 'P2002' || 
+                    error.message?.includes('Unique constraint');
+                
+                if (isDuplicateError) {
+                    // Skip duplicates silently or as warnings
+                    skipped++;
+                    continue; // Don't add to errors, just skip
+                }
+
                 errors.push({
                     row: rowNumber,
                     field: 'general',
