@@ -1079,6 +1079,7 @@ export class DataMigrationService {
             imported,
             skipped,
             errors,
+            details: importDetails,
         };
     }
 
