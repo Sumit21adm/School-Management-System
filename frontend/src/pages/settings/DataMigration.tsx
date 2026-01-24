@@ -9,6 +9,7 @@ import {
     Card,
     CardContent,
     CardActions,
+    Collapse, // Added
     Stepper,
     Step,
     StepLabel,
@@ -41,6 +42,8 @@ import {
     Discount,
     Info,
     HistoryEdu,
+    KeyboardArrowDown,
+    KeyboardArrowUp,
 } from '@mui/icons-material';
 import PageHeader from '../../components/PageHeader';
 import { dataMigrationService } from '../../lib/api/data-migration';
@@ -66,6 +69,7 @@ export default function DataMigration() {
     const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [skipOnError, setSkipOnError] = useState(false);
+    const [showDetails, setShowDetails] = useState(false); // Added for toggle
     const [error, setError] = useState<string | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -492,6 +496,52 @@ export default function DataMigration() {
                                 <Button variant="contained" onClick={handleReset}>
                                     Import More Data
                                 </Button>
+
+                                {/* Detailed Report Section */}
+                                {importResult.details && importResult.details.some(d => d.status !== 'imported') && (
+                                    <Box sx={{ mt: 3 }}>
+                                        <Button
+                                            onClick={() => setShowDetails(!showDetails)}
+                                            endIcon={showDetails ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                                            sx={{ mb: 2 }}
+                                        >
+                                            {showDetails ? 'Hide' : 'Show'} Detailed Report ({importResult.details.filter(d => d.status !== 'imported').length} issues)
+                                        </Button>
+
+                                        <Collapse in={showDetails}>
+                                            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
+                                                <Table size="small" stickyHeader>
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell>Row</TableCell>
+                                                            <TableCell>Status</TableCell>
+                                                            <TableCell>Student ID</TableCell>
+                                                            <TableCell>Reason</TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {importResult.details
+                                                            .filter(d => d.status !== 'imported')
+                                                            .map((item, idx) => (
+                                                                <TableRow key={idx} hover>
+                                                                    <TableCell>{item.row}</TableCell>
+                                                                    <TableCell>
+                                                                        <Chip
+                                                                            label={item.status.toUpperCase()}
+                                                                            color={item.status === 'failed' ? 'error' : 'warning'}
+                                                                            size="small"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell>{item.studentId || '-'}</TableCell>
+                                                                    <TableCell>{item.reason}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        </Collapse>
+                                    </Box>
+                                )}
                             </Box>
                         )}
                     </Box>

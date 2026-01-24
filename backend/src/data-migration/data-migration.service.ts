@@ -685,7 +685,9 @@ export class DataMigrationService {
             const dob = row.getCell(5).text?.trim();
             const gender = row.getCell(6).text?.trim()?.toLowerCase();
             const className = row.getCell(7).text?.trim();
-            const section = row.getCell(8).text?.trim();
+            // CLEANING: Parse Section for validation consistency
+            const rawSection = row.getCell(8).text?.trim();
+            const section = this.parseSection(rawSection);
             const admissionDate = row.getCell(10).text?.trim();
             const address = row.getCell(11).text?.trim();
             const phone = row.getCell(12).text?.trim();
@@ -791,6 +793,51 @@ export class DataMigrationService {
     }
 
     // ============================================
+    // HELPERS FOR DATA CLEANING
+    // ============================================
+
+    /**
+     * Parse Section from "Class-Section" format (e.g., "XI-Science-A" -> "A")
+     * If no hyphen, returns original string.
+     */
+    private parseSection(value: string | undefined): string {
+        if (!value) return '';
+        const trimmed = value.trim();
+        if (trimmed.includes('-')) {
+            // Take the last part (e.g. XI-Science-A -> A)
+            return trimmed.split('-').pop()!.trim();
+        }
+        return trimmed;
+    }
+
+    /**
+     * Parse Route Code from "Code: Name" format (e.g., "R1: City Route" -> "R1")
+     */
+    private parseRouteCode(value: string | undefined): string | null {
+        if (!value) return null;
+        const trimmed = value.trim();
+        if (trimmed.includes(':')) {
+            return trimmed.split(':')[0].trim();
+        }
+        return trimmed;
+    }
+
+    /**
+     * Parse Route Stop from "RouteCode - StopName" format (e.g., "R1 - Market" -> "Market")
+     */
+    private parseRouteStop(value: string | undefined): string | null {
+        if (!value) return null;
+        const trimmed = value.trim();
+        // Check for " - " separator which is used in Reference Data
+        if (trimmed.includes(' - ')) {
+            // Return everything after the first " - "
+            const parts = trimmed.split(' - ');
+            return parts.slice(1).join(' - ').trim();
+        }
+        return trimmed;
+    }
+
+    // ============================================
     // IMPORT OPERATIONS
     // ============================================
 
@@ -836,6 +883,7 @@ export class DataMigrationService {
         const sessionMap = new Map(allSessions.map(s => [s.name, s]));
 
         const errors: ValidationErrorDto[] = [];
+        const importDetails: any[] = []; // Collect detailed report
         let imported = 0;
         let skipped = 0;
 
@@ -854,6 +902,7 @@ export class DataMigrationService {
 
                 if (!studentId) {
                     skipped++;
+                    importDetails.push({ row: rowNumber, status: 'skipped', reason: 'Missing Student ID' });
                     continue;
                 }
 
@@ -866,18 +915,20 @@ export class DataMigrationService {
 
                     if (nameMatch && fatherMatch) {
                         skipped++;
+                        importDetails.push({ row: rowNumber, status: 'skipped', studentId, reason: `Duplicate: Matched existing student '${existing.name}'` });
                         continue;
                     }
 
                     if (options?.skipOnError) {
                         skipped++;
+                        importDetails.push({ row: rowNumber, status: 'skipped', studentId, reason: `Duplicate ID: Conflicts with '${existing.name}' (Name mismatch)` });
                         continue;
                     }
                     errors.push({ row: rowNumber, field: 'studentId', value: studentId, message: `Already exists (System: ${existing.name}, File: ${name})` });
+                    importDetails.push({ row: rowNumber, status: 'failed', studentId, reason: `Duplicate ID error` });
                     continue;
                 }
 
-                // Parse remaining fields
                 // Parse remaining fields
                 const className = row.getCell(7).text?.trim() || '';
                 let status = row.getCell(15).text?.trim() || 'active';
@@ -887,6 +938,10 @@ export class DataMigrationService {
                     status = 'alumni';
                 }
 
+                // CLEANING: Parse Section
+                const rawSection = row.getCell(8).text?.trim();
+                const cleanSection = this.parseSection(rawSection) || 'A';
+
                 const studentData = {
                     studentId,
                     name,
@@ -895,7 +950,7 @@ export class DataMigrationService {
                     dob: parseDateDDMMYYYY(row.getCell(5).text?.trim()) || new Date(),
                     gender: row.getCell(6).text?.trim()?.toLowerCase() || 'male',
                     className,
-                    section: row.getCell(8).text?.trim() || 'A',
+                    section: cleanSection, // Use cleaned section
                     rollNumber: sanitizeText(row.getCell(9).text),
                     admissionDate: parseDateDDMMYYYY(row.getCell(10).text?.trim()) || new Date(),
                     address: row.getCell(11).text?.trim() || '',
@@ -931,12 +986,19 @@ export class DataMigrationService {
                 await this.prisma.studentDetails.create({ data: studentData });
 
                 // Handle transport if specified
-                const routeCode = row.getCell(30).text?.trim();
+                // CLEANING: Parse Route Code
+                const rawRouteCode = row.getCell(30).text?.trim();
+                const routeCode = this.parseRouteCode(rawRouteCode);
+
                 if (routeCode) {
                     const route = routeMap.get(routeCode);
                     if (route) {
-                        const pickupStopName = row.getCell(31).text?.trim();
-                        const dropStopName = row.getCell(32).text?.trim();
+                        // CLEANING: Parse Stops
+                        const rawPickupStop = row.getCell(31).text?.trim();
+                        const rawDropStop = row.getCell(32).text?.trim();
+
+                        const pickupStopName = this.parseRouteStop(rawPickupStop);
+                        const dropStopName = this.parseRouteStop(rawDropStop);
                         const transportType = row.getCell(33).text?.trim() || 'both';
 
                         const pickupStop = route.stops.find((s: any) => s.stopName === pickupStopName);
@@ -986,6 +1048,7 @@ export class DataMigrationService {
                 if (isDuplicateError) {
                     // Skip duplicates silently or as warnings
                     skipped++;
+                    importDetails.push({ row: rowNumber, status: 'skipped', reason: `Unique constraint failed: ${error.message}` });
                     continue; // Don't add to errors, just skip
                 }
 
@@ -995,6 +1058,7 @@ export class DataMigrationService {
                     value: '',
                     message: error.message || 'Unknown error during import',
                 });
+                importDetails.push({ row: rowNumber, status: 'failed', reason: error.message || 'Unknown error' });
                 if (!options?.skipOnError) {
                     return {
                         success: false,
@@ -1002,6 +1066,7 @@ export class DataMigrationService {
                         imported,
                         skipped,
                         errors,
+                        details: importDetails,
                     };
                 }
                 skipped++;
