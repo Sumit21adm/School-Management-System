@@ -146,4 +146,23 @@ export const dataMigrationService = {
         });
         return response.data;
     },
+
+    /**
+     * Import academic history from Excel file
+     */
+    importAcademicHistory: async (file: File, options?: ImportOptions): Promise<ImportResult> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (options?.skipOnError) {
+            formData.append('skipOnError', 'true');
+        }
+
+        const response = await axios.post(`${API_URL}/data-migration/import/academic-history`, formData, {
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
 };

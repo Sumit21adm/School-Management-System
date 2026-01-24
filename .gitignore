@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+.venv/
+
 .pnp/
 .pnp.js
 
@@ -57,3 +59,6 @@ release_build/
 # Backup directories
 **/uploads_backup_*/
 *.tgz
+/SDV Data Migration
+!scripts/sdv-migration/
+

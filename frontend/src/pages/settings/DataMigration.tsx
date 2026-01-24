@@ -40,18 +40,20 @@ import {
     Description,
     Discount,
     Info,
+    HistoryEdu,
 } from '@mui/icons-material';
 import PageHeader from '../../components/PageHeader';
 import { dataMigrationService } from '../../lib/api/data-migration';
 import type { ValidationResult, ImportResult } from '../../lib/api/data-migration';
 
-type ImportType = 'students' | 'fee-receipts' | 'demand-bills' | 'discounts';
+type ImportType = 'students' | 'fee-receipts' | 'demand-bills' | 'discounts' | 'academic-history';
 
 const importTypeConfig: Record<ImportType, { label: string; icon: React.ReactNode; color: string }> = {
     students: { label: 'Students', icon: <People />, color: '#9C27B0' },
     'fee-receipts': { label: 'Fee Receipts', icon: <Receipt />, color: '#FF9800' },
     'demand-bills': { label: 'Demand Bills', icon: <Description />, color: '#3F51B5' },
     discounts: { label: 'Discounts', icon: <Discount />, color: '#009688' },
+    'academic-history': { label: 'Academic History', icon: <HistoryEdu />, color: '#795548' },
 };
 
 export default function DataMigration() {
@@ -151,6 +153,9 @@ export default function DataMigration() {
                     break;
                 case 'discounts':
                     result = await dataMigrationService.importDiscounts(file, options);
+                    break;
+                case 'academic-history':
+                    result = await dataMigrationService.importAcademicHistory(file, options);
                     break;
             }
 

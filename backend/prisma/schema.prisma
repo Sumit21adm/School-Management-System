@@ -88,7 +88,7 @@ model StudentDetails {
   @@index([status])
   @@index([sessionId])
   @@map("student_details")
-  @@unique([className, section, rollNumber])
+  @@unique([sessionId, className, section, rollNumber])
 }
 
 // Fee Tables
