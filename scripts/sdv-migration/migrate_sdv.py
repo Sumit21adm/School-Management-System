@@ -14,7 +14,7 @@ import re
 import os
 import json
 import argparse
-from datetime import datetime
+from datetime import datetime, date
 from collections import defaultdict
 from typing import Dict, List, Tuple, Optional
 
@@ -29,44 +29,90 @@ except ImportError:
 # CONFIGURATION
 # =============================================================================
 
-
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
-
 # Paths are now configured via CLI arguments
 # SQL_FILE, OUTPUT_DIR removed from global scope
 
 
-# Fee type mapping: legacy column -> new fee type name
-FEE_TYPE_MAPPING = {
+# Comprehensive Fee Type Mapping
+# Legacy Name (any case/format) -> System Name
+FEE_TYPE_SYSTEM_MAP = {
     'tuition_fee': 'Tuition Fee',
+    'tuitionfeedet': 'Tuition Fee',
+    'tuition': 'Tuition Fee',
+    'tuition fee': 'Tuition Fee',
+    
     'computer_fee': 'Computer Fee',
+    'computerfinearts': 'Computer Fee',
+    'computer': 'Computer Fee',
+    'computer fine arts': 'Computer Fee',
+    
     'transport_fee': 'Transport Fee',
+    'conveyance': 'Transport Fee',
+    'transport': 'Transport Fee',
+    
     'dev_fee': 'Development Fee',
+    'development': 'Development Fee',
+    
     'exam_fee': 'Exam Fee',
+    'exam': 'Exam Fee',
+    
     'lib_fee': 'Library Fee',
+    'library': 'Library Fee',
+    
     'lab_fee': 'Lab Fee',
-    'fine': 'Late Fine',
+    'laboratory': 'Lab Fee',
+    'lab': 'Lab Fee',
+    
+    'fine': 'Late Fee',
+    'latefine': 'Late Fee',
+    'late fine': 'Late Fee',
+    
     'adm_fee': 'Admission Fee',
-    'other': 'Other Fee',
+    'admission fee': 'Admission Fee',
+    
     'pre_dues': 'Previous Dues',
+    'pre dues': 'Previous Dues',
+    'dues': 'Previous Dues',
+    
+    'smartclassgencharge': 'Smart Class',
+    'smart class': 'Smart Class',
+    'smart_class': 'Smart Class',
+    
+    'generator': 'Generator Fee',
+    'gen': 'Generator Fee',
+    
+    'activity': 'Activity Fee',
+    'activity fee': 'Activity Fee',
+    
+    'dress_fee': 'Dress Fee',
+    'dressdues': 'Dress Fee',
+    
+    'hostel_fee': 'Hostel Fee',
+    'hostel': 'Hostel Fee',
+    
+    'other': 'Other Fee',
+    'others': 'Other Fee',
+    'other fee': 'Other Fee'
 }
 
-# Concession table mapping
-CONCESSION_MAPPING = {
-    'TuitionFee': 'Tuition Fee',
-    'ComputerFineArts': 'Computer Fee',
-    'SmartClass': 'Smart Class',
-    'Development': 'Development Fee',
-    'Laboratory': 'Lab Fee',
-    'Library': 'Library Fee',
-    'LateFine': 'Late Fine',
-    'Others': 'Other Fee',
-    'Generator': 'Generator Fee',
-    'Activity': 'Activity Fee',
-    'Exam': 'Exam Fee',
-}
+def map_fee_type(legacy_name: str) -> Optional[str]:
+    """Strictly map legacy names to system names."""
+    if not legacy_name or legacy_name in PLACEHOLDER_VALUES:
+        return None
+    
+    # Normalize for lookup
+    clean_name = legacy_name.strip().lower()
+    
+    # Check map
+    return FEE_TYPE_SYSTEM_MAP.get(clean_name, legacy_name) # Fallback to original if not in map, but we should be thorough
+
+def is_valid_fee(fee_name: str, amount: float) -> bool:
+    """Check if a fee record is valid for import."""
+    if amount <= 0:
+        return False
+    if not fee_name or fee_name in PLACEHOLDER_VALUES:
+        return False
+    return True
 
 # Placeholder values to treat as NULL
 PLACEHOLDER_VALUES = {'--Select--', 'None', 'N/A', '-', '', 'null', 'NULL', 'NA'}
@@ -255,14 +301,18 @@ def clean_aadhar(aadhar: str) -> Optional[str]:
         return digits
     return None
 
-def safe_float(value: str) -> float:
-    """Convert string to float, handling empty/invalid values."""
-    if not value or value in PLACEHOLDER_VALUES:
+def safe_float(value) -> float:
+    """Convert value to float, handling empty/invalid values and mixed types."""
+    if value is None or value == '' or value in PLACEHOLDER_VALUES:
         return 0.0
-    try:
-        return float(value.replace(',', ''))
-    except (ValueError, TypeError):
-        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value.replace(',', ''))
+        except (ValueError, TypeError):
+            return 0.0
+    return 0.0
 
 # =============================================================================
 # DATA EXTRACTION
@@ -320,6 +370,7 @@ def extract_students(tables: Dict) -> Dict[str, List[Dict]]:
             'roll': clean_text(row.get('roll', '')),
             'admission_date': clean_date(row.get('date', ''))[0],
             'phone': phone,
+            'whats_app': phone, # Default WhatsApp to mobile
             'email': clean_text(row.get('email', '')),
             'address': address if address else 'Address Not Available',
             'aadhar': clean_aadhar(row.get('uidNo', '')),
@@ -327,6 +378,10 @@ def extract_students(tables: Dict) -> Dict[str, List[Dict]]:
             'religion': clean_text(row.get('Religion', '')),
             'status': status,
             'session': session,
+            'father_occupation': clean_text(row.get('Father_Occupation', '')),
+            'mother_occupation': clean_text(row.get('Mother_Occupation', '')),
+            'father_aadhar': clean_aadhar(row.get('Father_Aadhar', '')),
+            'mother_aadhar': clean_aadhar(row.get('Mother_Aadhar', '')),
         }
         
         if student['name'] and student['student_id']:
@@ -466,30 +521,19 @@ def extract_demand_bills(tables: Dict, students_by_session: Dict) -> Dict[str, L
         previous_dues = safe_float(row.get('Dues', '0'))
         
         # Map known columns to Fee Types
-        # Based on demandbillnew schema: 
-        # TuitionFee, ComputerFineArts, SmartClassGenCharge, Development, Laboratory, Library, LateFine, Others
-        # SmartClass, Generator, Activity, Exam, DressDues
+        # Extract fee components
+        # Based on demandbillnew schema
+        legacy_cols = [
+            'TuitionFee', 'ComputerFineArts', 'TransportFee', 'Conveyance', 'SmartClassGenCharge', 
+            'Development', 'Laboratory', 'Library', 'LateFine', 'Others', 
+            'Activity', 'Exam', 'DressDues', 'HostelFee'
+        ]
         
-        bill_map = {
-            'TuitionFee': 'Tuition Fee',
-            'ComputerFineArts': 'Computer Fee',
-            'TransportFee': 'Transport Fee', # Not in schema above but in mapping? Check row keys
-            'Conveyance': 'Transport Fee', # Found in schema!
-            'SmartClassGenCharge': 'Smart Class',
-            'Development': 'Development Fee',
-            'Laboratory': 'Lab Fee',
-            'Library': 'Library Fee',
-            'LateFine': 'Late Fine',
-            'Others': 'Other Fee',
-            'Activity': 'Activity Fee',
-            'Exam': 'Exam Fee',
-            'DressDues': 'Dress Fee',
-            'HostelFee': 'Hostel Fee'
-        }
-        
-        for col, fee_type in bill_map.items():
+        for col in legacy_cols:
             amount = safe_float(row.get(col, '0'))
-            if amount > 0:
+            fee_type = map_fee_type(col)
+            
+            if is_valid_fee(fee_type, amount):
                 bills_by_session[session].append({
                     'student_id': student_id,
                     'bill_no': bill_no,
@@ -592,19 +636,19 @@ def extract_admission_payments(tables: Dict, students_by_session: Dict) -> Dict[
         }
         
         for item in data['items']:
-            desc = item['fee_type']
-            mapped_type = fee_map.get(desc, desc) # Fallback to original
+            mapped_type = map_fee_type(item['fee_type'])
             
-            receipts_by_session[session].append({
-                'student_id': data['student_id'],
-                'receipt_no': f"ADM-{data['tid']}", # Prefix to distinguish
-                'receipt_date': default_date,
-                'fee_type': mapped_type,
-                'amount': item['amount'],
-                'discount': 0, # Admissionpayment usually net
-                'payment_mode': 'CASH', # Default
-                'payment_ref': ''
-            })
+            if is_valid_fee(mapped_type, item['amount']):
+                receipts_by_session[session].append({
+                    'student_id': data['student_id'],
+                    'receipt_no': f"ADM-{data['tid']}", # Prefix to distinguish
+                    'receipt_date': default_date,
+                    'fee_type': mapped_type,
+                    'amount': item['amount'],
+                    'discount': 0, # Admissionpayment usually net
+                    'payment_mode': 'CASH', # Default
+                    'payment_ref': ''
+                })
             
     return receipts_by_session
 
@@ -630,7 +674,7 @@ def extract_modern_transactions(tables: Dict, students_by_session: Dict) -> Dict
             'development': 'Development Fee',
             'lab': 'Lab Fee',
             'library': 'Library Fee',
-            'latefine': 'Late Fine',
+            'latefine': 'Late Fee',
             'others': 'Other Fee',
             'gen': 'Generator Fee',
             'activity': 'Activity Fee',
@@ -730,9 +774,11 @@ def extract_fee_receipts(tables: Dict, students_by_session: Dict) -> Dict[str, L
             payment_mode = 'Cash'
         
         # Extract individual fee amounts
-        for legacy_col, fee_type in FEE_TYPE_MAPPING.items():
+        for legacy_col in ['adm_fee', 'tuition_fee', 'computer_fee', 'transport_fee', 'dev_fee', 'exam_fee', 'lib_fee', 'lab_fee', 'fine', 'other', 'pre_dues']:
             amount = safe_float(row.get(legacy_col, '0'))
-            if amount > 0:
+            fee_type = map_fee_type(legacy_col)
+            
+            if is_valid_fee(fee_type, amount):
                 receipts_by_session[session].append({
                     'student_id': student_id,
                     'receipt_no': receipt_no,
@@ -761,9 +807,11 @@ def extract_discounts(tables: Dict, students_by_session: Dict) -> Dict[str, List
             continue
         
         # Extract discount amounts for each fee type
-        for legacy_col, fee_type in CONCESSION_MAPPING.items():
+        for legacy_col in ['TuitionFee', 'ComputerFineArts', 'SmartClass', 'Development', 'Laboratory', 'Library', 'LateFine', 'Others', 'Generator', 'Activity', 'Exam']:
             amount = safe_float(row.get(legacy_col, '0'))
-            if amount > 0:
+            fee_type = map_fee_type(legacy_col)
+            
+            if is_valid_fee(fee_type, amount):
                 discounts_by_session[session].append({
                     'student_id': student_id,
                     'fee_type': fee_type,
@@ -818,73 +866,61 @@ def validate_data(students: Dict, receipts: Dict, discounts: Dict) -> Validation
 # =============================================================================
 
 def generate_excel(session: str, students: List[Dict], receipts: List[Dict], 
-                   discounts: List[Dict], output_dir: str, **kwargs):
+                   bills: List[Dict], discounts: List[Dict], output_dir: str, **kwargs) -> str:
     """Generate Excel file by copying template and populating data."""
     os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, f"Migration_{session}.xlsx")
+    safe_session = session.replace('/', '-').replace(' ', '_')
+    filename = f"Migration_{safe_session}.xlsx"
+    filepath = os.path.join(output_dir, filename)
     
     # Check if template exists
-    template_path = "data_migration_template.xlsx"
+    template_path = "SDV Data Migration/data_migration_template.xlsx"
     if not os.path.exists(template_path):
-        print("⚠️ Template not found, creating basic file...")
-        # Fallback to basic creation if template missing (should not happen)
-        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-            # ... (existing fallback logic if needed, but we rely on template)
-            pass
+        print(f"⚠️ Template not found at {template_path}, creating basic Workbook...")
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Students"
+    else:
+        from shutil import copyfile
+        copyfile(template_path, filepath)
+        from openpyxl import load_workbook
+        wb = load_workbook(filepath)
     
-    from shutil import copyfile
-    copyfile(template_path, filepath)
-    
-    from openpyxl import load_workbook
-    wb = load_workbook(filepath)
-    
-    # Helper to append dict data to worksheet
-    def append_data(ws_name, data, col_mapping, date_cols=None):
+    # Helper to append data to worksheet based on headers
+    def populate_sheet(ws_name, data, col_mapping):
         if not data or ws_name not in wb.sheetnames:
             return
             
         ws = wb[ws_name]
         
-        # Get header row (row 1) to map keys to column indices
+        # Get headers from row 1
         headers = {cell.value: i+1 for i, cell in enumerate(ws[1]) if cell.value}
         
-        # Check for missing headers from mapping and add them
-        next_col = max(headers.values()) + 1 if headers else 1
-        for key, header_name in col_mapping.items():
-            if header_name not in headers:
-                # Add new header
-                cell = ws.cell(row=1, column=next_col)
-                cell.value = header_name
-                headers[header_name] = next_col
-                next_col += 1
+        # Start appending from row 2 onwards (overwriting sample if any)
+        current_row = 2
         
-        # Prepare data rows
-        rows_to_append = []
         for record in data:
-            row = [None] * (max(headers.values()) if headers else 1)
-            
-            # Map record keys to excel headers
             for key, val in record.items():
-                # Map internal key to header name
                 header_name = col_mapping.get(key)
                 if header_name and header_name in headers:
-                    col_idx = headers[header_name] - 1
-                    # Ensure list is long enough
-                    if len(row) <= col_idx:
-                        row.extend([None] * (col_idx - len(row) + 1))
-                    row[col_idx] = val
+                    col_idx = headers[header_name]
+                    cell = ws.cell(row=current_row, column=col_idx)
                     
-            rows_to_append.append(row)
-
-        # Append rows starting from first empty row (usually row 3 for template with sample)
-        # Template sample is at row 2, we overwrite or append? 
-        # Standard templates usually have a sample row. Let's keep sample row 2 and start at 3?
-        # Or remove sample row? Let's assume we append after sample.
-        start_row = 3 
-        
-        # But wait, openpyxl append adds to the end.
-        for r in rows_to_append:
-            ws.append(r)
+                    # Format dates as DD-MM-YYYY
+                    if isinstance(val, (date, datetime)):
+                         cell.value = val.strftime('%d-%m-%Y')
+                    elif isinstance(val, str) and len(str(val)) == 10 and '-' in str(val): # YYYY-MM-DD
+                        try:
+                            if val[4] == '-' and val[7] == '-':
+                                d_obj = datetime.strptime(val, '%Y-%m-%d')
+                                cell.value = d_obj.strftime('%d-%m-%Y')
+                            else:
+                                cell.value = val
+                        except:
+                            cell.value = val
+                    else:
+                        cell.value = val
+            current_row += 1
             
     # Mappings
     student_map = {
@@ -906,6 +942,21 @@ def generate_excel(session: str, students: List[Dict], receipts: List[Dict],
         'religion': 'Religion',
         'status': 'Status',
         'session': 'Session Name',
+        'apaar_id': 'APAAR ID',
+        'father_occupation': 'Father Occ.',
+        'father_aadhar': 'Father Aadhar',
+        'father_pan': 'Father PAN',
+        'mother_occupation': 'Mother Occ.',
+        'mother_aadhar': 'Mother Aadhar',
+        'mother_pan': 'Mother PAN',
+        'guardian_rel': 'Guardian Rel',
+        'guardian_name': 'Guardian Name',
+        'guardian_phone': 'Guardian Phone',
+        'guardian_email': 'Guardian Email',
+        'guardian_aadhar': 'Guardian Aadhar',
+        'guardian_pan': 'Guardian PAN',
+        'guardian_address': 'Guardian Address',
+        'whats_app': 'WhatsApp No'
     }
     
     receipt_map = {
@@ -915,32 +966,41 @@ def generate_excel(session: str, students: List[Dict], receipts: List[Dict],
         'fee_type': 'Fee Type *',
         'amount': 'Amount *',
         'discount': 'Discount',
-        # net amount calc needed?
+        'net_amount': 'Net Amount *',
         'payment_mode': 'Payment Mode *',
         'payment_ref': 'Payment Ref',
-        'session': 'Session Name',
-    }
-
-    discount_map = {
-        'student_id': 'Student ID *',
-        'fee_type': 'Fee Type *',
-        'discount_amount': 'Discount Value *',
-        'discount_type': 'Discount Type *',
-        'reason': 'Reason',
-        'session': 'Session Name',
+        'collected_by': 'Collected By',
+        'remarks': 'Remarks',
+        'bill_no': 'Bill No (if against bill)'
     }
     
-    demand_bill_map = {
+    bill_map = {
         'student_id': 'Student ID *',
         'bill_no': 'Bill No *',
         'bill_date': 'Bill Date (DD-MM-YYYY) *',
+        'due_date': 'Due Date (DD-MM-YYYY) *',
+        'month': 'Month (1-12) *',
+        'year': 'Year *',
         'fee_type': 'Fee Type *',
         'amount': 'Amount *',
-        'net_amount': 'Net Amount',
-        'session': 'Session Name',
-        # 'status': 'Status', # if needed
+        'discount': 'Discount',
+        'previous_dues': 'Previous Dues',
+        'late_fee': 'Late Fee',
+        'net_amount': 'Net Amount *',
+        'paid_amount': 'Paid Amount',
+        'status': 'Status *'
     }
-
+    
+    discount_map = {
+        'student_id': 'Student ID *',
+        'fee_type': 'Fee Type *',
+        'discount_type': 'Discount Type *',
+        'discount_amount': 'Discount Value *',
+        'reason': 'Reason',
+        'approved_by': 'Approved By',
+        'session': 'Session Name'
+    }
+    
     history_map = {
         'student_id': 'Student ID *',
         'session': 'Session *',
@@ -948,43 +1008,71 @@ def generate_excel(session: str, students: List[Dict], receipts: List[Dict],
         'section': 'Section *',
         'roll': 'Roll Number',
         'status': 'Status *',
-        'Final Result': 'Final Result'
+        'final_result': 'Final Result'
     }
 
-    # Append Data
-    if students:
-        append_data('Students', students, student_map)
-        
+    # Populate Sheets
+    if students: populate_sheet('Students', students, student_map)
+    
     if receipts:
-        # Pre-calculate net amount if not present
         for r in receipts:
-             r['net_amount'] = r['amount'] - r['discount']
-        # Update map for net amount
-        receipt_map['net_amount'] = 'Net Amount *'
-        append_data('Fee_Receipts', receipts, receipt_map)
+            if 'net_amount' not in r:
+                r['net_amount'] = safe_float(r.get('amount', 0)) - safe_float(r.get('discount', 0))
+            if 'collected_by' not in r: r['collected_by'] = 'Migration'
+            if 'remarks' not in r: r['remarks'] = 'Legacy Import'
+        populate_sheet('Fee_Receipts', receipts, receipt_map)
 
-    if discounts:
-        append_data('Discounts', discounts, discount_map)
+    if bills:
+        for b in bills:
+            if 'net_amount' not in b: b['net_amount'] = b.get('amount', 0)
+            if 'status' not in b: b['status'] = 'PENDING'
+            if 'due_date' not in b: b['due_date'] = b.get('bill_date')
+            # Extract month/year from bill_date
+            date_str = str(b.get('bill_date', ''))
+            try:
+                if '-' in date_str:
+                    parts = date_str.split('-')
+                    if len(parts[0]) == 4: # YYYY-MM-DD
+                        b['year'] = int(parts[0])
+                        b['month'] = int(parts[1])
+                    else: # DD-MM-YYYY
+                        b['year'] = int(parts[2])
+                        b['month'] = int(parts[1])
+            except:
+                b['month'] = 4
+                b['year'] = 2024
+        populate_sheet('Demand_Bills', bills, bill_map)
         
-    if 'demand_bills' in kwargs and kwargs['demand_bills']:
-        db_data = kwargs['demand_bills']
-        # Ensure net_amount
-        for db in db_data:
-            if 'net_amount' not in db:
-                db['net_amount'] = db.get('amount', 0)
-        append_data('Demand_Bills', db_data, demand_bill_map)
-
-    if 'history' in kwargs and kwargs['history']:
-        hist_data = kwargs['history']
-        # Map status
-        status_map = {'active': 'promoted', 'inactive': 'detained', 'passed': 'passed'}
-        for h in hist_data:
-            h['status'] = status_map.get(h.get('status', '').lower(), 'promoted')
-            
-        append_data('Academic_History', hist_data, history_map)
+    if discounts: 
+        for d in discounts:
+             if 'approved_by' not in d: d['approved_by'] = 'Administrator'
+             if 'discount_type' not in d: d['discount_type'] = 'Fixed'
+        populate_sheet('Discounts', discounts, discount_map)
+    
+    if kwargs.get('history'): 
+        populate_sheet('Academic_History', kwargs['history'], history_map)
 
     wb.save(filepath)
     return filepath
+
+
+# Consolidated Excel generation logic.
+
+
+def generate_consolidated_excel(all_data: Dict[str, List[Dict]], output_dir: str) -> str:
+    """Generate a single consolidated Excel file for all sessions."""
+    # Flatten data
+    all_students = []
+    all_receipts = []
+    all_bills = []
+    all_discounts = []
+    
+    for session_data in all_data['students'].values(): all_students.extend(session_data)
+    for session_data in all_data['receipts'].values(): all_receipts.extend(session_data)
+    for session_data in all_data['bills'].values(): all_bills.extend(session_data)
+    for session_data in all_data['discounts'].values(): all_discounts.extend(session_data)
+    
+    return generate_excel("Consolidated", all_students, all_receipts, all_bills, all_discounts, output_dir)
 
 # =============================================================================
 # MAIN
@@ -1097,14 +1185,23 @@ def main():
             if session not in students:
                 print(f"Warning: Session {session} not found in data.")
                 continue
-            print(f"     Total Students: {len(all_s_data)}")
-            print(f"     Total Receipts: {len(all_r_data)}")
-            print(f"     Total Bills: {len(all_b_data)}")
+            
+            print(f"\nProcessing Session: {session}")
+            print(f"     Total Students: {len(students[session])}")
+            print(f"     Total Receipts: {len(receipts[session])}")
+            print(f"     Total Bills: {len(bills[session])}")
+            
+            filepath = generate_excel(session, students[session], receipts[session], 
+                                    bills[session], discounts[session], args.output)
+            print(f"  ✅ Saved: {filepath}")
         
-        # Always generate Historical Data File if exporting (as standalone backup)
-        # print("\n📜 Generating Historical Data File...")
-        # hist_path = generate_excel('Historical', [], [], [], args.output_dir, history=full_history_records)
-        # print(f"  ✅ Historical: {len(full_history_records)} academic records → {hist_path}")
+        # Generate Consolidated File
+        if not args.session:
+            print("\n📚 Generating Consolidated Migration File (All Sessions)...")
+            cons_path = generate_consolidated_excel({
+                'students': students, 'receipts': receipts, 'bills': bills, 'discounts': discounts
+            }, args.output)
+            print(f"  ✅ Saved Consolidated: {cons_path}")
         
         print("\n🎉 Export complete!")
         return

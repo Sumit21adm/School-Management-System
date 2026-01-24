@@ -113,15 +113,43 @@ export class FeeTypesService {
     async delete(id: number) {
         const feeType = await this.findOne(id);
 
-        if (feeType.isDefault) {
-            throw new BadRequestException('Cannot delete default fee types');
+        // System-critical fee types that cannot be deleted
+        const protectedFeeTypes = ['Tuition Fee', 'Transport Fee', 'Late Fee', 'Advance Payment', 'Previous Dues'];
+
+        if (feeType.isDefault || protectedFeeTypes.includes(feeType.name)) {
+            throw new BadRequestException('Cannot delete system fee types');
         }
 
+        // 1. Check Fee Structure Usage
         const usageCount = await this.prisma.feeStructureItem.count({
             where: { feeTypeId: id },
         });
         if (usageCount > 0) {
             throw new BadRequestException('Cannot delete fee type that is used in fee structures');
+        }
+
+        // 2. Check Discounts Usage
+        const discountCount = await this.prisma.studentFeeDiscount.count({
+            where: { feeTypeId: id },
+        });
+        if (discountCount > 0) {
+            throw new BadRequestException('Cannot delete fee type that is used in student discounts');
+        }
+
+        // 3. Check Transactions Usage
+        const transactionCount = await this.prisma.feePaymentDetail.count({
+            where: { feeTypeId: id },
+        });
+        if (transactionCount > 0) {
+            throw new BadRequestException('Cannot delete fee type that has existing payment transactions');
+        }
+
+        // 4. Check Demand Bills Usage
+        const billCount = await this.prisma.demandBillItem.count({
+            where: { feeTypeId: id },
+        });
+        if (billCount > 0) {
+            throw new BadRequestException('Cannot delete fee type that has been billed');
         }
 
         await this.prisma.feeType.delete({ where: { id } });

@@ -95,7 +95,7 @@ const getDateRange = (filter: DateFilter): { from: string; to: string } => {
 };
 
 export default function DailyCollectionReport({ sessionId, classes }: DailyCollectionReportProps) {
-    const [dateFilter, setDateFilter] = useState<DateFilter>('today');
+    const [dateFilter, setDateFilter] = useState<DateFilter>('all');
     const [customDateFrom, setCustomDateFrom] = useState('');
     const [customDateTo, setCustomDateTo] = useState('');
     const [page, setPage] = useState(1);

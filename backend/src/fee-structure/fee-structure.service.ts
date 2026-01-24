@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { UpsertFeeStructureDto, CopyFeeStructureDto } from './dto/fee-structure.dto';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -62,6 +62,19 @@ export class FeeStructureService {
     }
 
     async upsertStructure(sessionId: number, className: string, dto: UpsertFeeStructureDto) {
+        // Check if bills exist for this class/session
+        const existingBills = await this.prisma.demandBill.count({
+            where: {
+                sessionId,
+                student: { className: className },
+                status: { not: 'CANCELLED' }
+            }
+        });
+
+        if (existingBills > 0) {
+            throw new BadRequestException('Cannot modify fee structure after demand bills have been generated for this class.');
+        }
+
         // Delete existing structure and items
         await this.prisma.feeStructure.deleteMany({
             where: { sessionId, className },

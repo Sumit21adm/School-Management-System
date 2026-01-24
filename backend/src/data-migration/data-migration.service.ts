@@ -652,15 +652,15 @@ export class DataMigrationService {
 
         const existingAadhars = new Set(existingStudents.map(s => s.aadharCardNo).filter(Boolean));
 
-        // Create lookup for existing Session-Class-Section-RollNo
-        const existingRollKeys = new Set(
-            existingStudents
-                .filter(s => s.className && s.section && s.rollNumber)
-                .map(s => {
-                    const sessionName = s.sessionId ? (sessionIdToName.get(s.sessionId) || '') : '';
-                    return `${sessionName}-${s.className}-${s.section}-${s.rollNumber}`.toLowerCase();
-                })
-        );
+        // Create lookup for existing Session-Class-Section-RollNo -> StudentID
+        const existingRollMap = new Map<string, string>();
+        existingStudents.forEach(s => {
+            if (s.className && s.section && s.rollNumber) {
+                const sessionName = s.sessionId ? (sessionIdToName.get(s.sessionId) || '') : '';
+                const key = `${sessionName}-${s.className}-${s.section}-${s.rollNumber}`.toLowerCase();
+                existingRollMap.set(key, s.studentId);
+            }
+        });
 
         const fileAadhars = new Set<string>();
         const fileRollKeys = new Set<string>();
@@ -758,11 +758,15 @@ export class DataMigrationService {
                 const rollKey = `${sessionName}-${className}-${section}-${rollNumber}`.toLowerCase();
 
                 if (fileRollKeys.has(rollKey)) {
-                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Duplicate Roll Number '${rollNumber}' for Class '${className}' Section '${section}' Session '${sessionName}' in file` });
+                    warnings.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Duplicate Roll Number '${rollNumber}' in file. Will be auto-corrected.` });
                 }
 
-                if (existingRollKeys.has(rollKey)) {
-                    errors.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Roll Number '${rollNumber}' already exists for Class '${className}' Section '${section}' Session '${sessionName}'` });
+                if (existingRollMap.has(rollKey)) {
+                    const existingOwnerId = existingRollMap.get(rollKey);
+                    // Only warn if the existing roll number belongs to a DIFFERENT student
+                    if (existingOwnerId !== studentId) {
+                        warnings.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Roll Number '${rollNumber}' already taken. Will be auto-corrected.` });
+                    }
                 }
 
                 fileRollKeys.add(rollKey);
@@ -797,45 +801,50 @@ export class DataMigrationService {
     // ============================================
 
     /**
-     * Parse Section from "Class-Section" format (e.g., "XI-Science-A" -> "A")
-     * If no hyphen, returns original string.
+     * Parse Section from "Class-A" or "A" format
+     * Returns the part after the last hyphen if present
      */
-    private parseSection(value: string | undefined): string {
-        if (!value) return '';
-        const trimmed = value.trim();
-        if (trimmed.includes('-')) {
-            // Take the last part (e.g. XI-Science-A -> A)
-            return trimmed.split('-').pop()!.trim();
+    private parseSection(raw: string): string | null {
+        if (!raw) return null;
+        if (raw.includes('-')) {
+            const parts = raw.split('-');
+            return parts[parts.length - 1].trim(); // Take last part
         }
-        return trimmed;
+        return raw.trim();
     }
 
     /**
-     * Parse Route Code from "Code: Name" format (e.g., "R1: City Route" -> "R1")
+     * Parse Route Code from "R10: Route Name" or "R10" format
+     * Returns the part before the first colon
      */
-    private parseRouteCode(value: string | undefined): string | null {
-        if (!value) return null;
-        const trimmed = value.trim();
-        if (trimmed.includes(':')) {
-            return trimmed.split(':')[0].trim();
+    private parseRouteCode(raw: string): string | null {
+        if (!raw) return null;
+        if (raw.includes(':')) {
+            return raw.split(':')[0].trim();
         }
-        return trimmed;
+        return raw.trim();
     }
 
     /**
-     * Parse Route Stop from "RouteCode - StopName" format (e.g., "R1 - Market" -> "Market")
+     * Parse Route Stop from "R10 - Market" or "Market" format
+     * Returns the part after the first hyphen
      */
-    private parseRouteStop(value: string | undefined): string | null {
-        if (!value) return null;
-        const trimmed = value.trim();
-        // Check for " - " separator which is used in Reference Data
-        if (trimmed.includes(' - ')) {
-            // Return everything after the first " - "
-            const parts = trimmed.split(' - ');
-            return parts.slice(1).join(' - ').trim();
+    private parseRouteStop(raw: string): string | null {
+        if (!raw) return null;
+        if (raw.includes(' - ')) {
+            const parts = raw.split(' - ');
+            if (parts.length > 1) {
+                return parts.slice(1).join(' - ').trim(); // Join rest in case of multiple hyphens
+            }
         }
-        return trimmed;
+        return raw.trim();
     }
+
+    private parseDate(dateStr: string): Date | null {
+        return parseDateDDMMYYYY(dateStr);
+    }
+    // ============================================
+
 
     // ============================================
     // IMPORT OPERATIONS
@@ -881,6 +890,23 @@ export class DataMigrationService {
         // Fetch all sessions for lookup
         const allSessions = await this.prisma.academicSession.findMany();
         const sessionMap = new Map(allSessions.map(s => [s.name, s]));
+
+        // Prefetch existing students for Roll Number tracking - AUTO-INCREMENT SUPPORT
+        const allStudentDetails = await this.prisma.studentDetails.findMany({
+            select: { id: true, studentId: true, rollNumber: true, className: true, section: true, sessionId: true }
+        });
+
+        // Map: "SessionID-Class-Section" -> Set of used Roll Numbers (as strings)
+        const usedRollNumbers = new Map<string, Set<string>>();
+        allStudentDetails.forEach(s => {
+            if (s.sessionId && s.className && s.section && s.rollNumber) {
+                const key = `${s.sessionId}-${s.className}-${s.section}`.toLowerCase();
+                if (!usedRollNumbers.has(key)) {
+                    usedRollNumbers.set(key, new Set());
+                }
+                usedRollNumbers.get(key)!.add(s.rollNumber.toLowerCase());
+            }
+        });
 
         const errors: ValidationErrorDto[] = [];
         const importDetails: any[] = []; // Collect detailed report
@@ -981,6 +1007,50 @@ export class DataMigrationService {
                         return activeSession.id;
                     })(),
                 };
+
+                // AUTO-INCREMENT ROLL NUMBER LOGIC
+                if (studentData.sessionId && studentData.className && studentData.section && studentData.rollNumber) {
+                    const key = `${studentData.sessionId}-${studentData.className}-${studentData.section}`.toLowerCase();
+                    if (!usedRollNumbers.has(key)) {
+                        usedRollNumbers.set(key, new Set());
+                    }
+                    const usedSet = usedRollNumbers.get(key)!;
+
+                    let originalRoll = studentData.rollNumber;
+                    let currentRoll = originalRoll;
+                    let isDuplicate = usedSet.has(currentRoll.toLowerCase());
+
+                    // If duplicate, try to resolve
+                    if (isDuplicate) {
+                        // Check if we are updating the SAME student (re-import)
+                        // But wait, 'existing' check earlier handles exact matches. 
+                        // If we are here, it's either a new student OR an update where we didn't skip.
+                        // For simplicity, if it's occupied, we find a new one to avoid collision.
+
+                        // Try to parse integer
+                        let nextNum = parseInt(currentRoll.replace(/\D/g, '')) || 0;
+                        if (nextNum === 0) nextNum = usedSet.size + 1; // Fallback if non-numeric
+
+                        let attempts = 0;
+                        while (usedSet.has(currentRoll.toLowerCase()) && attempts < 1000) {
+                            nextNum++;
+                            currentRoll = nextNum.toString();
+                            attempts++;
+                        }
+
+                        if (currentRoll !== originalRoll) {
+                            studentData.rollNumber = currentRoll;
+                            importDetails.push({
+                                row: rowNumber,
+                                status: 'warning',
+                                studentId,
+                                reason: `Roll Number auto-updated from '${originalRoll}' to '${currentRoll}'`
+                            });
+                        }
+                    }
+                    // Mark as used
+                    usedSet.add(studentData.rollNumber.toLowerCase());
+                }
 
                 // Create student
                 await this.prisma.studentDetails.create({ data: studentData });
