@@ -79,20 +79,22 @@ export class DataMigrationService {
         workbook.created = new Date();
 
         // Fetch reference data for dropdowns
-        const [classes, sections, feeTypes, routes, routeStops, activeSession] = await Promise.all([
-            this.prisma.schoolClass.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } }),
-            this.prisma.section.findMany({ include: { class: true } }),
-            this.prisma.feeType.findMany({ where: { isActive: true } }),
-            this.prisma.route.findMany({ where: { status: 'active' } }),
-            this.prisma.routeStop.findMany({ include: { route: true } }),
+        const [classes, feeTypes, routes, allSessions, activeSession] = await Promise.all([
+            this.prisma.schoolClass.findMany({ include: { sections: true } }),
+            this.prisma.feeType.findMany(),
+            this.prisma.route.findMany({ include: { stops: true } }),
+            this.prisma.academicSession.findMany({ orderBy: { startDate: 'desc' } }),
             this.prisma.academicSession.findFirst({ where: { isActive: true } }),
         ]);
+
+        const sections = classes.flatMap(c => c.sections.map(s => ({ ...s, class: c })));
+        const routeStops = routes.flatMap(r => r.stops.map(s => ({ ...s, route: r })));
 
         // 1. Instructions Sheet
         this.createInstructionsSheet(workbook);
 
         // 2. Reference Data Sheet
-        this.createReferenceDataSheet(workbook, classes, sections, feeTypes, routes, routeStops, activeSession);
+        this.createReferenceDataSheet(workbook, classes, sections, feeTypes, routes, routeStops, activeSession, allSessions);
 
         // 3. Students Sheet
         this.createStudentsSheet(workbook, classes, routes);
@@ -104,7 +106,7 @@ export class DataMigrationService {
         this.createDemandBillsSheet(workbook, feeTypes);
 
         // 6. Discounts Sheet
-        this.createDiscountsSheet(workbook, feeTypes);
+        this.createDiscountsSheet(workbook, feeTypes, allSessions);
 
         // 7. Academic History Sheet
         this.createAcademicHistorySheet(workbook, classes);
@@ -144,15 +146,18 @@ export class DataMigrationService {
             '   • PAN Numbers: Format AAAAA0000A (5 letters, 4 digits, 1 letter)',
             '   • Amounts: Numbers only, no currency symbols',
             '',
-            '4. REQUIRED FIELDS:',
-            '   • Students: Student ID, Name, Father Name, Mother Name, DOB, Gender, Class, Section, Admission Date, Address, Phone',
-            '   • Fee Receipts: Student ID, Receipt No, Receipt Date, Fee Type, Amount, Net Amount, Payment Mode',
+            '4. COLUMNS GUIDE:',
+            '   • Students: Student ID, Name, Father Name, Mother Name, DOB, Gender, Class, Section, Roll No...',
+            '   • Fee Receipts: Student ID, Receipt No, Date, Fee Type, Amount, Net Amount, Modes...',
+            '     (Note: If a "Fee Type" does not exist, it will be AUTO-CREATED with a warning)',
             '   • Demand Bills: Student ID, Bill No, Bill Date, Due Date, Month, Year, Fee Type, Amount, Net Amount, Status',
-            '   • Discounts: Student ID, Fee Type, Discount Type, Discount Value',
+            '     (Note: Missing "Fee Types" will also be auto-created here)',
+            '   • Discounts: Student ID, Fee Type, Discount Type, Discount Value, Session Name (Optional)',
+            '     (Note: Use "Session Name" to assign discount to a specific historical session. Default is Active Session)',
             '   • Academic History: Student ID, Session, Class, Section, Roll No, Status',
             '',
             '5. REFERENCE DATA:',
-            '   • Check the "Reference_Data" sheet for valid values for Classes, Sections, Fee Types, and Routes',
+            '   • Check the "Reference_Data" sheet for valid values for Classes, Sections, Fee Types, Routes, and Sessions',
             '   • Use exact values from Reference Data - case sensitive!',
             '',
             '6. VALIDATION:',
@@ -166,7 +171,7 @@ export class DataMigrationService {
             '=== TROUBLESHOOTING ===',
             '• "Class not found" - Ensure class name matches exactly with Reference_Data sheet',
             '• "Student not found" - Import students before importing fee records',
-            '• "Fee Type not found" - Create the fee type in Settings > Fee Types first',
+            '• "Fee Type not found" - It will be auto-created now, but check spelling to avoid duplicates',
             '• "Duplicate ID" - Student ID or Receipt No already exists in system',
         ];
 
@@ -188,7 +193,8 @@ export class DataMigrationService {
         feeTypes: any[],
         routes: any[],
         routeStops: any[],
-        activeSession: any
+        activeSession: any,
+        allSessions: any[] = []
     ) {
         const sheet = workbook.addWorksheet('Reference_Data', {
             properties: { tabColor: { argb: 'FF2196F3' } }
@@ -201,6 +207,7 @@ export class DataMigrationService {
             { header: 'Fee Types', key: 'feeTypes', width: 25 },
             { header: 'Routes', key: 'routes', width: 25 },
             { header: 'Route Stops', key: 'stops', width: 30 },
+            { header: 'Academic Sessions', key: 'sessions', width: 25 }, // New Column
             { header: 'Gender Options', key: 'gender', width: 15 },
             { header: 'Status Options', key: 'status', width: 15 },
             { header: 'Payment Modes', key: 'paymentModes', width: 15 },
@@ -216,7 +223,7 @@ export class DataMigrationService {
         sheet.addRow([`Active Session: ${activeSession?.name || 'NONE - Create one first!'}`]);
 
         // Populate data columns
-        const maxRows = Math.max(classes.length, feeTypes.length, routes.length, routeStops.length, 10);
+        const maxRows = Math.max(classes.length, feeTypes.length, routes.length, routeStops.length, allSessions.length, 10);
 
         const genderOptions = ['male', 'female', 'other'];
         const statusOptions = ['active', 'inactive', 'passed', 'alumni'];
@@ -231,6 +238,7 @@ export class DataMigrationService {
                 feeTypes[i]?.name || '',
                 routes[i] ? `${routes[i].routeCode}: ${routes[i].routeName}` : '',
                 routeStops[i] ? `${routeStops[i].route?.routeCode} - ${routeStops[i].stopName}` : '',
+                allSessions[i]?.name || '',
                 genderOptions[i] || '',
                 statusOptions[i] || '',
                 paymentModes[i] || '',
@@ -478,7 +486,7 @@ export class DataMigrationService {
         sheet.getRow(2).font = { italic: true, color: { argb: 'FF666666' } };
     }
 
-    private createDiscountsSheet(workbook: any, feeTypes: any[]) {
+    private createDiscountsSheet(workbook: any, feeTypes: any[], sessions: any[] = []) {
         const sheet = workbook.addWorksheet('Discounts', {
             properties: { tabColor: { argb: 'FF009688' } }
         });
@@ -490,6 +498,7 @@ export class DataMigrationService {
             { header: 'Discount Value *', key: 'discountValue', width: 15 },
             { header: 'Reason', key: 'reason', width: 30 },
             { header: 'Approved By', key: 'approvedBy', width: 20 },
+            { header: 'Session Name', key: 'sessionName', width: 20 }, // New Column
         ];
 
         // Style header
@@ -513,6 +522,18 @@ export class DataMigrationService {
             showErrorMessage: true,
         });
 
+        // Session Name dropdown (Referencing Reference_Data sheet)
+        // Column F is the new Session Name column in Reference_Data (A=Classes, B=Sections, C=Types, D=Routes, E=Stops, F=Sessions)
+        if (sessions.length > 0) {
+            sheet.dataValidations.add('G2:G1000', {
+                type: 'list',
+                formulae: ['Reference_Data!$F$2:$F$100'],
+                showErrorMessage: true,
+                errorTitle: 'Invalid Session',
+                error: 'Please select a valid Session Name from the list'
+            });
+        }
+
         // Sample row
         sheet.addRow({
             studentId: 'STU2024001',
@@ -521,6 +542,7 @@ export class DataMigrationService {
             discountValue: 10,
             reason: 'Staff Ward Discount',
             approvedBy: 'Principal',
+            sessionName: sessions[0]?.name || '', // Sample session
         });
 
         sheet.getRow(2).font = { italic: true, color: { argb: 'FF666666' } };
@@ -958,9 +980,9 @@ export class DataMigrationService {
                 imported++;
             } catch (error: any) {
                 // Check if it's a duplicate/unique constraint error - skip gracefully
-                const isDuplicateError = error.code === 'P2002' || 
+                const isDuplicateError = error.code === 'P2002' ||
                     error.message?.includes('Unique constraint');
-                
+
                 if (isDuplicateError) {
                     // Skip duplicates silently or as warnings
                     skipped++;
@@ -1133,11 +1155,38 @@ export class DataMigrationService {
                 let totalAmount = 0;
 
                 for (const item of items) {
-                    const feeType = feeTypeMap.get(item.feeTypeName);
+                    let feeType = feeTypeMap.get(item.feeTypeName);
                     if (!feeType) {
-                        errors.push({ row: item.rowNumber, field: 'feeTypeName', value: item.feeTypeName, message: 'Fee Type not found' });
-                        continue; // Skip invalid item or fail whole receipt? 
-                        // Better to skip item but log error.
+                        // Auto-create missing fee type
+                        try {
+                            const created = await this.prisma.feeType.create({
+                                data: {
+                                    name: item.feeTypeName,
+                                    description: 'Auto-created during migration',
+                                    isActive: true,
+                                    isDefault: false,
+                                    isRecurring: false,
+                                }
+                            });
+                            feeType = created;
+                            feeTypeMap.set(item.feeTypeName, created);
+                            errors.push({
+                                row: item.rowNumber,
+                                field: 'feeTypeName',
+                                value: item.feeTypeName,
+                                message: `Fee Type '${item.feeTypeName}' was auto-created`
+                            });
+                        } catch (createError: any) {
+                            // If creation fails (e.g. duplicate), try to find it again
+                            feeType = await this.prisma.feeType.findFirst({
+                                where: { name: item.feeTypeName }
+                            }) ?? undefined;
+                            if (!feeType) {
+                                errors.push({ row: item.rowNumber, field: 'feeTypeName', value: item.feeTypeName, message: 'Fee Type not found and could not be created' });
+                                continue;
+                            }
+                            feeTypeMap.set(item.feeTypeName, feeType);
+                        }
                     }
 
                     paymentDetailsCreate.push({
@@ -1288,11 +1337,39 @@ export class DataMigrationService {
                     continue;
                 }
 
-                const feeType = feeTypeMap.get(feeTypeName);
+                let feeType = feeTypeMap.get(feeTypeName);
                 if (!feeType) {
-                    errors.push({ row: rowNumber, field: 'feeTypeName', value: feeTypeName, message: 'Fee Type not found' });
-                    skipped++;
-                    continue;
+                    // Auto-create missing fee type
+                    try {
+                        const created = await this.prisma.feeType.create({
+                            data: {
+                                name: feeTypeName,
+                                description: 'Auto-created during migration',
+                                isActive: true,
+                                isDefault: false,
+                                isRecurring: false,
+                            }
+                        });
+                        feeType = created;
+                        feeTypeMap.set(feeTypeName, created);
+                        errors.push({
+                            row: rowNumber,
+                            field: 'feeTypeName',
+                            value: feeTypeName,
+                            message: `Fee Type '${feeTypeName}' was auto-created`
+                        });
+                    } catch (createError: any) {
+                        // If creation fails (e.g. duplicate), try to find it again
+                        feeType = await this.prisma.feeType.findFirst({
+                            where: { name: feeTypeName }
+                        }) ?? undefined;
+                        if (!feeType) {
+                            errors.push({ row: rowNumber, field: 'feeTypeName', value: feeTypeName, message: 'Fee Type not found and could not be created' });
+                            skipped++;
+                            continue;
+                        }
+                        feeTypeMap.set(feeTypeName, feeType);
+                    }
                 }
 
                 const existingBill = await this.prisma.demandBill.findUnique({ where: { billNo } });
@@ -1390,6 +1467,10 @@ export class DataMigrationService {
         const feeTypes = await this.prisma.feeType.findMany();
         const feeTypeMap = new Map(feeTypes.map(f => [f.name, f]));
 
+        // Fetch all sessions for lookup
+        const allSessions = await this.prisma.academicSession.findMany();
+        const sessionMap = new Map(allSessions.map(s => [s.name, s]));
+
         const errors: ValidationErrorDto[] = [];
         let imported = 0;
         let skipped = 0;
@@ -1398,6 +1479,15 @@ export class DataMigrationService {
         worksheet.eachRow((row: any, rowNumber: number) => {
             if (rowNumber === 1) return;
             rows.push({ row, rowNumber });
+        });
+
+        // Find Session Name Column dynamically
+        let sessionColIdx = -1;
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell: any, colNumber: number) => {
+            if (cell.text?.trim() === 'Session Name') {
+                sessionColIdx = colNumber;
+            }
         });
 
         for (const { row, rowNumber } of rows) {
@@ -1429,13 +1519,20 @@ export class DataMigrationService {
                     continue;
                 }
 
+                // Resolve Session ID from Session Name column (fallback to active session)
+                const sessionName = sessionColIdx > 0 ? row.getCell(sessionColIdx).text?.trim() : '';
+                let targetSessionId = activeSession.id;
+                if (sessionName && sessionMap.has(sessionName)) {
+                    targetSessionId = sessionMap.get(sessionName)!.id;
+                }
+
                 // Upsert discount (update if exists, create if not)
                 await this.prisma.studentFeeDiscount.upsert({
                     where: {
                         studentId_feeTypeId_sessionId: {
                             studentId,
                             feeTypeId: feeType.id,
-                            sessionId: activeSession.id,
+                            sessionId: targetSessionId,
                         },
                     },
                     update: {
@@ -1447,7 +1544,7 @@ export class DataMigrationService {
                     create: {
                         studentId,
                         feeTypeId: feeType.id,
-                        sessionId: activeSession.id,
+                        sessionId: targetSessionId,
                         discountType: discountType as any,
                         discountValue,
                         reason,
