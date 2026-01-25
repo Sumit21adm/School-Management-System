@@ -50,7 +50,7 @@ Build a comprehensive Excel-based data migration system for importing complete s
 **Status: Implementation Complete - Pending Manual Testing**
 
 To verify:
-1. Start app: `./scripts/run-mac.command`
+1. Start app: `./scripts/dev-runner/run-mac.command`
 2. Navigate to Settings → Data Migration
 3. Download template and verify 6 sheets
 4. Fill with test data and import

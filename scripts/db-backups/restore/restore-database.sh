@@ -6,7 +6,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BACKUP_DIR="$PROJECT_DIR/backups/database"
 
 # MySQL Configuration
@@ -84,7 +84,7 @@ fi
 # Create a backup of current data before restore
 echo ""
 echo " Creating safety backup of current data..."
-"$SCRIPT_DIR/backup-database.sh" || true
+"$SCRIPT_DIR/../local/backup-database.sh" || true
 
 echo ""
 echo " Restoring database..."
