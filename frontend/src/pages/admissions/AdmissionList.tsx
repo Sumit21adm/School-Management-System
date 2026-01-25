@@ -954,6 +954,9 @@ export default function AdmissionList() {
                 <Box>
                   <Typography variant="h5" fontWeight={600}>{selectedStudent.name}</Typography>
                   <Typography color="text.secondary" gutterBottom>ID: {selectedStudent.studentId}</Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Admission Date: {selectedStudent.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString() : '-'}
+                  </Typography>
                   <Typography variant="body2" sx={{ bgcolor: 'primary.main', color: 'white', px: 1, py: 0.5, borderRadius: 1, display: 'inline-block' }}>
                     Class {selectedStudent.className} - {selectedStudent.section}
                   </Typography>

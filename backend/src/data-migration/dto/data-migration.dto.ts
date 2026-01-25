@@ -345,12 +345,20 @@ export class ValidationResultDto {
     warnings: ValidationErrorDto[];
 }
 
+export class ImportReportItem {
+    row: number;
+    status: 'imported' | 'skipped' | 'failed';
+    studentId?: string;
+    reason: string;
+}
+
 export class ImportResultDto {
     success: boolean;
     totalRows: number;
     imported: number;
     skipped: number;
     errors: ValidationErrorDto[];
+    details?: ImportReportItem[]; // Detailed report for all processed rows
 }
 
 export class ImportOptionsDto {

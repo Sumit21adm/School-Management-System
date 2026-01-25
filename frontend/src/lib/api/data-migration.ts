@@ -22,12 +22,20 @@ export interface ValidationResult {
     warnings: ValidationError[];
 }
 
+export interface ImportReportItem {
+    row: number;
+    status: 'imported' | 'skipped' | 'failed';
+    studentId?: string;
+    reason: string;
+}
+
 export interface ImportResult {
     success: boolean;
     totalRows: number;
     imported: number;
     skipped: number;
     errors: ValidationError[];
+    details?: ImportReportItem[];
 }
 
 export interface ImportOptions {

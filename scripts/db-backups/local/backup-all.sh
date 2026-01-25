@@ -24,7 +24,7 @@ echo " ========================================"
 echo "  All Backups Completed Successfully!"
 echo " ========================================"
 echo ""
-echo " Backup location: $SCRIPT_DIR/../backups/"
+echo " Backup location: $SCRIPT_DIR/../../backups/"
 echo ""
-ls -lh "$SCRIPT_DIR/../backups/database/" 2>/dev/null | tail -5
-ls -lh "$SCRIPT_DIR/../backups/files/" 2>/dev/null | tail -5
+ls -lh "$SCRIPT_DIR/../../backups/database/" 2>/dev/null | tail -5
+ls -lh "$SCRIPT_DIR/../../backups/files/" 2>/dev/null | tail -5

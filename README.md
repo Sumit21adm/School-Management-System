@@ -92,14 +92,14 @@ We have automated the entire setup process. You don't need to manually configure
 2. Navigate to the project directory.
 3. Run the setup script:
    ```bash
-   chmod +x scripts/run-mac.command
-   ./scripts/run-mac.command
+   chmod +x scripts/dev-runner/run-mac.command
+   ./scripts/dev-runner/run-mac.command
    ```
 
 ### 🪟 Windows
 
 1. Navigate to the project folder.
-2. Double-click **`scripts\run-windows.bat`** (or run it from CMD).
+2. Double-click **`scripts\dev-runner\run-windows.bat`** (or run it from CMD).
 
 ---
 
@@ -145,10 +145,12 @@ School-Management-System/
 │   └── attendance-management-plan.md
 │
 └── scripts/                    # Automation Scripts
-    ├── run-mac.command         # Mac/Linux launcher
-    ├── run-windows.bat         # Windows launcher
-    ├── stop-mac.command        # Mac/Linux stop script
-    └── stop-windows.bat        # Windows stop script
+    ├── dev-runner/             # Development Launchers
+    │   ├── run-mac.command
+    │   └── run-windows.bat
+    ├── production-build/       # Release Builders
+    ├── db-backups/             # Backup Tools
+    └── db-maintenance/         # Debugging Tools
 ```
 
 ## 🔐 Default Credentials

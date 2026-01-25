@@ -81,7 +81,8 @@ export async function seedCoreSettings() {
         { name: 'APR 2022 - MAR 2023', startDate: new Date('2022-04-01'), endDate: new Date('2023-03-31'), isActive: false },
         { name: 'APR 2023 - MAR 2024', startDate: new Date('2023-04-01'), endDate: new Date('2024-03-31'), isActive: false },
         { name: 'APR 2024 - MAR 2025', startDate: new Date('2024-04-01'), endDate: new Date('2025-03-31'), isActive: true },
-        { name: 'APR 2025 - MAR 2026', startDate: new Date('2025-04-01'), endDate: new Date('2026-03-31'), isActive: false, isSetupMode: true },
+        { name: 'APR 2025 - MAR 2026', startDate: new Date('2025-04-01'), endDate: new Date('2026-03-31'), isActive: true },
+        { name: 'APR 2026 - MAR 2027', startDate: new Date('2026-04-01'), endDate: new Date('2027-03-31'), isActive: false, isSetupMode: true },
     ];
 
     for (const s of sessions) {
@@ -100,7 +101,7 @@ export async function seedCoreSettings() {
         { name: 'Annual Charges', frequency: 'Yearly', isRecurring: false },
         { name: 'Admission Fee', frequency: 'One-time', isRecurring: false },
         { name: 'Late Fee', frequency: 'One-time', description: 'Penalty for overdue payment' },
-        { name: 'Late Fine', frequency: 'One-time', description: 'Migrated penalty' },
+        // Late Fine removed - now maps to 'Late Fee' above
         { name: 'Advance Payment', frequency: 'One-time', description: 'Advance fee payment (System)', isRecurring: false },
         // New Migrated Fee Types
         { name: 'Computer Fee', frequency: 'Monthly', isRecurring: true },
@@ -174,8 +175,7 @@ export async function seedClasses() {
         { name: 'XI-Com', displayName: 'Class XI (Commerce)', order: 16 },
         { name: 'XII', displayName: 'Class XII', order: 17 },
         { name: 'XII-Science', displayName: 'Class XII (Science)', order: 18 },
-        { name: 'XII-Com', displayName: 'Class XII (Commerce)', order: 19 },
-        { name: 'PASS OUT', displayName: 'Pass Out (Alumni)', order: 99 },
+        { name: 'XII-Com', displayName: 'Class XII (Commerce)', order: 19 }
     ];
 
     for (const cls of classes) {

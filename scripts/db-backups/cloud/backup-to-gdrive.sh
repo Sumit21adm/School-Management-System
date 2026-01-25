@@ -8,7 +8,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BACKUP_DIR="$PROJECT_DIR/backups"
 
 # Google Drive folder name
@@ -36,7 +36,7 @@ if ! rclone listremotes | grep -q "gdrive:"; then
 fi
 
 # Run local backup first
-"$SCRIPT_DIR/backup-all.sh"
+"$SCRIPT_DIR/../local/backup-all.sh"
 
 # Sync to Google Drive
 echo ""

@@ -4,7 +4,7 @@
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PLIST_FILE="$HOME/Library/LaunchAgents/com.school.backup.plist"
 
 echo ""
@@ -22,7 +22,7 @@ cat > "$PLIST_FILE" << EOF
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>$SCRIPT_DIR/backup-all.sh</string>
+        <string>$SCRIPT_DIR/../local/backup-all.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
