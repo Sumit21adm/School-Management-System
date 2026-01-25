@@ -1,0 +1,382 @@
+// Master Database Schema for Admin Portal
+// This database manages organizations, subscriptions, and billing
+// Each organization has its own separate tenant database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ORGANIZATION / TENANT MANAGEMENT
+// ============================================
+
+model Organization {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(200)
+  slug          String    @unique @db.VarChar(100)  // Unique identifier/subdomain
+  email         String    @db.VarChar(100)
+  phone         String?   @db.VarChar(20)
+  address       String?   @db.Text
+  city          String?   @db.VarChar(100)
+  state         String?   @db.VarChar(100)
+  country       String    @default("India") @db.VarChar(100)
+  pincode       String?   @db.VarChar(10)
+  logoUrl       String?   @db.VarChar(255)
+  website       String?   @db.VarChar(255)
+  
+  // Database connection for tenant isolation
+  dbHost        String?   @db.VarChar(255)
+  dbName        String?   @db.VarChar(100)
+  dbUser        String?   @db.VarChar(100)
+  dbPassword    String?   @db.VarChar(255)  // Encrypted
+  
+  // Status and trial
+  status        OrgStatus @default(TRIAL)
+  trialEndsAt   DateTime?
+  
+  // Metadata
+  studentCount  Int       @default(0)  // Cached count for billing
+  userCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  subscription  Subscription?
+  adminUsers    AdminUser[]
+  invoices      Invoice[]
+  activationCodes ActivationCode[]
+
+  @@index([status])
+  @@index([slug])
+  @@map("organizations")
+}
+
+enum OrgStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+// ============================================
+// ADMIN USERS (Portal Admins & Org Owners)
+// ============================================
+
+model AdminUser {
+  id              Int       @id @default(autoincrement())
+  email           String    @unique @db.VarChar(100)
+  password        String    @db.VarChar(255)
+  name            String    @db.VarChar(100)
+  phone           String?   @db.VarChar(20)
+  role            AdminRole @default(ORG_ADMIN)
+  organizationId  Int?      // Null for SUPER_ADMIN
+  isActive        Boolean   @default(true)
+  lastLogin       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([role])
+  @@index([organizationId])
+  @@map("admin_users")
+}
+
+enum AdminRole {
+  SUPER_ADMIN   // Platform owner - can manage all orgs
+  ORG_ADMIN     // Organization owner - can manage their org
+}
+
+// ============================================
+// SUBSCRIPTION PLANS
+// ============================================
+
+model SubscriptionPlan {
+  id              Int       @id @default(autoincrement())
+  name            String    @unique @db.VarChar(100)  // "Starter", "Growth", "Enterprise"
+  description     String?   @db.Text
+  
+  // Per-student pricing
+  pricePerStudent Decimal   @db.Decimal(10,2)  // ₹X per student/month
+  minStudents     Int       @default(1)
+  maxStudents     Int?      // null = unlimited
+  
+  // Base platform fee
+  baseFeeMonthly  Decimal   @default(0) @db.Decimal(10,2)
+  baseFeeYearly   Decimal   @default(0) @db.Decimal(10,2)
+  yearlyDiscount  Int       @default(15)  // Percentage discount for yearly
+  
+  // Feature access (JSON array of enabled modules)
+  includedModules String    @db.Text  // ["core", "fees", "students"]
+  maxUsers        Int?
+  
+  // Display
+  isPopular       Boolean   @default(false)
+  sortOrder       Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  subscriptions   Subscription[]
+
+  @@index([isActive])
+  @@map("subscription_plans")
+}
+
+// ============================================
+// ADD-ON MODULES
+// ============================================
+
+model AddonModule {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique @db.VarChar(50)  // "transport", "exams", "attendance"
+  name            String    @db.VarChar(100)
+  description     String?   @db.Text
+  priceMonthly    Decimal   @db.Decimal(10,2)
+  priceYearly     Decimal   @db.Decimal(10,2)
+  icon            String?   @db.VarChar(50)  // Icon name for UI
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  subscriptionAddons SubscriptionAddon[]
+
+  @@index([isActive])
+  @@map("addon_modules")
+}
+
+// ============================================
+// SUBSCRIPTIONS
+// ============================================
+
+model Subscription {
+  id              Int       @id @default(autoincrement())
+  organizationId  Int       @unique
+  planId          Int
+  status          SubStatus @default(TRIAL)
+  billingCycle    BillingCycle @default(MONTHLY)
+  
+  // Billing info
+  studentCount    Int       @default(0)  // Current count for billing
+  currentMonthlyAmount Decimal @default(0) @db.Decimal(10,2)
+  
+  // Dates
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  trialEndsAt     DateTime? // 30-day trial
+  nextBillingDate DateTime? @db.Date
+  
+  // Renewal
+  autoRenew       Boolean   @default(true)
+  cancelledAt     DateTime?
+  cancelReason    String?   @db.VarChar(255)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  plan            SubscriptionPlan @relation(fields: [planId], references: [id])
+  addons          SubscriptionAddon[]
+  invoices        Invoice[]
+
+  @@index([status])
+  @@index([nextBillingDate])
+  @@map("subscriptions")
+}
+
+enum SubStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+// ============================================
+// SUBSCRIPTION ADD-ONS
+// ============================================
+
+model SubscriptionAddon {
+  id              Int       @id @default(autoincrement())
+  subscriptionId  Int
+  addonId         Int
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  addon           AddonModule  @relation(fields: [addonId], references: [id])
+  
+  @@unique([subscriptionId, addonId])
+  @@map("subscription_addons")
+}
+
+// ============================================
+// INVOICES & PAYMENTS
+// ============================================
+
+model Invoice {
+  id              Int       @id @default(autoincrement())
+  invoiceNo       String    @unique @db.VarChar(50)  // INV-2026-00001
+  organizationId  Int
+  subscriptionId  Int?
+  
+  // Billing period
+  periodStart     DateTime  @db.Date
+  periodEnd       DateTime  @db.Date
+  
+  // Line items breakdown
+  studentCount    Int       // Students billed for this period
+  baseFee         Decimal   @db.Decimal(10,2)
+  studentFee      Decimal   @db.Decimal(10,2)  // pricePerStudent * studentCount
+  addonsFee       Decimal   @default(0) @db.Decimal(10,2)
+  
+  // Totals
+  subtotal        Decimal   @db.Decimal(10,2)
+  discount        Decimal   @default(0) @db.Decimal(10,2)
+  tax             Decimal   @default(0) @db.Decimal(10,2)  // GST 18%
+  total           Decimal   @db.Decimal(10,2)
+  
+  // Status
+  status          InvoiceStatus @default(PENDING)
+  dueDate         DateTime  @db.Date
+  paidAt          DateTime?
+  
+  // Payment info
+  paymentGateway  String?   @db.VarChar(20)  // "razorpay" or "stripe"
+  paymentId       String?   @db.VarChar(100)  // Gateway payment ID
+  paymentOrderId  String?   @db.VarChar(100)  // Gateway order ID
+  paymentMethod   String?   @db.VarChar(50)   // "card", "upi", "netbanking"
+  
+  // PDF
+  pdfUrl          String?   @db.VarChar(255)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// ============================================
+// PAYMENT TRANSACTIONS (Audit Log)
+// ============================================
+
+model PaymentTransaction {
+  id              Int       @id @default(autoincrement())
+  invoiceId       Int?
+  gateway         String    @db.VarChar(20)  // "razorpay" or "stripe"
+  gatewayOrderId  String?   @db.VarChar(100)
+  gatewayPaymentId String?  @db.VarChar(100)
+  amount          Decimal   @db.Decimal(10,2)
+  currency        String    @default("INR") @db.VarChar(3)
+  status          String    @db.VarChar(20)  // "created", "paid", "failed", "refunded"
+  method          String?   @db.VarChar(50)
+  errorCode       String?   @db.VarChar(50)
+  errorMessage    String?   @db.Text
+  metadata        String?   @db.Text  // JSON - raw webhook data
+  createdAt       DateTime  @default(now())
+
+  @@index([gateway])
+  @@index([status])
+  @@index([invoiceId])
+  @@map("payment_transactions")
+}
+
+// ============================================
+// SYSTEM SETTINGS
+// ============================================
+
+model SystemSettings {
+  id              Int       @id @default(autoincrement())
+  key             String    @unique @db.VarChar(100)
+  value           String    @db.Text
+  description     String?   @db.VarChar(255)
+  updatedAt       DateTime  @updatedAt
+
+  @@map("system_settings")
+}
+
+// ============================================
+// ACTIVATION CODES (License Keys)
+// ============================================
+
+model ActivationCode {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique @db.VarChar(32)  // Format: XXXX-XXXX-XXXX-XXXX
+  organizationId  Int
+  
+  // License Configuration
+  maxStudents     Int?      // null = unlimited (inherits from plan)
+  maxUsers        Int?
+  allowedModules  String?   @db.Text  // JSON array of module codes, null = all from plan
+  expiresAt       DateTime?            // null = follows subscription
+  
+  // Activation Status
+  status          ActivationStatus @default(ACTIVE)
+  activatedAt     DateTime?
+  activatedIp     String?   @db.VarChar(45)
+  machineId       String?   @db.VarChar(255)  // Hardware fingerprint
+  instanceName    String?   @db.VarChar(100)  // "Production", "Staging", etc.
+  
+  // Metadata
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  createdBy       Int?
+  revokedAt       DateTime?
+  revokedBy       Int?
+  revokeReason    String?   @db.VarChar(255)
+  
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  heartbeats      ActivationHeartbeat[]
+
+  @@index([status])
+  @@index([organizationId])
+  @@map("activation_codes")
+}
+
+enum ActivationStatus {
+  ACTIVE      // Generated, ready to use
+  USED        // Successfully activated
+  REVOKED     // Manually revoked by admin
+  EXPIRED     // Past expiry date
+}
+
+model ActivationHeartbeat {
+  id              Int       @id @default(autoincrement())
+  activationId    Int
+  timestamp       DateTime  @default(now())
+  studentCount    Int       // Current student count reported
+  userCount       Int       // Current active users
+  machineId       String    @db.VarChar(255)
+  ipAddress       String    @db.VarChar(45)
+  appVersion      String?   @db.VarChar(20)
+  
+  activation      ActivationCode @relation(fields: [activationId], references: [id], onDelete: Cascade)
+
+  @@index([activationId])
+  @@index([timestamp])
+  @@map("activation_heartbeats")
+}
+
