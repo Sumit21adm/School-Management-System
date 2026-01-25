@@ -40,8 +40,8 @@ jobs:
 
       - name: Run Release Build Script
         run: |
-          chmod +x scripts/release-docker/build.sh
-          ./scripts/release-docker/build.sh
+          chmod +x scripts/production-build/build.sh
+          ./scripts/production-build/build.sh
 
 
       - name: Generate Release Tag
