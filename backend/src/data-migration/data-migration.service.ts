@@ -289,6 +289,7 @@ export class DataMigrationService {
             { header: 'Transport Type', key: 'transportType', width: 15 },
             { header: 'Previous Dues', key: 'previousDues', width: 15 },
             { header: 'Advance Balance', key: 'advanceBalance', width: 15 },
+            { header: 'Session Name', key: 'sessionName', width: 20 },
         ];
 
         // Style header row
@@ -674,6 +675,9 @@ export class DataMigrationService {
             }
         });
 
+        const routeColIdx = 30; // Route Code is originally at 30
+
+
         worksheet.eachRow((row: any, rowNumber: number) => {
             if (rowNumber === 1) return; // Skip header
             totalRows++;
@@ -691,16 +695,22 @@ export class DataMigrationService {
             const admissionDate = row.getCell(10).text?.trim();
             const address = row.getCell(11).text?.trim();
             const phone = row.getCell(12).text?.trim();
+            const status = row.getCell(15).text?.trim()?.toLowerCase(); // Read Status Column
 
             // Required field validation
             if (!studentId) errors.push({ row: rowNumber, field: 'studentId', value: '', message: 'Student ID is required' });
             if (!name) errors.push({ row: rowNumber, field: 'name', value: '', message: 'Name is required' });
             if (!dob) errors.push({ row: rowNumber, field: 'dob', value: '', message: 'Date of Birth is required' });
             if (!gender) errors.push({ row: rowNumber, field: 'gender', value: '', message: 'Gender is required' });
-            if (!className) errors.push({ row: rowNumber, field: 'className', value: '', message: 'Class is required' });
-            if (!section) errors.push({ row: rowNumber, field: 'section', value: '', message: 'Section is required' });
-            if (!admissionDate) errors.push({ row: rowNumber, field: 'admissionDate', value: '', message: 'Admission Date is required' });
-            if (!address) errors.push({ row: rowNumber, field: 'address', value: '', message: 'Address is required' });
+            if (!gender) errors.push({ row: rowNumber, field: 'gender', value: '', message: 'Gender is required' });
+
+            // Allow blank class if status is meant to be alumni
+            const isAlumni = status === 'alumni' || status === 'pass out' || status === 'inactive';
+
+            if (!isAlumni) {
+                if (!className) errors.push({ row: rowNumber, field: 'className', value: '', message: 'Class is required for active students' });
+                if (!section) errors.push({ row: rowNumber, field: 'section', value: '', message: 'Section is required for active students' });
+            }
             if (!phone) errors.push({ row: rowNumber, field: 'phone', value: '', message: 'Phone is required' });
 
             // Format validation
@@ -732,6 +742,7 @@ export class DataMigrationService {
             }
 
             if (className && className !== 'PASS OUT' && !classNames.has(className)) {
+                // If not provided (and not alumni status), validation error will catch it later
                 errors.push({ row: rowNumber, field: 'className', value: className, message: `Class '${className}' not found. Check Reference_Data sheet for valid classes.` });
             }
 
@@ -913,6 +924,15 @@ export class DataMigrationService {
         let imported = 0;
         let skipped = 0;
 
+        // Find Session Name Column dynamically
+        let sessionColIdx = -1;
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell: any, colNumber: number) => {
+            if (cell.text?.trim() === 'Session Name') {
+                sessionColIdx = colNumber;
+            }
+        });
+
         // Process each row
         const rows: any[] = [];
         worksheet.eachRow((row: any, rowNumber: number) => {
@@ -999,7 +1019,7 @@ export class DataMigrationService {
                     guardianPhone: sanitizeText(row.getCell(28).text),
                     guardianEmail: sanitizeText(row.getCell(29).text),
                     sessionId: (() => {
-                        const fileSessionName = row.getCell(30).text?.trim();
+                        const fileSessionName = sessionColIdx > 0 ? row.getCell(sessionColIdx).text?.trim() : '';
                         if (fileSessionName && sessionMap.has(fileSessionName)) {
                             return sessionMap.get(fileSessionName)!.id;
                         }
@@ -1027,15 +1047,22 @@ export class DataMigrationService {
                         // If we are here, it's either a new student OR an update where we didn't skip.
                         // For simplicity, if it's occupied, we find a new one to avoid collision.
 
-                        // Try to parse integer
-                        let nextNum = parseInt(currentRoll.replace(/\D/g, '')) || 0;
-                        if (nextNum === 0) nextNum = usedSet.size + 1; // Fallback if non-numeric
-
                         let attempts = 0;
-                        while (usedSet.has(currentRoll.toLowerCase()) && attempts < 1000) {
-                            nextNum++;
-                            currentRoll = nextNum.toString();
+                        let suffixCode = 65; // ASCII for 'A'
+
+                        while (usedSet.has(currentRoll.toLowerCase()) && attempts < 100) {
+                            // Try appending suffix: 1 -> 1A, 1B, 1C...
+                            const suffix = String.fromCharCode(suffixCode);
+                            currentRoll = `${originalRoll}${suffix}`;
+
+                            suffixCode++;
                             attempts++;
+
+                            // Safety break if we run out of A-Z (26 duplicates of SAME roll number is distinct edge case)
+                            if (suffixCode > 90) {
+                                // Fallback to numeric suffix if > Z (e.g. 1-27)
+                                currentRoll = `${originalRoll}-${attempts}`;
+                            }
                         }
 
                         if (currentRoll !== originalRoll) {
@@ -1064,6 +1091,11 @@ export class DataMigrationService {
                     const route = routeMap.get(routeCode);
                     if (route) {
                         // CLEANING: Parse Stops
+                        // Adjust cell indexes because we might have added columns (Session Name) or not?
+                        // If we use dynamic finding for Session Name, hardcoded 30/31 might break if we change template structure.
+                        // BUT, import uses header matching or fixed schema.
+                        // Ideally, we should find column by header name.
+                        // Currently template has fixed structure. Route Code is col 30.
                         const rawPickupStop = row.getCell(31).text?.trim();
                         const rawDropStop = row.getCell(32).text?.trim();
 
@@ -1442,125 +1474,166 @@ export class DataMigrationService {
             }
         });
 
-        for (const { row, rowNumber } of rows) {
-            try {
-                const studentId = row.getCell(1).text?.trim();
-                const billNo = row.getCell(2).text?.trim();
-                const billDate = row.getCell(3).text?.trim();
-                const dueDate = row.getCell(4).text?.trim();
-                const month = parseInt(row.getCell(5).text) || 1;
-                const year = parseInt(row.getCell(6).text) || new Date().getFullYear();
-                const feeTypeName = row.getCell(7).text?.trim();
-                const amount = parseFloat(row.getCell(8).text) || 0;
-                const discount = parseFloat(row.getCell(9).text) || 0;
-                const previousDues = parseFloat(row.getCell(10).text) || 0;
-                const lateFee = parseFloat(row.getCell(11).text) || 0;
-                const netAmount = parseFloat(row.getCell(12).text) || 0;
-                const paidAmount = parseFloat(row.getCell(13).text) || 0;
-                const status = row.getCell(14).text?.trim()?.toUpperCase() || 'PENDING';
-                const sessionName = sessionColIdx > 0 ? row.getCell(sessionColIdx).text?.trim() : '';
+        // Group rows by billNo
+        const billGroups = new Map<string, {
+            billNo: string;
+            studentId: string;
+            billDate: string;
+            dueDate: string;
+            month: number;
+            year: number;
+            previousDues: number;
+            lateFee: number;
+            paidAmount: number;
+            status: string;
+            sessionName: string;
+            items: any[];
+            rowNumbers: number[];
+        }>();
 
-                if (!studentId || !billNo || !feeTypeName) {
-                    errors.push({ row: rowNumber, field: 'required', value: '', message: 'Missing required fields' });
-                    skipped++;
+        for (const { row, rowNumber } of rows) {
+            const billNo = row.getCell(2).text?.trim();
+            if (!billNo) continue;
+
+            if (!billGroups.has(billNo)) {
+                billGroups.set(billNo, {
+                    billNo,
+                    studentId: row.getCell(1).text?.trim(),
+                    billDate: row.getCell(3).text?.trim(),
+                    dueDate: row.getCell(4).text?.trim(),
+                    month: parseInt(row.getCell(5).text) || 1,
+                    year: parseInt(row.getCell(6).text) || new Date().getFullYear(),
+                    // Amounts will be summed or taken from first valid row (assuming bill header details are same)
+                    previousDues: parseFloat(row.getCell(10).text) || 0,
+                    lateFee: parseFloat(row.getCell(11).text) || 0,
+                    paidAmount: parseFloat(row.getCell(13).text) || 0,
+                    status: row.getCell(14).text?.trim()?.toUpperCase() || 'PENDING',
+                    sessionName: sessionColIdx > 0 ? row.getCell(sessionColIdx).text?.trim() : '',
+                    items: [],
+                    rowNumbers: []
+                });
+            }
+            const group = billGroups.get(billNo)!;
+
+            group.items.push({
+                feeTypeName: row.getCell(7).text?.trim(),
+                amount: parseFloat(row.getCell(8).text) || 0,
+                discount: parseFloat(row.getCell(9).text) || 0,
+                netAmount: parseFloat(row.getCell(12).text) || 0,
+                rowNumber
+            });
+            group.rowNumbers.push(rowNumber);
+        }
+
+        // Process Groups
+        for (const group of billGroups.values()) {
+            const { billNo, studentId, items, rowNumbers } = group;
+            const firstRowNumber = rowNumbers[0];
+
+            try {
+                if (!studentId || !billNo) {
+                    errors.push({ row: firstRowNumber, field: 'required', value: '', message: 'Missing required fields' });
+                    skipped += items.length;
                     continue;
                 }
 
                 const student = await this.prisma.studentDetails.findUnique({ where: { studentId } });
                 if (!student) {
-                    errors.push({ row: rowNumber, field: 'studentId', value: studentId, message: 'Student not found' });
-                    skipped++;
+                    errors.push({ row: firstRowNumber, field: 'studentId', value: studentId, message: 'Student not found' });
+                    skipped += items.length;
                     continue;
-                }
-
-                let feeType = feeTypeMap.get(feeTypeName);
-                if (!feeType) {
-                    // Auto-create missing fee type
-                    try {
-                        const created = await this.prisma.feeType.create({
-                            data: {
-                                name: feeTypeName,
-                                description: 'Auto-created during migration',
-                                isActive: true,
-                                isDefault: false,
-                                isRecurring: false,
-                            }
-                        });
-                        feeType = created;
-                        feeTypeMap.set(feeTypeName, created);
-                        errors.push({
-                            row: rowNumber,
-                            field: 'feeTypeName',
-                            value: feeTypeName,
-                            message: `Fee Type '${feeTypeName}' was auto-created`
-                        });
-                    } catch (createError: any) {
-                        // If creation fails (e.g. duplicate), try to find it again
-                        feeType = await this.prisma.feeType.findFirst({
-                            where: { name: feeTypeName }
-                        }) ?? undefined;
-                        if (!feeType) {
-                            errors.push({ row: rowNumber, field: 'feeTypeName', value: feeTypeName, message: 'Fee Type not found and could not be created' });
-                            skipped++;
-                            continue;
-                        }
-                        feeTypeMap.set(feeTypeName, feeType);
-                    }
                 }
 
                 const existingBill = await this.prisma.demandBill.findUnique({ where: { billNo } });
                 if (existingBill) {
-                    errors.push({ row: rowNumber, field: 'billNo', value: billNo, message: 'Bill number already exists' });
-                    skipped++;
+                    errors.push({ row: firstRowNumber, field: 'billNo', value: billNo, message: 'Bill number already exists' });
+                    skipped += items.length;
                     continue;
                 }
 
                 // Resolve Session ID
                 let targetSessionId = activeSession.id;
-                if (sessionName && sessionMap.has(sessionName)) {
-                    targetSessionId = sessionMap.get(sessionName)!.id;
+                if (group.sessionName && sessionMap.has(group.sessionName)) {
+                    targetSessionId = sessionMap.get(group.sessionName)!.id;
                 }
+
+                // Calculate Totals
+                let totalAmount = 0;
+                let totalDiscount = 0;
+                let totalNet = 0;
+
+                const billItemsCreate: any[] = [];
+
+                for (const item of items) {
+                    if (!item.feeTypeName) continue;
+
+                    let feeType = feeTypeMap.get(item.feeTypeName);
+                    if (!feeType) {
+                        try {
+                            const created = await this.prisma.feeType.create({
+                                data: { name: item.feeTypeName, description: 'Auto-created', isActive: true, isDefault: false, isRecurring: false }
+                            });
+                            feeType = created;
+                            feeTypeMap.set(item.feeTypeName, created);
+                            errors.push({ row: item.rowNumber, field: 'feeTypeName', value: item.feeTypeName, message: `Fee Type '${item.feeTypeName}' auto-created` });
+                        } catch (e) {
+                            feeType = await this.prisma.feeType.findFirst({ where: { name: item.feeTypeName } }) ?? undefined;
+                            if (!feeType) {
+                                errors.push({ row: item.rowNumber, field: 'feeTypeName', value: item.feeTypeName, message: 'Fee Type not found' });
+                                continue;
+                            }
+                            feeTypeMap.set(item.feeTypeName, feeType);
+                        }
+                    }
+
+                    billItemsCreate.push({
+                        feeTypeId: feeType.id,
+                        amount: item.amount,
+                        discountAmount: item.discount,
+                        description: `${item.feeTypeName} - Imported`,
+                    });
+
+                    totalAmount += item.amount;
+                    totalDiscount += item.discount;
+                    totalNet += item.netAmount;
+                }
+
+                if (billItemsCreate.length === 0) {
+                    skipped += items.length;
+                    continue;
+                }
+
+                // Final Net Amount = Sum(Net) + Late Fee + Previous Dues
+                // But in Excel: Net Amount = Amount - Discount. 
+                // So Bill Total = Sum(Net Amounts) + Late Fee + Previous Dues.
+                const finalBillAmount = totalNet + group.lateFee + group.previousDues;
 
                 await this.prisma.demandBill.create({
                     data: {
                         billNo,
                         studentId,
                         sessionId: targetSessionId,
-                        month,
-                        year,
-                        billDate: parseDateDDMMYYYY(billDate) || new Date(),
-                        dueDate: parseDateDDMMYYYY(dueDate) || new Date(),
-                        totalAmount: amount,
-                        previousDues,
-                        lateFee,
-                        discount,
-                        netAmount,
-                        paidAmount,
-                        status: status as any,
+                        month: group.month,
+                        year: group.year,
+                        billDate: parseDateDDMMYYYY(group.billDate) || new Date(),
+                        dueDate: parseDateDDMMYYYY(group.dueDate) || new Date(),
+                        totalAmount: totalAmount, // Sum of component amounts
+                        previousDues: group.previousDues,
+                        lateFee: group.lateFee,
+                        discount: totalDiscount,
+                        netAmount: finalBillAmount,
+                        paidAmount: group.paidAmount,
+                        status: group.status as any,
                         billItems: {
-                            create: {
-                                feeTypeId: feeType.id,
-                                amount,
-                                discountAmount: discount,
-                                description: `${feeTypeName} - Imported`,
-                            },
+                            create: billItemsCreate,
                         },
                     },
                 });
 
-                imported++;
+                imported += items.length;
             } catch (error: any) {
-                errors.push({ row: rowNumber, field: 'general', value: '', message: error.message });
-                if (!options?.skipOnError) {
-                    return {
-                        success: false,
-                        totalRows: rows.length,
-                        imported,
-                        skipped,
-                        errors,
-                    };
-                }
-                skipped++;
+                errors.push({ row: firstRowNumber, field: 'general', value: '', message: error.message });
+                skipped += items.length;
             }
         }
 

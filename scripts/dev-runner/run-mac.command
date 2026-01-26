@@ -230,6 +230,7 @@ echo ""
 # Start API
 echo " Starting API server on port 3001..."
 cd "$API_DIR"
+export NODE_OPTIONS="--max-old-space-size=4096"
 nohup npm run start:dev > "$LOGS_DIR/api.log" 2>&1 &
 API_PID=$!
 
