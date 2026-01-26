@@ -80,7 +80,7 @@ export async function seedCoreSettings() {
         { name: 'APR 2021 - MAR 2022', startDate: new Date('2021-04-01'), endDate: new Date('2022-03-31'), isActive: false },
         { name: 'APR 2022 - MAR 2023', startDate: new Date('2022-04-01'), endDate: new Date('2023-03-31'), isActive: false },
         { name: 'APR 2023 - MAR 2024', startDate: new Date('2023-04-01'), endDate: new Date('2024-03-31'), isActive: false },
-        { name: 'APR 2024 - MAR 2025', startDate: new Date('2024-04-01'), endDate: new Date('2025-03-31'), isActive: true },
+        { name: 'APR 2024 - MAR 2025', startDate: new Date('2024-04-01'), endDate: new Date('2025-03-31'), isActive: false },
         { name: 'APR 2025 - MAR 2026', startDate: new Date('2025-04-01'), endDate: new Date('2026-03-31'), isActive: true },
         { name: 'APR 2026 - MAR 2027', startDate: new Date('2026-04-01'), endDate: new Date('2027-03-31'), isActive: false, isSetupMode: true },
     ];

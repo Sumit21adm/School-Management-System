@@ -95,7 +95,8 @@ else
         -e MYSQL_PASSWORD="$MYSQL_PASSWORD" \
         -p $MYSQL_PORT:3306 \
         -v school_mysql_data:/var/lib/mysql \
-        mysql:8.0
+        mysql:8.0 \
+        --default-authentication-plugin=mysql_native_password
 fi
 
 # Wait for MySQL to be ready
