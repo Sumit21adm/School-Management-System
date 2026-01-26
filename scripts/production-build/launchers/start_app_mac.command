@@ -68,7 +68,7 @@ fi
 echo ""
 echo " 🐳 Starting Containers..."
 # Use strict project name so data persists across folder renames
-docker-compose -p school_management_system up -d
+docker-compose -p school_management_system up -d --build
 
 echo ""
 echo " ========================================"

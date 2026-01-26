@@ -27,6 +27,7 @@ import { TransportModule } from './transport/transport.module';
 import { StaffModule } from './staff/staff.module';
 import { RoleSettingsModule } from './role-settings/role-settings.module';
 import { DataMigrationModule } from './data-migration/data-migration.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { DataMigrationModule } from './data-migration/data-migration.module';
     TransportModule,
     RoleSettingsModule,
     DataMigrationModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

@@ -90,6 +90,13 @@ export const PERMISSION_MODULES: PermissionModule[] = [
             { key: 'transport_assign', label: 'Assign Transport' },
         ],
     },
+    {
+        module: 'Attendance',
+        permissions: [
+            { key: 'attendance_mark', label: 'Mark Attendance' },
+            { key: 'attendance_view', label: 'View Attendance' },
+        ],
+    },
 ];
 
 // Default permissions for each role

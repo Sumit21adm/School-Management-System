@@ -82,6 +82,11 @@ model StudentDetails {
   academicHistory  StudentAcademicHistory[]
   transport        StudentTransport?         // Optional transport assignment
   examResults      ExamResult[]
+  
+  // Attendance Relations
+  attendances      Attendance[]
+  attendanceSummaries AttendanceSummary[]
+  leaveRequests    LeaveRequest[]
 
   @@index([className])
   @@index([section])
@@ -230,6 +235,12 @@ model AcademicSession {
   feeTransactions FeeTransaction[]
   demandBills   DemandBill[]
   academicHistory StudentAcademicHistory[]
+  
+  // Attendance Relations
+  attendances      Attendance[]
+  attendanceSummaries AttendanceSummary[]
+  holidays         Holiday[]
+  leaveRequests    LeaveRequest[]
 
   exams       Exam[]
 
@@ -845,4 +856,91 @@ model TransportFareSlab {
 
   @@index([minDistance, maxDistance])
   @@map("transport_fare_slabs")
+}
+
+// ============================================
+// ATTENDANCE MANAGEMENT MODELS
+// ============================================
+
+model Attendance {
+  id              Int       @id @default(autoincrement())
+  date            DateTime  @db.Date
+  status          String    @db.VarChar(20)          // present, absent, late, half_day, leave
+  inTime          String?   @db.VarChar(10)          // "08:30" (for late tracking)
+  outTime         String?   @db.VarChar(10)          // "14:30"
+  remarks         String?   @db.VarChar(200)
+  markedBy        Int?                                // User who marked
+  markedAt        DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  student         StudentDetails   @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  studentId       String    @db.VarChar(20)
+  session         AcademicSession   @relation(fields: [sessionId], references: [id])
+  sessionId       Int
+
+  @@unique([studentId, date, sessionId])             // One record per student per day per session
+  @@index([date])
+  @@index([sessionId, date])
+  @@map("attendances")
+}
+
+model AttendanceSummary {
+  id              Int       @id @default(autoincrement())
+  month           Int                                 // 1-12
+  year            Int
+  totalDays       Int       @default(0)              // Working days in month
+  presentDays     Int       @default(0)
+  absentDays      Int       @default(0)
+  lateDays        Int       @default(0)
+  halfDays        Int       @default(0)
+  leaveDays       Int       @default(0)
+  percentage      Decimal   @db.Decimal(5,2)         // Attendance %
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  student         StudentDetails   @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  studentId       String    @db.VarChar(20)
+  session         AcademicSession   @relation(fields: [sessionId], references: [id])
+  sessionId       Int
+
+  @@unique([studentId, month, year, sessionId])
+  @@map("attendance_summaries")
+}
+
+model Holiday {
+  id              Int       @id @default(autoincrement())
+  date            DateTime  @db.Date
+  name            String    @db.VarChar(100)         // "Diwali", "Republic Day"
+  type            String    @db.VarChar(50)          // national, religious, school
+  description     String?   @db.VarChar(200)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  session         AcademicSession   @relation(fields: [sessionId], references: [id])
+  sessionId       Int
+
+  @@unique([date, sessionId])
+  @@map("holidays")
+}
+
+model LeaveRequest {
+  id              Int       @id @default(autoincrement())
+  fromDate        DateTime  @db.Date
+  toDate          DateTime  @db.Date
+  reason          String    @db.Text
+  leaveType       String    @db.VarChar(50)          // sick, casual, family, other
+  status          String    @default("pending")      // pending, approved, rejected
+  appliedAt       DateTime  @default(now())
+  processedBy     Int?                                // User who approved/rejected
+  processedAt     DateTime?
+  remarks         String?   @db.VarChar(200)
+
+  // Relations
+  student         StudentDetails   @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  studentId       String    @db.VarChar(20)
+  session         AcademicSession   @relation(fields: [sessionId], references: [id])
+  sessionId       Int
+  
+  @@map("leave_requests")
 }

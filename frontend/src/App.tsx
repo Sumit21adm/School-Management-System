@@ -46,6 +46,9 @@ import FareSlabs from './pages/transport/FareSlabs';
 
 import Users from './pages/users/Users';
 
+import MarkAttendance from './pages/attendance/MarkAttendance';
+import AttendanceReports from './pages/attendance/AttendanceReports';
+
 import ClassDetails from './pages/Classes/ClassDetails';
 
 function AppContent() {
@@ -154,6 +157,10 @@ function AppContent() {
 
                 {/* Staff/Users Routes */}
                 <Route path="/users" element={<Users />} />
+
+                {/* Attendance Routes */}
+                <Route path="/attendance/mark" element={<MarkAttendance />} />
+                <Route path="/attendance/reports" element={<AttendanceReports />} />
               </Route>
 
               {/* Catch all redirect */}
