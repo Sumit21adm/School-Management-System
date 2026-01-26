@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Container, Paper, Typography, Box, Table, TableBody, TableCell,
     TableHead, TableRow, Button, IconButton, Dialog, DialogTitle,
-    DialogContent, DialogActions, TextField, Alert, Snackbar, MenuItem, Stack, Chip
+    DialogContent, DialogActions, TextField, Alert, Snackbar, MenuItem, Stack, Chip, Checkbox, List, ListItem, ListItemText, ListItemIcon, Divider
 } from '@mui/material';
-import { ArrowBack, Delete, Add } from '@mui/icons-material';
-import { examinationService } from '../../lib/api';
+import { ArrowBack, Delete, Add, Print, PictureAsPdf } from '@mui/icons-material';
+import { examinationService, admissionService as studentService, apiClient } from '../../lib/api';
 import type { Exam, Subject } from '../../types/examination';
 
 const CLASSES = ['Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
@@ -19,6 +19,7 @@ export default function ExamDetails() {
     const examId = Number(id);
 
     const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+    const [admitCardDialogOpen, setAdmitCardDialogOpen] = useState(false);
     const [scheduleData, setScheduleData] = useState({
         subjectId: '',
         className: '',
@@ -28,6 +29,13 @@ export default function ExamDetails() {
         roomNo: '',
         period: ''
     });
+
+    // Admit Card Generation States
+    const [selectedClass, setSelectedClass] = useState('');
+    const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+    const [studentsList, setStudentsList] = useState<any[]>([]);
+    const [loadingStudents, setLoadingStudents] = useState(false);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
     const showMessage = (message: string, severity: 'success' | 'error' = 'success') => setSnackbar({ open: true, message, severity });
@@ -45,6 +53,22 @@ export default function ExamDetails() {
         queryFn: examinationService.getSubjects
     });
     const subjects = (subjectsData?.data || []) as Subject[];
+
+    // Fetch students when a class is selected
+    const fetchStudentsForClass = async (className: string) => {
+        if (!className) return;
+        setLoadingStudents(true);
+        try {
+            // Using existing student service to fetch by class
+            const response = await studentService.getStudents({ className, limit: 100 });
+            setStudentsList(response.data.data || []);
+            setSelectedStudents([]); // Reset selection
+        } catch (error) {
+            showMessage('Failed to fetch students', 'error');
+        } finally {
+            setLoadingStudents(false);
+        }
+    };
 
     // Mutations
     const addScheduleMutation = useMutation({
@@ -73,7 +97,6 @@ export default function ExamDetails() {
             return;
         }
 
-        // Combine date and time to ISO
         const startDateTime = new Date(`${scheduleData.date}T${scheduleData.startTime}`);
         const endDateTime = new Date(`${scheduleData.date}T${scheduleData.endTime}`);
 
@@ -88,14 +111,73 @@ export default function ExamDetails() {
         });
     };
 
+    const handleSelectAllStudents = (checked: boolean) => {
+        if (checked) {
+            setSelectedStudents(studentsList.map(s => s.studentId));
+        } else {
+            setSelectedStudents([]);
+        }
+    };
+
+    const handleToggleStudent = (studentId: string) => {
+        setSelectedStudents(prev =>
+            prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+        );
+    };
+
+    const generateAdmitCardsPdf = async () => {
+        if (selectedStudents.length === 0) {
+            showMessage('Please select at least one student', 'error');
+            return;
+        }
+
+        setGeneratingPdf(true);
+        try {
+            // Call backend endpoint to generate PDF
+            const response = await apiClient.post('/examination/admit-card/pdf', {
+                examId,
+                studentIds: selectedStudents
+            }, {
+                responseType: 'blob'
+            });
+
+            // Create blob URL and open in new tab
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+
+            showMessage('Admit Cards generated successfully');
+            setAdmitCardDialogOpen(false);
+        } catch (error) {
+            console.error(error);
+            showMessage('Failed to generate PDF. Please try again.', 'error');
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
     if (examLoading) return <Container sx={{ mt: 4 }}><Typography>Loading...</Typography></Container>;
     if (!exam) return <Container sx={{ mt: 4 }}><Alert severity="error">Exam not found</Alert></Container>;
 
     return (
         <Box>
-            <Button startIcon={<ArrowBack />} onClick={() => navigate('/exams')} sx={{ mb: 2 }}>
-                Back to Exams
-            </Button>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Button startIcon={<ArrowBack />} onClick={() => navigate('/exams')}>
+                    Back to Exams
+                </Button>
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<PictureAsPdf />}
+                    onClick={() => {
+                        setSelectedStudents([]);
+                        setSelectedClass('');
+                        setAdmitCardDialogOpen(true);
+                    }}
+                >
+                    Generate Admit Card
+                </Button>
+            </Box>
 
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -161,6 +243,7 @@ export default function ExamDetails() {
                 </Table>
             </Paper>
 
+            {/* Schedule Dialog (Existing) */}
             <Dialog open={scheduleDialogOpen} onClose={() => setScheduleDialogOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>Add Exam Schedule</DialogTitle>
                 <DialogContent>
@@ -244,6 +327,87 @@ export default function ExamDetails() {
                 <DialogActions>
                     <Button onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
                     <Button onClick={handleAddSchedule} variant="contained">Add</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Admit Card Generation Dialog */}
+            <Dialog
+                open={admitCardDialogOpen}
+                onClose={() => setAdmitCardDialogOpen(false)}
+                maxWidth='sm'
+                fullWidth
+            >
+                <DialogTitle>Generate Admit Cards (PDF)</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ mt: 1 }}>
+                        <TextField
+                            select
+                            label="Select Class"
+                            fullWidth
+                            value={selectedClass}
+                            onChange={(e) => {
+                                setSelectedClass(e.target.value);
+                                fetchStudentsForClass(e.target.value);
+                            }}
+                            sx={{ mb: 2 }}
+                        >
+                            {CLASSES.map((cls) => (
+                                <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
+                            ))}
+                        </TextField>
+
+                        {loadingStudents && <Typography>Loading students...</Typography>}
+
+                        {!loadingStudents && studentsList.length > 0 && (
+                            <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>
+                                <List dense>
+                                    <ListItem>
+                                        <ListItemIcon>
+                                            <Checkbox
+                                                edge="start"
+                                                checked={selectedStudents.length === studentsList.length && studentsList.length > 0}
+                                                indeterminate={selectedStudents.length > 0 && selectedStudents.length < studentsList.length}
+                                                onChange={(e) => handleSelectAllStudents(e.target.checked)}
+                                            />
+                                        </ListItemIcon>
+                                        <ListItemText primary="Select All" />
+                                    </ListItem>
+                                    <Divider />
+                                    {studentsList.map((student) => (
+                                        <ListItem key={student.studentId} onClick={() => handleToggleStudent(student.studentId)} sx={{ cursor: 'pointer' }}>
+                                            <ListItemIcon>
+                                                <Checkbox
+                                                    edge="start"
+                                                    checked={selectedStudents.includes(student.studentId)}
+                                                    tabIndex={-1}
+                                                    disableRipple
+                                                />
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary={`${student.name} (${student.studentId})`}
+                                                secondary={`Roll: ${student.rollNumber || 'N/A'}`}
+                                            />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Paper>
+                        )}
+
+                        {!loadingStudents && selectedClass && studentsList.length === 0 && (
+                            <Typography color="text.secondary">No students found in this class.</Typography>
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setAdmitCardDialogOpen(false)}>Close</Button>
+                    <Button
+                        onClick={generateAdmitCardsPdf}
+                        variant="contained"
+                        disabled={selectedStudents.length === 0 || generatingPdf}
+                        startIcon={generatingPdf ? <PictureAsPdf /> : <Print />}
+                    >
+                        {generatingPdf ? 'Generating...' : `Generate PDF (${selectedStudents.length})`}
+                    </Button>
                 </DialogActions>
             </Dialog>
 

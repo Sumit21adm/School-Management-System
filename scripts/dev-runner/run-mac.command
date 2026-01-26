@@ -95,7 +95,8 @@ else
         -e MYSQL_PASSWORD="$MYSQL_PASSWORD" \
         -p $MYSQL_PORT:3306 \
         -v school_mysql_data:/var/lib/mysql \
-        mysql:8.0
+        mysql:8.0 \
+        --default-authentication-plugin=mysql_native_password
 fi
 
 # Wait for MySQL to be ready
@@ -229,6 +230,7 @@ echo ""
 # Start API
 echo " Starting API server on port 3001..."
 cd "$API_DIR"
+export NODE_OPTIONS="--max-old-space-size=4096"
 nohup npm run start:dev > "$LOGS_DIR/api.log" 2>&1 &
 API_PID=$!
 
