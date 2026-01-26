@@ -28,7 +28,10 @@
         "transportReports": "Reports",
         "fareSlabs": "Fare Slabs",
         "staff": "USER MANAGEMENT",
-        "staffList": "Users"
+        "staffList": "Users",
+        "attendance": "ATTENDANCE",
+        "markAttendance": "Mark Attendance",
+        "attendanceReports": "Reports"
     },
     "pages": {
         "dashboard": "Dashboard",

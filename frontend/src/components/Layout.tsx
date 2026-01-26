@@ -54,6 +54,7 @@ import {
   HelpOutline as HelpIcon,
   PriceChange as FareIcon,
   CloudUpload as ImportIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useColorMode } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
@@ -141,6 +142,14 @@ const menuItems: MenuItem[] = [
       { path: '/settings/users', labelKey: 'sidebar.userManagement', icon: UserIcon, requiredPermission: 'users_manage' },
       { path: '/settings/roles', labelKey: 'sidebar.roleSettings', icon: Settings, requiredPermission: 'users_manage' },
       { path: '/settings/data-migration', labelKey: 'sidebar.dataMigration', icon: ImportIcon, requiredPermission: 'school_settings' },
+    ],
+  },
+  {
+    labelKey: 'sidebar.attendance',
+    icon: AssignmentIcon,
+    children: [
+      { path: '/attendance/mark', labelKey: 'sidebar.markAttendance', icon: CheckCircleIcon, requiredPermission: 'attendance_mark' },
+      { path: '/attendance/reports', labelKey: 'sidebar.attendanceReports', icon: AssignmentIcon, requiredPermission: 'attendance_view' },
     ],
   },
 ];
