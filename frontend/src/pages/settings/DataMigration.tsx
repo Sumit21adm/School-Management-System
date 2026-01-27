@@ -130,7 +130,7 @@ export default function DataMigration() {
                 setValidationResult({ isValid: true, totalRows: 0, validRows: 0, errorCount: 0, errors: [], warnings: [] });
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Validation failed');
+            setError(err.response?.data?.message || err.message || 'Validation failed');
         } finally {
             setValidating(false);
         }
