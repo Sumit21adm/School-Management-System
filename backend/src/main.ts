@@ -23,8 +23,8 @@ async function bootstrap() {
   });
 
   // Enable JSON and URL-encoded body parsing
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
+  app.use(json({ limit: '100mb' }));
+  app.use(urlencoded({ extended: true, limit: '100mb' }));
 
   // Serve static files
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
@@ -32,7 +32,8 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3001;
-  await app.listen(port, '0.0.0.0');
+  const server = await app.listen(port, '0.0.0.0');
+  server.setTimeout(600000); // 10 minutes
   console.log(`Application is running on: http://localhost:${port}`);
 }
 bootstrap();

@@ -604,207 +604,225 @@ export class DataMigrationService {
     // ============================================
 
     async validateStudentsImport(file: Express.Multer.File): Promise<ValidationResultDto> {
-        const ExcelJS = require('exceljs');
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(file.buffer);
+        try {
+            const ExcelJS = require('exceljs');
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(file.buffer);
 
-        const worksheet = workbook.getWorksheet('Students') || workbook.getWorksheet(1);
-        if (!worksheet) {
+            const worksheet = workbook.getWorksheet('Students') || workbook.getWorksheet(1);
+            if (!worksheet) {
+                return {
+                    isValid: false,
+                    totalRows: 0,
+                    validRows: 0,
+                    errorCount: 1,
+                    errors: [{ row: 0, field: 'file', value: '', message: 'No "Students" sheet found in workbook' }],
+                    warnings: [],
+                };
+            }
+
+            const errors: ValidationErrorDto[] = [];
+            const warnings: ValidationErrorDto[] = [];
+            let totalRows = 0;
+
+            // Fetch reference data for validation
+            const [classes, existingStudents, allSessions] = await Promise.all([
+                this.prisma.schoolClass.findMany({ where: { isActive: true } }),
+                this.prisma.studentDetails.findMany({
+                    select: {
+                        studentId: true,
+                        name: true,
+                        fatherName: true,
+                        aadharCardNo: true,
+                        className: true,
+                        section: true,
+                        rollNumber: true,
+                        sessionId: true, // Include session for roll key
+                    },
+                    where: { status: 'active' } // Check active students primarily
+                }),
+                this.prisma.academicSession.findMany(), // Fetch all sessions
+            ]);
+
+            // Create session ID -> Name map
+            const sessionIdToName = new Map(allSessions.map(s => [s.id, s.name]));
+
+            const classNames = new Set(classes.map(c => c.name));
+            const existingIds = new Set(existingStudents.map(s => s.studentId));
+            // Create map for smart duplicate detection
+            const existingStudentMap = new Map(existingStudents.map(s => [s.studentId, s]));
+
+            const existingAadhars = new Set(existingStudents.map(s => s.aadharCardNo).filter(Boolean));
+
+            // Create lookup for existing Session-Class-Section-RollNo -> StudentID
+            const existingRollMap = new Map<string, string>();
+            existingStudents.forEach(s => {
+                if (s.className && s.section && s.rollNumber) {
+                    const sessionName = s.sessionId ? (sessionIdToName.get(s.sessionId) || '') : '';
+                    const key = `${sessionName}-${s.className}-${s.section}-${s.rollNumber}`.toLowerCase();
+                    existingRollMap.set(key, s.studentId);
+                }
+            });
+
+            const fileAadhars = new Set<string>();
+            const fileRollKeys = new Set<string>();
+
+            // Find Session Name Column dynamically
+            let sessionColIdx = -1;
+            const headerRow = worksheet.getRow(1);
+            headerRow.eachCell((cell: any, colNumber: number) => {
+                if (cell.text?.trim() === 'Session Name') {
+                    sessionColIdx = colNumber;
+                }
+            });
+
+            const routeColIdx = 30; // Route Code is originally at 30
+
+
+            worksheet.eachRow((row: any, rowNumber: number) => {
+                if (rowNumber === 1) return; // Skip header
+                totalRows++;
+
+                const studentId = row.getCell(1).text?.trim();
+                const name = row.getCell(2).text?.trim();
+                const fatherName = row.getCell(3).text?.trim();
+                const motherName = row.getCell(4).text?.trim();
+                const dob = row.getCell(5).text?.trim();
+                const gender = row.getCell(6).text?.trim()?.toLowerCase();
+                const className = row.getCell(7).text?.trim();
+                // CLEANING: Parse Section for validation consistency
+                const rawSection = row.getCell(8).text?.trim();
+                const section = this.parseSection(rawSection);
+                const admissionDate = row.getCell(10).text?.trim();
+                const address = row.getCell(11).text?.trim();
+                const phone = row.getCell(12).text?.trim();
+                const status = row.getCell(15).text?.trim()?.toLowerCase(); // Read Status Column
+
+                // Required field validation
+                if (!studentId) errors.push({ row: rowNumber, field: 'studentId', value: '', message: 'Student ID is required' });
+                if (!name) errors.push({ row: rowNumber, field: 'name', value: '', message: 'Name is required' });
+                if (!dob) errors.push({ row: rowNumber, field: 'dob', value: '', message: 'Date of Birth is required' });
+                if (!gender) errors.push({ row: rowNumber, field: 'gender', value: '', message: 'Gender is required' });
+                if (!gender) errors.push({ row: rowNumber, field: 'gender', value: '', message: 'Gender is required' });
+
+                // Allow blank class if status is meant to be alumni
+                const isAlumni = status === 'alumni' || status === 'pass out' || status === 'inactive';
+
+                if (!isAlumni) {
+                    if (!className) errors.push({ row: rowNumber, field: 'className', value: '', message: 'Class is required for active students' });
+                    if (!section) errors.push({ row: rowNumber, field: 'section', value: '', message: 'Section is required for active students' });
+                }
+                if (!phone) errors.push({ row: rowNumber, field: 'phone', value: '', message: 'Phone is required' });
+
+                // Format validation
+                if (studentId && existingIds.has(studentId)) {
+                    // Smart Duplicate Check: If names match, treat as warning (skip), otherwise error
+                    const existing = existingStudentMap.get(studentId);
+                    const nameMatch = existing?.name?.toLowerCase().trim() === name?.toLowerCase().trim();
+                    const fatherMatch = existing?.fatherName?.toLowerCase().trim() === fatherName?.toLowerCase().trim();
+
+                    if (existing && nameMatch && fatherMatch) {
+                        warnings.push({
+                            row: rowNumber,
+                            field: 'studentId',
+                            value: studentId,
+                            message: `Student '${name}' (ID: ${studentId}) already exists with matching data. Record will be skipped.`
+                        });
+                    } else {
+                        errors.push({
+                            row: rowNumber,
+                            field: 'studentId',
+                            value: studentId,
+                            message: `Student ID '${studentId}' exists but data mismatch (System: ${existing?.name}, File: ${name}).`
+                        });
+                    }
+                }
+
+                if (gender && !['male', 'female', 'other'].includes(gender)) {
+                    errors.push({ row: rowNumber, field: 'gender', value: gender, message: 'Gender must be: male, female, or other' });
+                }
+
+                if (className && className !== 'PASS OUT' && !classNames.has(className)) {
+                    // If not provided (and not alumni status), validation error will catch it later
+                    errors.push({ row: rowNumber, field: 'className', value: className, message: `Class '${className}' not found. Check Reference_Data sheet for valid classes.` });
+                }
+
+                if (dob && !isValidDateFormat(dob)) {
+                    errors.push({ row: rowNumber, field: 'dob', value: dob, message: 'Invalid date format. Use DD-MM-YYYY' });
+                }
+
+                if (admissionDate && !isValidDateFormat(admissionDate)) {
+                    errors.push({ row: rowNumber, field: 'admissionDate', value: admissionDate, message: 'Invalid date format. Use DD-MM-YYYY' });
+                }
+
+                if (phone && !/^\d{10,15}$/.test(phone)) {
+                    errors.push({ row: rowNumber, field: 'phone', value: phone, message: 'Phone must be 10-15 digits' });
+                }
+
+                // Track IDs for duplicate detection within file
+                existingIds.add(studentId);
+
+                // Roll Number Validation (within Session + Class + Section)
+                const rollNumber = sanitizeText(row.getCell(9).text);
+                const sessionName = sessionColIdx > 0 ? (row.getCell(sessionColIdx).text?.trim() || '') : '';
+                if (className && section && rollNumber) {
+                    // Include session in key to allow same roll across different years
+                    const rollKey = `${sessionName}-${className}-${section}-${rollNumber}`.toLowerCase();
+
+                    if (fileRollKeys.has(rollKey)) {
+                        warnings.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Duplicate Roll Number '${rollNumber}' in file. Will be auto-corrected.` });
+                    }
+
+                    if (existingRollMap.has(rollKey)) {
+                        const existingOwnerId = existingRollMap.get(rollKey);
+                        // Only warn if the existing roll number belongs to a DIFFERENT student
+                        if (existingOwnerId !== studentId) {
+                            warnings.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Roll Number '${rollNumber}' already taken. Will be auto-corrected.` });
+                        }
+                    }
+
+                    fileRollKeys.add(rollKey);
+                }
+
+                // Aadhar Validation
+                const aadhar = sanitizeText(row.getCell(18).text);
+
+                if (aadhar) {
+                    if (fileAadhars.has(aadhar)) {
+                        errors.push({ row: rowNumber, field: 'aadharCardNo', value: aadhar, message: `Duplicate Aadhar Number '${aadhar}' in file` });
+                    }
+                    if (existingAadhars.has(aadhar)) {
+                        errors.push({ row: rowNumber, field: 'aadharCardNo', value: aadhar, message: `Aadhar Number '${aadhar}' already exists in system` });
+                    }
+                    fileAadhars.add(aadhar);
+                }
+            });
+
+            return {
+                isValid: errors.length === 0,
+                totalRows,
+                validRows: totalRows - new Set(errors.map(e => e.row)).size,
+                errorCount: errors.length,
+                errors,
+                warnings,
+            };
+
+        } catch (error: any) {
+            console.error('Validation Error:', error);
             return {
                 isValid: false,
                 totalRows: 0,
                 validRows: 0,
                 errorCount: 1,
-                errors: [{ row: 0, field: 'file', value: '', message: 'No "Students" sheet found in workbook' }],
+                errors: [{
+                    row: 0,
+                    field: 'file',
+                    value: '',
+                    message: `Critical Validation Error: ${error.message || 'Unknown error'}`
+                }],
                 warnings: [],
             };
         }
-
-        const errors: ValidationErrorDto[] = [];
-        const warnings: ValidationErrorDto[] = [];
-        let totalRows = 0;
-
-        // Fetch reference data for validation
-        const [classes, existingStudents, allSessions] = await Promise.all([
-            this.prisma.schoolClass.findMany({ where: { isActive: true } }),
-            this.prisma.studentDetails.findMany({
-                select: {
-                    studentId: true,
-                    name: true,
-                    fatherName: true,
-                    aadharCardNo: true,
-                    className: true,
-                    section: true,
-                    rollNumber: true,
-                    sessionId: true, // Include session for roll key
-                },
-                where: { status: 'active' } // Check active students primarily
-            }),
-            this.prisma.academicSession.findMany(), // Fetch all sessions
-        ]);
-
-        // Create session ID -> Name map
-        const sessionIdToName = new Map(allSessions.map(s => [s.id, s.name]));
-
-        const classNames = new Set(classes.map(c => c.name));
-        const existingIds = new Set(existingStudents.map(s => s.studentId));
-        // Create map for smart duplicate detection
-        const existingStudentMap = new Map(existingStudents.map(s => [s.studentId, s]));
-
-        const existingAadhars = new Set(existingStudents.map(s => s.aadharCardNo).filter(Boolean));
-
-        // Create lookup for existing Session-Class-Section-RollNo -> StudentID
-        const existingRollMap = new Map<string, string>();
-        existingStudents.forEach(s => {
-            if (s.className && s.section && s.rollNumber) {
-                const sessionName = s.sessionId ? (sessionIdToName.get(s.sessionId) || '') : '';
-                const key = `${sessionName}-${s.className}-${s.section}-${s.rollNumber}`.toLowerCase();
-                existingRollMap.set(key, s.studentId);
-            }
-        });
-
-        const fileAadhars = new Set<string>();
-        const fileRollKeys = new Set<string>();
-
-        // Find Session Name Column dynamically
-        let sessionColIdx = -1;
-        const headerRow = worksheet.getRow(1);
-        headerRow.eachCell((cell: any, colNumber: number) => {
-            if (cell.text?.trim() === 'Session Name') {
-                sessionColIdx = colNumber;
-            }
-        });
-
-        const routeColIdx = 30; // Route Code is originally at 30
-
-
-        worksheet.eachRow((row: any, rowNumber: number) => {
-            if (rowNumber === 1) return; // Skip header
-            totalRows++;
-
-            const studentId = row.getCell(1).text?.trim();
-            const name = row.getCell(2).text?.trim();
-            const fatherName = row.getCell(3).text?.trim();
-            const motherName = row.getCell(4).text?.trim();
-            const dob = row.getCell(5).text?.trim();
-            const gender = row.getCell(6).text?.trim()?.toLowerCase();
-            const className = row.getCell(7).text?.trim();
-            // CLEANING: Parse Section for validation consistency
-            const rawSection = row.getCell(8).text?.trim();
-            const section = this.parseSection(rawSection);
-            const admissionDate = row.getCell(10).text?.trim();
-            const address = row.getCell(11).text?.trim();
-            const phone = row.getCell(12).text?.trim();
-            const status = row.getCell(15).text?.trim()?.toLowerCase(); // Read Status Column
-
-            // Required field validation
-            if (!studentId) errors.push({ row: rowNumber, field: 'studentId', value: '', message: 'Student ID is required' });
-            if (!name) errors.push({ row: rowNumber, field: 'name', value: '', message: 'Name is required' });
-            if (!dob) errors.push({ row: rowNumber, field: 'dob', value: '', message: 'Date of Birth is required' });
-            if (!gender) errors.push({ row: rowNumber, field: 'gender', value: '', message: 'Gender is required' });
-            if (!gender) errors.push({ row: rowNumber, field: 'gender', value: '', message: 'Gender is required' });
-
-            // Allow blank class if status is meant to be alumni
-            const isAlumni = status === 'alumni' || status === 'pass out' || status === 'inactive';
-
-            if (!isAlumni) {
-                if (!className) errors.push({ row: rowNumber, field: 'className', value: '', message: 'Class is required for active students' });
-                if (!section) errors.push({ row: rowNumber, field: 'section', value: '', message: 'Section is required for active students' });
-            }
-            if (!phone) errors.push({ row: rowNumber, field: 'phone', value: '', message: 'Phone is required' });
-
-            // Format validation
-            if (studentId && existingIds.has(studentId)) {
-                // Smart Duplicate Check: If names match, treat as warning (skip), otherwise error
-                const existing = existingStudentMap.get(studentId);
-                const nameMatch = existing?.name?.toLowerCase().trim() === name?.toLowerCase().trim();
-                const fatherMatch = existing?.fatherName?.toLowerCase().trim() === fatherName?.toLowerCase().trim();
-
-                if (existing && nameMatch && fatherMatch) {
-                    warnings.push({
-                        row: rowNumber,
-                        field: 'studentId',
-                        value: studentId,
-                        message: `Student '${name}' (ID: ${studentId}) already exists with matching data. Record will be skipped.`
-                    });
-                } else {
-                    errors.push({
-                        row: rowNumber,
-                        field: 'studentId',
-                        value: studentId,
-                        message: `Student ID '${studentId}' exists but data mismatch (System: ${existing?.name}, File: ${name}).`
-                    });
-                }
-            }
-
-            if (gender && !['male', 'female', 'other'].includes(gender)) {
-                errors.push({ row: rowNumber, field: 'gender', value: gender, message: 'Gender must be: male, female, or other' });
-            }
-
-            if (className && className !== 'PASS OUT' && !classNames.has(className)) {
-                // If not provided (and not alumni status), validation error will catch it later
-                errors.push({ row: rowNumber, field: 'className', value: className, message: `Class '${className}' not found. Check Reference_Data sheet for valid classes.` });
-            }
-
-            if (dob && !isValidDateFormat(dob)) {
-                errors.push({ row: rowNumber, field: 'dob', value: dob, message: 'Invalid date format. Use DD-MM-YYYY' });
-            }
-
-            if (admissionDate && !isValidDateFormat(admissionDate)) {
-                errors.push({ row: rowNumber, field: 'admissionDate', value: admissionDate, message: 'Invalid date format. Use DD-MM-YYYY' });
-            }
-
-            if (phone && !/^\d{10,15}$/.test(phone)) {
-                errors.push({ row: rowNumber, field: 'phone', value: phone, message: 'Phone must be 10-15 digits' });
-            }
-
-            // Track IDs for duplicate detection within file
-            existingIds.add(studentId);
-
-            // Roll Number Validation (within Session + Class + Section)
-            const rollNumber = sanitizeText(row.getCell(9).text);
-            const sessionName = sessionColIdx > 0 ? (row.getCell(sessionColIdx).text?.trim() || '') : '';
-            if (className && section && rollNumber) {
-                // Include session in key to allow same roll across different years
-                const rollKey = `${sessionName}-${className}-${section}-${rollNumber}`.toLowerCase();
-
-                if (fileRollKeys.has(rollKey)) {
-                    warnings.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Duplicate Roll Number '${rollNumber}' in file. Will be auto-corrected.` });
-                }
-
-                if (existingRollMap.has(rollKey)) {
-                    const existingOwnerId = existingRollMap.get(rollKey);
-                    // Only warn if the existing roll number belongs to a DIFFERENT student
-                    if (existingOwnerId !== studentId) {
-                        warnings.push({ row: rowNumber, field: 'rollNumber', value: rollNumber, message: `Roll Number '${rollNumber}' already taken. Will be auto-corrected.` });
-                    }
-                }
-
-                fileRollKeys.add(rollKey);
-            }
-
-            // Aadhar Validation
-            const aadhar = sanitizeText(row.getCell(18).text);
-
-            if (aadhar) {
-                if (fileAadhars.has(aadhar)) {
-                    errors.push({ row: rowNumber, field: 'aadharCardNo', value: aadhar, message: `Duplicate Aadhar Number '${aadhar}' in file` });
-                }
-                if (existingAadhars.has(aadhar)) {
-                    errors.push({ row: rowNumber, field: 'aadharCardNo', value: aadhar, message: `Aadhar Number '${aadhar}' already exists in system` });
-                }
-                fileAadhars.add(aadhar);
-            }
-        });
-
-        return {
-            isValid: errors.length === 0,
-            totalRows,
-            validRows: totalRows - new Set(errors.map(e => e.row)).size,
-            errorCount: errors.length,
-            errors,
-            warnings,
-        };
     }
 
     // ============================================

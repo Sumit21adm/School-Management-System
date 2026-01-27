@@ -55,7 +55,9 @@ export class DataMigrationController {
      * Validate students import file (dry-run)
      */
     @Post('validate/students')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+    }))
     async validateStudents(
         @UploadedFile() file: Express.Multer.File
     ): Promise<ValidationResultDto> {
@@ -73,7 +75,9 @@ export class DataMigrationController {
      * Import students from Excel file
      */
     @Post('import/students')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+    }))
     async importStudents(
         @UploadedFile() file: Express.Multer.File,
         @Body() options: ImportOptionsDto
@@ -90,7 +94,9 @@ export class DataMigrationController {
      * Import fee receipts from Excel file
      */
     @Post('import/fee-receipts')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+    }))
     async importFeeReceipts(
         @UploadedFile() file: Express.Multer.File,
         @Body() options: ImportOptionsDto
@@ -107,7 +113,9 @@ export class DataMigrationController {
      * Import demand bills from Excel file
      */
     @Post('import/demand-bills')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+    }))
     async importDemandBills(
         @UploadedFile() file: Express.Multer.File,
         @Body() options: ImportOptionsDto
@@ -124,7 +132,9 @@ export class DataMigrationController {
      * Import discounts from Excel file
      */
     @Post('import/discounts')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+    }))
     async importDiscounts(
         @UploadedFile() file: Express.Multer.File,
         @Body() options: ImportOptionsDto
@@ -141,7 +151,9 @@ export class DataMigrationController {
      * Import academic history from Excel file
      */
     @Post('import/academic-history')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+    }))
     async importAcademicHistory(
         @UploadedFile() file: Express.Multer.File,
         @Body() options: ImportOptionsDto
