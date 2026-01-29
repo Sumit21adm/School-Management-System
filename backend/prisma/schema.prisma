@@ -395,7 +395,8 @@ model User {
   name        String    @db.VarChar(100)
   email       String?   @db.VarChar(100)
   phone       String?   @db.VarChar(15)
-  active      Boolean   @default(true)
+  active      Boolean   @default(true) // Soft delete status (false = deleted/hidden)
+  loginAccess Boolean   @default(true) // Controls portal login access
   lastLogin   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -609,8 +610,8 @@ model ExamSchedule {
   subjectId   Int
   className   String   @db.VarChar(20) // Class this specific paper is for
   date        DateTime @db.Date
-  startTime   DateTime @db.Time
-  endTime     DateTime @db.Time
+  startTime   DateTime? @db.Time
+  endTime     DateTime? @db.Time
   roomNo      String?  @db.VarChar(20)
   period      Int?
   
@@ -804,6 +805,7 @@ model RouteStop {
   latitude        Decimal?  @db.Decimal(10,8)
   longitude       Decimal?  @db.Decimal(11,8)
   distanceFromSchool Decimal? @db.Decimal(5,2) // Distance from school in km
+  fare            Decimal?  @db.Decimal(10, 2) // Manual fare for stop-wise calculation
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -856,6 +858,14 @@ model TransportFareSlab {
 
   @@index([minDistance, maxDistance])
   @@map("transport_fare_slabs")
+}
+
+model TransportSettings {
+  id                   Int      @id @default(autoincrement())
+  fareCalculationMode  String   @default("DISTANCE_SLAB") @db.VarChar(20) // DISTANCE_SLAB, STOP_WISE
+  updatedAt            DateTime @updatedAt
+
+  @@map("transport_settings")
 }
 
 // ============================================
@@ -943,4 +953,45 @@ model LeaveRequest {
   sessionId       Int
   
   @@map("leave_requests")
+}
+
+// ============================================
+// BACKUP & CLOUD STORAGE SETTINGS
+// ============================================
+
+model BackupSettings {
+  id              Int      @id @default(autoincrement())
+  autoBackup      Boolean  @default(false)
+  backupTime      String   @default("02:00") @db.VarChar(10)  // Time for auto-backup (24h format)
+  retentionDays   Int      @default(30)
+  
+  // Google Drive OAuth - Admin Configurable Credentials (encrypted)
+  gdriveClientId      String?  @db.VarChar(200)   // OAuth Client ID
+  gdriveClientSecret  String?  @db.Text           // Encrypted OAuth Client Secret
+  gdriveRedirectUri   String?  @db.VarChar(500)   // OAuth Redirect URI
+  
+  // Google Drive OAuth - Connection State
+  gdriveEnabled   Boolean  @default(false)
+  gdriveTokens    String?  @db.Text   // Encrypted JSON with access/refresh tokens
+  gdriveEmail     String?  @db.VarChar(100)  // Connected Google account email
+  gdriveConnectedAt DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("backup_settings")
+}
+
+model CloudBackup {
+  id            Int      @id @default(autoincrement())
+  filename      String   @db.VarChar(200)   // Local backup filename
+  driveFileId   String   @db.VarChar(100)   // Google Drive file ID
+  driveWebLink  String?  @db.VarChar(500)   // Direct link to file in Drive
+  size          BigInt                       // File size in bytes
+  type          String   @db.VarChar(20)    // 'database' or 'files'
+  uploadedAt    DateTime @default(now())
+  
+  @@unique([filename])
+  @@index([type])
+  @@map("cloud_backups")
 }

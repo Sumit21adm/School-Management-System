@@ -55,23 +55,20 @@ export class AdmitCardService {
 
             const entry = scheduleMap.get(dateKey);
 
-            // Logic to determine sitting based on StartTime
-            // Assuming < 12:00 is First, >= 12:00 is Second
-            const hour = sch.startTime.getUTCHours(); // Be careful with UTC vs Local. Prisma dates are usually UTC.
-            // Using getUTCHours() might be tricky if data is stored as local time string in DB but Prisma maps to Date.
-            // Let's assume standard school timing: 9 AM vs 12 PM.
+            // Determine sitting: Use period if available, otherwise infer from startTime
+            let isMorning = true; // Default to morning/first sitting
 
-            // A safer check might be comparing against a threshold time if timezone is ambiguous,
-            // but for now let's use the Date object methods.
-            // NOTE: Ideally we check `sch.period` if we stored sitting there, 
-            // but we'll infer from time for robustness.
-
-            const localHour = new Date(sch.startTime).getHours();
-            // NOTE: This server timezone dependency is risky. 
-            // Better to rely on the fact that we created First sitting at 09:00 and Second at 12:30.
-
-            // Check if start time is before 12:00 PM
-            const isMorning = sch.startTime.toISOString().includes('T09:') || sch.startTime.toISOString().includes('T08:') || sch.startTime.toISOString().includes('T10:') || sch.startTime.toISOString().includes('T11:');
+            if (sch.period) {
+                // Period-based: odd periods (1,3,5...) = morning, even (2,4,6...) = afternoon
+                // Or simpler: period <= 4 is first sitting, > 4 is second
+                isMorning = sch.period <= 4;
+            } else if (sch.startTime) {
+                // Time-based: check if before 12:00 PM
+                const timeStr = sch.startTime.toISOString();
+                isMorning = timeStr.includes('T08:') || timeStr.includes('T09:') ||
+                    timeStr.includes('T10:') || timeStr.includes('T11:');
+            }
+            // If neither period nor startTime, default to firstSitting
 
             if (entry) {
                 if (isMorning) {

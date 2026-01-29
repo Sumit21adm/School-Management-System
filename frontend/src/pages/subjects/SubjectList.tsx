@@ -34,7 +34,10 @@ import {
 import { subjectService } from '../../lib/api';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
-const COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#9c27b0', '#d32f2f', '#0288d1', '#7b1fa2'];
+const COLORS = [
+    '#1976d2', '#2e7d32', '#ed6c02', '#9c27b0', '#d32f2f', '#0288d1', '#7b1fa2',
+    '#009688', '#e91e63', '#3f51b5', '#00bcd4', '#cddc39', '#ffc107', '#795548', '#607d8b'
+];
 
 const SubjectList = () => {
     const queryClient = useQueryClient();
@@ -85,16 +88,22 @@ const SubjectList = () => {
 
     const handleSubmit = async () => {
         try {
+            const payload = {
+                ...formData,
+                code: formData.code.trim() || undefined // Send undefined if empty to avoid unique constraint violation
+            };
+
             if (editingSubject) {
-                await subjectService.update(editingSubject.id, formData);
+                await subjectService.update(editingSubject.id, payload);
             } else {
-                await subjectService.create(formData);
+                await subjectService.create(payload);
             }
             queryClient.invalidateQueries({ queryKey: ['subjects'] });
             handleCloseDialog();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to save subject', error);
-            alert('Failed to save subject. Name or Code might be duplicate.');
+            const msg = error.response?.data?.message || 'Failed to save subject. Name or Code might be duplicate.';
+            alert(msg);
         }
     };
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -7,10 +7,9 @@ import {
     DialogContent, DialogActions, TextField, Alert, Snackbar, MenuItem, Stack, Chip, Checkbox, List, ListItem, ListItemText, ListItemIcon, Divider
 } from '@mui/material';
 import { ArrowBack, Delete, Add, Print, PictureAsPdf } from '@mui/icons-material';
-import { examinationService, admissionService as studentService, apiClient } from '../../lib/api';
+import { examinationService, admissionService as studentService, subjectService, classService, sessionService, apiClient } from '../../lib/api';
 import type { Exam, Subject } from '../../types/examination';
 
-const CLASSES = ['Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
 export default function ExamDetails() {
     const { id } = useParams();
@@ -32,15 +31,24 @@ export default function ExamDetails() {
 
     // Admit Card Generation States
     const [selectedClass, setSelectedClass] = useState('');
+    const [selectedSection, setSelectedSection] = useState(''); // Empty string = All Sections
     const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
     const [studentsList, setStudentsList] = useState<any[]>([]);
     const [loadingStudents, setLoadingStudents] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [availableSections, setAvailableSections] = useState<string[]>([]);
+    const [admitCardSections, setAdmitCardSections] = useState<string[]>([]); // Sections for admit card dialog
 
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
     const showMessage = (message: string, severity: 'success' | 'error' = 'success') => setSnackbar({ open: true, message, severity });
 
     // Queries
+    // Fetch active session
+    const { data: activeSession } = useQuery({
+        queryKey: ['activeSession'],
+        queryFn: sessionService.getActive,
+    });
+
     const { data: examData, isLoading: examLoading } = useQuery({
         queryKey: ['exam', examId],
         queryFn: () => examinationService.getExam(examId),
@@ -50,18 +58,93 @@ export default function ExamDetails() {
 
     const { data: subjectsData } = useQuery({
         queryKey: ['subjects'],
-        queryFn: examinationService.getSubjects
+        queryFn: subjectService.getAll
     });
-    const subjects = (subjectsData?.data || []) as Subject[];
+    const subjects = (subjectsData || []) as Subject[];
 
-    // Fetch students when a class is selected
-    const fetchStudentsForClass = async (className: string) => {
-        if (!className) return;
+    // Fetch classes from database (same as Attendance module)
+    const { data: classesData = [] } = useQuery({
+        queryKey: ['classes'],
+        queryFn: classService.getAll,
+    });
+    const classes = (classesData as any[]) || [];
+
+    // Fetch sections when a class is selected (for schedule dialog)
+    useEffect(() => {
+        const fetchSections = async () => {
+            if (scheduleData.className) {
+                try {
+                    const response = await studentService.getAvailableSections(scheduleData.className);
+                    setAvailableSections(response.data || []);
+                } catch {
+                    setAvailableSections([]);
+                }
+            } else {
+                setAvailableSections([]);
+            }
+        };
+        fetchSections();
+    }, [scheduleData.className]);
+
+    // Fetch sections when class is selected for admit card dialog, then auto-load students
+    useEffect(() => {
+        const fetchAdmitCardSectionsAndStudents = async () => {
+            if (selectedClass && activeSession?.id) {
+                try {
+                    // Fetch available sections
+                    const response = await studentService.getAvailableSections(selectedClass);
+                    setAdmitCardSections(response.data || []);
+                } catch {
+                    setAdmitCardSections([]);
+                }
+                setSelectedSection(''); // Reset section when class changes
+                setSelectedStudents([]);
+
+                // Auto-load all students for the selected class (Active Session & Active Status)
+                setLoadingStudents(true);
+                try {
+                    const studentsResponse = await studentService.getStudents({
+                        className: selectedClass,
+                        limit: 500,
+                        sessionId: activeSession.id,
+                        status: 'active'
+                    });
+                    setStudentsList(studentsResponse.data.data || []);
+                } catch {
+                    setStudentsList([]);
+                } finally {
+                    setLoadingStudents(false);
+                }
+            } else {
+                setAdmitCardSections([]);
+                setStudentsList([]);
+                setSelectedStudents([]);
+            }
+        };
+        fetchAdmitCardSectionsAndStudents();
+    }, [selectedClass, activeSession]);
+
+    // Fetch students when class or section changes for admit card
+    const fetchStudentsForClassAndSection = async (className: string, section: string) => {
+        if (!className || !activeSession?.id) return;
         setLoadingStudents(true);
         try {
-            // Using existing student service to fetch by class
-            const response = await studentService.getStudents({ className, limit: 100 });
-            setStudentsList(response.data.data || []);
+            // Fetch students by class and optionally by section (Active Session & Active Status)
+            const params: any = {
+                className,
+                limit: 500,
+                sessionId: activeSession.id,
+                status: 'active'
+            };
+            if (section) {
+                params.section = section;
+            }
+            const response = await studentService.getStudents(params);
+            let students = response.data.data || [];
+
+            // If filtering by section returned no results but section was specified, that's expected
+            // If no section filter and no results, students might not exist for this class
+            setStudentsList(students);
             setSelectedStudents([]); // Reset selection
         } catch (error) {
             showMessage('Failed to fetch students', 'error');
@@ -92,20 +175,33 @@ export default function ExamDetails() {
     });
 
     const handleAddSchedule = () => {
-        if (!scheduleData.subjectId || !scheduleData.className || !scheduleData.date || !scheduleData.startTime || !scheduleData.endTime) {
-            showMessage('Please fill all required fields', 'error');
+        if (!scheduleData.subjectId || !scheduleData.className || !scheduleData.date) {
+            showMessage('Please fill all required fields (Subject, Class, Date)', 'error');
             return;
         }
 
-        const startDateTime = new Date(`${scheduleData.date}T${scheduleData.startTime}`);
-        const endDateTime = new Date(`${scheduleData.date}T${scheduleData.endTime}`);
+        const hasTime = scheduleData.startTime && scheduleData.endTime;
+        const hasPeriod = scheduleData.period;
+
+        if (!hasTime && !hasPeriod) {
+            showMessage('Please provide either Time Range or Period', 'error');
+            return;
+        }
+
+        let startDateTime = undefined;
+        let endDateTime = undefined;
+
+        if (scheduleData.startTime && scheduleData.endTime) {
+            startDateTime = new Date(`${scheduleData.date}T${scheduleData.startTime}`);
+            endDateTime = new Date(`${scheduleData.date}T${scheduleData.endTime}`);
+        }
 
         addScheduleMutation.mutate({
             subjectId: Number(scheduleData.subjectId),
             className: scheduleData.className,
             date: new Date(scheduleData.date).toISOString(),
-            startTime: startDateTime.toISOString(),
-            endTime: endDateTime.toISOString(),
+            startTime: startDateTime?.toISOString(),
+            endTime: endDateTime?.toISOString(),
             roomNo: scheduleData.roomNo,
             period: scheduleData.period ? Number(scheduleData.period) : undefined
         });
@@ -226,9 +322,15 @@ export default function ExamDetails() {
                                     <TableCell><Chip label={schedule.className} size="small" variant="outlined" /></TableCell>
                                     <TableCell>{schedule.subject?.name}</TableCell>
                                     <TableCell>
-                                        {new Date(schedule.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
-                                        {new Date(schedule.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        {schedule.period && <Typography variant="caption" display="block" color="textSecondary">Period: {schedule.period}</Typography>}
+                                        {schedule.startTime && schedule.endTime ? (
+                                            <>
+                                                {new Date(schedule.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
+                                                {new Date(schedule.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </>
+                                        ) : (
+                                            <Typography variant="caption" color="textSecondary">No Time Set</Typography>
+                                        )}
+                                        {schedule.period && <Typography variant="caption" display="block" color="primary">Period: {schedule.period}</Typography>}
                                     </TableCell>
                                     <TableCell>{schedule.roomNo || '-'}</TableCell>
                                     <TableCell align="right">
@@ -269,12 +371,28 @@ export default function ExamDetails() {
                                 value={scheduleData.className}
                                 onChange={(e) => setScheduleData({ ...scheduleData, className: e.target.value })}
                             >
-                                {CLASSES.map((cls) => (
-                                    <MenuItem key={cls} value={cls}>
-                                        Class {cls}
+                                {classes.map((cls: any) => (
+                                    <MenuItem key={cls.id} value={cls.name}>
+                                        {cls.name}
                                     </MenuItem>
                                 ))}
                             </TextField>
+                            <TextField
+                                select
+                                label="Section"
+                                fullWidth
+                                value={(scheduleData as any).section || 'ALL'}
+                                onChange={(e) => setScheduleData({ ...scheduleData, section: e.target.value === 'ALL' ? '' : e.target.value } as any)}
+                            >
+                                <MenuItem value="ALL">All Sections</MenuItem>
+                                {availableSections.map((sec: string) => (
+                                    <MenuItem key={sec} value={sec}>
+                                        Section {sec}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
                                 type="date"
                                 label="Date"
@@ -340,23 +458,53 @@ export default function ExamDetails() {
                 <DialogTitle>Generate Admit Cards (PDF)</DialogTitle>
                 <DialogContent>
                     <Box sx={{ mt: 1 }}>
-                        <TextField
-                            select
-                            label="Select Class"
-                            fullWidth
-                            value={selectedClass}
-                            onChange={(e) => {
-                                setSelectedClass(e.target.value);
-                                fetchStudentsForClass(e.target.value);
-                            }}
-                            sx={{ mb: 2 }}
-                        >
-                            {CLASSES.map((cls) => (
-                                <MenuItem key={cls} value={cls}>Class {cls}</MenuItem>
-                            ))}
-                        </TextField>
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                            <TextField
+                                select
+                                label="Select Class"
+                                fullWidth
+                                value={selectedClass}
+                                onChange={(e) => setSelectedClass(e.target.value)}
+                            >
+                                <MenuItem value="">Select Class</MenuItem>
+                                {classes.map((cls: any) => (
+                                    <MenuItem key={cls.id} value={cls.name}>{cls.name}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                select
+                                label="Section"
+                                fullWidth
+                                value={selectedSection || 'ALL'}
+                                onChange={(e) => {
+                                    const section = e.target.value === 'ALL' ? '' : e.target.value;
+                                    setSelectedSection(section);
+                                    if (selectedClass) {
+                                        fetchStudentsForClassAndSection(selectedClass, section);
+                                    }
+                                }}
+                                disabled={!selectedClass}
+                            >
+                                <MenuItem value="ALL">All Sections</MenuItem>
+                                {admitCardSections.map((sec: string) => (
+                                    <MenuItem key={sec} value={sec}>Section {sec}</MenuItem>
+                                ))}
+                            </TextField>
+                        </Box>
 
-                        {loadingStudents && <Typography>Loading students...</Typography>}
+                        {loadingStudents && <Typography sx={{ mb: 2 }}>Loading students...</Typography>}
+
+                        {!loadingStudents && selectedClass && studentsList.length === 0 && (
+                            <Typography color="textSecondary" sx={{ mb: 2 }}>
+                                No students found for this class/section.
+                            </Typography>
+                        )}
+
+                        {!loadingStudents && studentsList.length > 0 && (
+                            <Typography variant="body2" color="primary" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                Total Students: {studentsList.length}
+                            </Typography>
+                        )}
 
                         {!loadingStudents && studentsList.length > 0 && (
                             <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>

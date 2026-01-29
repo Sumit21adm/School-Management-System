@@ -25,12 +25,16 @@ export class StaffController {
         @Query('department') department?: string,
         @Query('page') page?: string,
         @Query('limit') limit?: string,
+        @Query('includeInactive') includeInactive?: string,
+        @Query('onlyInactive') onlyInactive?: string,
     ) {
         return this.staffService.findAll(
             role,
             department,
             page ? +page : 1,
-            limit ? +limit : 50
+            limit ? +limit : 50,
+            includeInactive === 'true',
+            onlyInactive === 'true'
         );
     }
 
@@ -48,7 +52,7 @@ export class StaffController {
 
     @Delete(':id')
     @Roles('ADMIN', 'SUPER_ADMIN')
-    remove(@Param('id', ParseIntPipe) id: number) {
-        return this.staffService.remove(id);
+    remove(@Param('id', ParseIntPipe) id: number, @Query('permanent') permanent?: string) {
+        return this.staffService.remove(id, permanent === 'true');
     }
 }

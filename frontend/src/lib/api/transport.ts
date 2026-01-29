@@ -26,6 +26,13 @@ export interface RouteStop {
     pickupTime?: string;
     dropTime?: string;
     distanceFromSchool?: number;
+    fare?: number;
+}
+
+export interface TransportSettings {
+    id: number;
+    fareCalculationMode: 'DISTANCE_SLAB' | 'STOP_WISE';
+    updatedAt: string;
 }
 
 export interface Route {
@@ -139,6 +146,13 @@ export const transportService = {
 
     deleteFareSlab: (id: number) =>
         apiClient.delete(`/transport/fare-slabs/${id}`).then(res => res.data),
+
+    // Settings
+    getSettings: () =>
+        apiClient.get<TransportSettings>('/transport/settings').then(res => res.data),
+
+    updateSettings: (data: { fareCalculationMode: string }) =>
+        apiClient.patch<TransportSettings>('/transport/settings', data).then(res => res.data),
 };
 
 export interface FareSlab {

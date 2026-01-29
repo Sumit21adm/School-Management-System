@@ -1,5 +1,5 @@
 import { IsString, IsEmail, IsOptional, IsEnum, IsDate, IsNumber, IsBoolean, IsNotEmpty } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { UserRole } from '@prisma/client';
 
 export class CreateStaffDto {
@@ -11,13 +11,14 @@ export class CreateStaffDto {
     @IsEnum(UserRole)
     role: UserRole;
 
-    @IsEmail()
     @IsOptional()
+    @Transform(({ value }) => value === '' ? undefined : value)
+    @IsEmail({}, { message: 'Email must be a valid email address' })
     email?: string;
 
     @IsString()
-    @IsOptional()
-    phone?: string;
+    @IsNotEmpty({ message: 'Phone number is required' })
+    phone: string;
 
     @IsString()
     @IsOptional()
@@ -30,6 +31,10 @@ export class CreateStaffDto {
     @IsBoolean()
     @IsOptional()
     active?: boolean;
+
+    @IsBoolean()
+    @IsOptional()
+    loginAccess?: boolean;
 
     @IsOptional()
     permissions?: string[]; // Array of permission keys

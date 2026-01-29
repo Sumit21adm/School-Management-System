@@ -281,7 +281,9 @@ const ClassDetails = () => {
             const response = await admissionService.getStudents({
                 className: classData.name,
                 section: sectionName,
-                status: 'active'
+                status: 'active',
+                sessionId: currentSession?.id, // Scope to active session
+                limit: 1000 // Fetch all students (or sufficiently large number)
             });
 
             const rawData = response.data.data || [];
@@ -316,7 +318,8 @@ const ClassDetails = () => {
                 classId: classData.id,
                 sectionId: selectedSectionId,
                 sortBy: 'NAME',
-                studentIds: students.map(s => s.id) // Send current order
+                studentIds: students.map(s => s.id), // Send current order
+                sessionId: currentSession?.id // Scope assignment to active session
             });
             alert('Roll numbers assigned successfully!');
             loadStudents(); // Refresh list

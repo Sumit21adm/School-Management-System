@@ -22,7 +22,8 @@ import {
     Chip,
     IconButton,
     Tooltip,
-    CircularProgress
+    CircularProgress,
+    TableSortLabel
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -97,8 +98,11 @@ export default function MarkAttendance() {
     const fetchAttendance = async () => {
         if (!selectedClass || !date) return;
 
+        // If session is still loading, do nothing (wait for it)
         if (!activeSession) {
-            enqueueSnackbar('Session not loaded. Please try again.', { variant: 'warning' });
+            // Only show error if we've actually tried to load it and failed or it's missing active session in DB
+            // But since useQuery is async, we might just be waiting. 
+            // Better to rely on useEffect dependency to trigger this when session becomes available.
             return;
         }
 
@@ -123,10 +127,10 @@ export default function MarkAttendance() {
     };
 
     useEffect(() => {
-        if (selectedClass && date) {
+        if (selectedClass && date && activeSession) {
             fetchAttendance();
         }
-    }, [selectedClass, selectedSection, date]);
+    }, [selectedClass, selectedSection, date, activeSession]);
 
     const handleStatusChange = (studentId: string, status: string) => {
         setStudents(prev => prev.map(s =>
@@ -173,6 +177,32 @@ export default function MarkAttendance() {
         }
     };
 
+    const [orderBy, setOrderBy] = useState<'rollNumber' | 'name'>('rollNumber');
+    const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+
+    const handleRequestSort = (property: 'rollNumber' | 'name') => {
+        const isAsc = orderBy === property && order === 'asc';
+        setOrder(isAsc ? 'desc' : 'asc');
+        setOrderBy(property);
+    };
+
+    const sortedStudents = React.useMemo(() => {
+        return [...students].sort((a, b) => {
+            const isAsc = order === 'asc';
+            if (orderBy === 'rollNumber') {
+                return isAsc
+                    ? a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
+                    : b.rollNumber.localeCompare(a.rollNumber, undefined, { numeric: true, sensitivity: 'base' });
+            } else {
+                return isAsc
+                    ? a.name.localeCompare(b.name)
+                    : b.name.localeCompare(a.name);
+            }
+        });
+    }, [students, order, orderBy]);
+
+    // ... existing functions ...
+
     return (
         <Box p={3}>
             <Typography variant="h5" gutterBottom>Mark Daily Attendance</Typography>
@@ -186,7 +216,7 @@ export default function MarkAttendance() {
                                 value={date}
                                 onChange={(newValue) => setDate(newValue)}
                                 slotProps={{
-                                    textField: { 
+                                    textField: {
                                         fullWidth: true,
                                         sx: { flex: 1 }
                                     }
@@ -246,24 +276,50 @@ export default function MarkAttendance() {
             ) : (
                 students.length > 0 && (
                     <TableContainer component={Paper}>
-                        <Box p={2} display="flex" gap={1}>
-                            <Typography variant="subtitle2" component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                                Quick Actions:
-                            </Typography>
-                            <Button size="small" color="success" onClick={() => handleBulkMark('present')}>Mark All Present</Button>
-                            <Button size="small" color="error" onClick={() => handleBulkMark('absent')}>Mark All Absent</Button>
+                        <Box p={2} display="flex" gap={2} alignItems="center">
+                            <Chip
+                                label={`Total Students: ${students.length}`}
+                                color="default"
+                                variant="outlined"
+                                size="small"
+                                sx={{ fontWeight: 600 }}
+                            />
+
+                            <Box display="flex" gap={1} alignItems="center">
+                                <Typography variant="subtitle2" component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                                    Quick Actions:
+                                </Typography>
+                                <Button size="small" color="success" onClick={() => handleBulkMark('present')}>Mark All Present</Button>
+                                <Button size="small" color="error" onClick={() => handleBulkMark('absent')}>Mark All Absent</Button>
+                            </Box>
                         </Box>
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Roll No</TableCell>
-                                    <TableCell>Name</TableCell>
+                                    <TableCell>
+                                        <TableSortLabel
+                                            active={orderBy === 'rollNumber'}
+                                            direction={orderBy === 'rollNumber' ? order : 'asc'}
+                                            onClick={() => handleRequestSort('rollNumber')}
+                                        >
+                                            Roll No
+                                        </TableSortLabel>
+                                    </TableCell>
+                                    <TableCell>
+                                        <TableSortLabel
+                                            active={orderBy === 'name'}
+                                            direction={orderBy === 'name' ? order : 'asc'}
+                                            onClick={() => handleRequestSort('name')}
+                                        >
+                                            Name
+                                        </TableSortLabel>
+                                    </TableCell>
                                     <TableCell>Status</TableCell>
                                     <TableCell>Remarks</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {students.map((student) => (
+                                {sortedStudents.map((student) => (
                                     <TableRow key={student.studentId} hover>
                                         <TableCell>{student.rollNumber}</TableCell>
                                         <TableCell>{student.name}</TableCell>

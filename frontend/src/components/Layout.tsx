@@ -96,6 +96,23 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    labelKey: 'sidebar.academics', // New Key (fallback needed if translation missing)
+    icon: ClassIcon,
+    children: [
+      { path: '/settings/classes', labelKey: 'sidebar.classManagement', icon: ClassIcon, requiredPermission: 'school_settings' },
+      { path: '/settings/subjects', labelKey: 'sidebar.subjects', icon: ExamPaperIcon, requiredPermission: 'school_settings' },
+      { path: '/settings/sessions', labelKey: 'sidebar.sessions', icon: SessionIcon, requiredPermission: 'sessions_view' },
+    ],
+  },
+  {
+    labelKey: 'sidebar.attendance',
+    icon: AssignmentIcon,
+    children: [
+      { path: '/attendance/mark', labelKey: 'sidebar.markAttendance', icon: CheckCircleIcon, requiredPermission: 'attendance_mark' },
+      { path: '/attendance/reports', labelKey: 'sidebar.attendanceReports', icon: AssignmentIcon, requiredPermission: 'attendance_view' },
+    ],
+  },
+  {
     labelKey: 'sidebar.feeManagement',
     icon: WalletIcon,
     children: [
@@ -114,13 +131,6 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    labelKey: 'sidebar.staff',
-    icon: UserIcon,
-    children: [
-      { path: '/users', labelKey: 'sidebar.staffList', icon: UserIcon, requiredPermission: 'users_manage' },
-    ],
-  },
-  {
     labelKey: 'sidebar.transport',
     icon: TransportIcon,
     children: [
@@ -133,23 +143,21 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    labelKey: 'sidebar.settings',
-    icon: Settings,
+    labelKey: 'sidebar.userManagement',
+    icon: UserIcon,
     children: [
-      { path: '/settings/sessions', labelKey: 'sidebar.sessions', icon: SessionIcon, requiredPermission: 'sessions_view' },
-      { path: '/settings/classes', labelKey: 'sidebar.classManagement', icon: ClassIcon, requiredPermission: 'school_settings' },
-      { path: '/settings/print', labelKey: 'sidebar.schoolSettings', icon: DomainIcon, requiredPermission: 'school_settings' },
-      { path: '/settings/users', labelKey: 'sidebar.userManagement', icon: UserIcon, requiredPermission: 'users_manage' },
+      { path: '/users', labelKey: 'sidebar.staffList', icon: UserIcon, requiredPermission: 'users_manage' },
       { path: '/settings/roles', labelKey: 'sidebar.roleSettings', icon: Settings, requiredPermission: 'users_manage' },
-      { path: '/settings/data-migration', labelKey: 'sidebar.dataMigration', icon: ImportIcon, requiredPermission: 'school_settings' },
+      { path: '/settings/users', labelKey: 'sidebar.userSettings', icon: ConfigIcon, requiredPermission: 'users_manage' },
     ],
   },
   {
-    labelKey: 'sidebar.attendance',
-    icon: AssignmentIcon,
+    labelKey: 'sidebar.systemSettings', // New Key
+    icon: Settings,
     children: [
-      { path: '/attendance/mark', labelKey: 'sidebar.markAttendance', icon: CheckCircleIcon, requiredPermission: 'attendance_mark' },
-      { path: '/attendance/reports', labelKey: 'sidebar.attendanceReports', icon: AssignmentIcon, requiredPermission: 'attendance_view' },
+      { path: '/settings/print', labelKey: 'sidebar.schoolProfile', icon: DomainIcon, requiredPermission: 'school_settings' },
+      { path: '/settings/backup', labelKey: 'sidebar.backupRestore', icon: BackupIcon, requiredPermission: 'school_settings' },
+      { path: '/settings/data-migration', labelKey: 'sidebar.dataMigration', icon: ImportIcon, requiredPermission: 'school_settings' },
     ],
   },
 ];
@@ -188,8 +196,8 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   const { dataUpdatedAt, refetch: refetchDashboard, isFetching: isDashboardFetching } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: () => dashboardService.getStats(),
-    refetchInterval: 15000,
-    staleTime: 10000,
+    refetchInterval: 5000,
+    staleTime: 4000,
   });
 
   // Live elapsed seconds counter

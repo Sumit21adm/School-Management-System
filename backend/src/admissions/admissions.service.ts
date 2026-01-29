@@ -7,9 +7,55 @@ export class AdmissionsService {
     constructor(private prisma: PrismaService) { }
 
     async create(data: Prisma.StudentDetailsCreateInput) {
+        if (typeof data.className === 'string' && typeof data.section === 'string') {
+            await this.ensureSectionExists(data.className, data.section);
+        }
+
         return this.prisma.studentDetails.create({
             data,
         });
+    }
+
+    private async ensureSectionExists(className: string, sectionName: string) {
+        if (!className || !sectionName) return;
+
+        try {
+            // Normalize section name (e.g. "Section A" -> "A")
+            let targetSectionName = sectionName;
+            if (sectionName.toLowerCase().startsWith('section ')) {
+                targetSectionName = sectionName.substring(8).trim();
+            }
+
+            // Find Class
+            const schoolClass = await this.prisma.schoolClass.findFirst({
+                where: { name: className },
+                include: { sections: true }
+            });
+
+            if (!schoolClass) return; // Can't create section if class doesn't exist
+
+            // Check if section exists (check both raw and normalized names)
+            const exists = schoolClass.sections.some(s =>
+                s.name === sectionName || s.name === targetSectionName
+            );
+
+            if (!exists) {
+                // Determine name to create: prefer simple "A", "B" unless class uses verbose convention
+                const hasVerbose = schoolClass.sections.some(s => s.name.startsWith('Section '));
+                const nameToCreate = hasVerbose ? `Section ${targetSectionName}` : targetSectionName;
+
+                await this.prisma.section.create({
+                    data: {
+                        name: nameToCreate,
+                        classId: schoolClass.id,
+                        capacity: 40 // Default
+                    }
+                });
+            }
+        } catch (error) {
+            console.error(`Failed to ensure section exists for ${className} - ${sectionName}`, error);
+            // Don't fail the request, just log
+        }
     }
 
     async findAll(params: { search?: string; className?: string; section?: string; status?: string; sessionId?: number; page?: number; limit?: number; sortBy?: string; order?: 'asc' | 'desc' }) {
@@ -104,6 +150,16 @@ export class AdmissionsService {
     }
 
     async update(id: number, data: Prisma.StudentDetailsUpdateInput) {
+        // If status is being changed to something other than 'active', clear the rollNumber
+        if (data.status && data.status !== 'active') {
+            data.rollNumber = null;
+        }
+
+        // Ensure section exists if changing class/section
+        if (typeof data.className === 'string' && typeof data.section === 'string') {
+            await this.ensureSectionExists(data.className, data.section);
+        }
+
         return this.prisma.studentDetails.update({
             where: { id },
             data,
@@ -227,10 +283,13 @@ export class AdmissionsService {
             }
         }
 
-        // Soft delete
+        // Soft delete - clear roll number to free it up
         return this.prisma.studentDetails.update({
             where: { id },
-            data: { status: 'archived' },
+            data: {
+                status: 'archived',
+                rollNumber: null
+            },
         });
     }
 
@@ -378,6 +437,11 @@ export class AdmissionsService {
 
                 if (!existing) {
                     const { _meta, ...dbData } = studentData;
+
+                    // Ensure section exists before creating
+                    if (dbData.className && dbData.section) {
+                        await this.ensureSectionExists(dbData.className, dbData.section);
+                    }
 
                     // Create Student
                     await this.prisma.studentDetails.create({ data: dbData });

@@ -80,6 +80,15 @@ import { useSession } from '../../contexts/SessionContext';
 
 import { hasPermission } from '../../utils/permissions';
 
+const StudentDetailRow = ({ label, value }: { label: string, value: React.ReactNode }) => (
+  <TableRow>
+    <TableCell component="th" scope="row" sx={{ fontWeight: 600, width: '35%', color: 'text.secondary' }}>
+      {label}
+    </TableCell>
+    <TableCell>{value || '-'}</TableCell>
+  </TableRow>
+);
+
 export default function AdmissionList() {
   const { selectedSession } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
@@ -789,7 +798,10 @@ export default function AdmissionList() {
                 students.map((student: any) => (
                   <TableRow
                     key={student.id}
+                    hover
+                    onClick={() => handleViewStudent(student)}
                     sx={{
+                      cursor: 'pointer',
                       '&:hover': {
                         bgcolor: 'action.hover',
                       },
@@ -856,7 +868,7 @@ export default function AdmissionList() {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end" onClick={(e) => e.stopPropagation()}>
                         {hasPermission('admissions_edit') && (
                           <IconButton
                             component={Link}
@@ -870,7 +882,10 @@ export default function AdmissionList() {
                         <IconButton
                           size="small"
                           color="default"
-                          onClick={() => handleViewStudent(student)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewStudent(student);
+                          }}
                         >
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
@@ -878,7 +893,10 @@ export default function AdmissionList() {
                           <IconButton
                             size="small"
                             color="success"
-                            onClick={() => handleRestoreClick(student)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRestoreClick(student);
+                            }}
                             title="Restore Student"
                           >
                             <RestoreFromTrash fontSize="small" />
@@ -889,7 +907,10 @@ export default function AdmissionList() {
                             <IconButton
                               size="small"
                               color="success"
-                              onClick={() => handleRestoreClick(student)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestoreClick(student);
+                              }}
                             >
                               <RestoreFromTrash fontSize="small" />
                             </IconButton>
@@ -899,7 +920,10 @@ export default function AdmissionList() {
                             <IconButton
                               size="small"
                               color="warning"
-                              onClick={() => handleAlumniClick(student)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAlumniClick(student);
+                              }}
                             >
                               <AlumniIcon fontSize="small" />
                             </IconButton>
@@ -909,7 +933,10 @@ export default function AdmissionList() {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleDeleteClick(student)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(student);
+                            }}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -971,143 +998,113 @@ export default function AdmissionList() {
               </Tabs>
 
               {tabValue === 0 && (
-                <Grid container spacing={2}>
-                  {/* Basic Info */}
-                  <Grid size={{ xs: 12 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Basic Information</Typography></Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Date of Birth</Typography>
-                    <Typography variant="body1">{new Date(selectedStudent.dob).toLocaleDateString()}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Gender</Typography>
-                    <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{selectedStudent.gender}</Typography>
-                  </Grid>
+                <Stack spacing={3}>
+                  {/* Basic Information */}
+                  <Paper variant="outlined">
+                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                      <Typography variant="subtitle1" fontWeight="bold">Basic Information</Typography>
+                    </Box>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableBody>
+                          <StudentDetailRow label="Date of Birth" value={selectedStudent.dob ? new Date(selectedStudent.dob).toLocaleDateString() : '-'} />
+                          <StudentDetailRow label="Gender" value={<Typography sx={{ textTransform: 'capitalize', fontSize: 'inherit' }}>{selectedStudent.gender}</Typography>} />
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
 
+                  {/* Government Identification */}
+                  <Paper variant="outlined">
+                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                      <Typography variant="subtitle1" fontWeight="bold">Government Identification</Typography>
+                    </Box>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableBody>
+                          <StudentDetailRow label="Student Aadhar" value={selectedStudent.aadharCardNo} />
+                          <StudentDetailRow label="APAAR ID" value={selectedStudent.apaarId} />
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
 
-                  {/* Government IDs */}
-                  <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Government Identification</Typography></Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Student Aadhar</Typography>
-                    <Typography variant="body1">{selectedStudent.aadharCardNo || '-'}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Typography variant="subtitle2" color="text.secondary">APAAR ID</Typography>
-                    <Typography variant="body1">{selectedStudent.apaarId || '-'}</Typography>
-                  </Grid>
-
-                  {/* Contact Info */}
-                  <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Contact Details</Typography></Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
-                    <Typography variant="body1">{selectedStudent.phone}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Email</Typography>
-                    <Typography variant="body1">{selectedStudent.email || '-'}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Typography variant="subtitle2" color="text.secondary">WhatsApp</Typography>
-                    <Typography variant="body1">{selectedStudent.whatsAppNo || '-'}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Address</Typography>
-                    <Typography variant="body1">{selectedStudent.address}</Typography>
-                  </Grid>
+                  {/* Contact Details */}
+                  <Paper variant="outlined">
+                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                      <Typography variant="subtitle1" fontWeight="bold">Contact Details</Typography>
+                    </Box>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableBody>
+                          <StudentDetailRow label="Phone" value={selectedStudent.phone} />
+                          <StudentDetailRow label="Email" value={selectedStudent.email} />
+                          <StudentDetailRow label="WhatsApp" value={selectedStudent.whatsAppNo} />
+                          <StudentDetailRow label="Address" value={selectedStudent.address} />
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
 
                   {/* Parents Details */}
-                  <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Parents Details</Typography></Grid>
+                  <Paper variant="outlined">
+                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                      <Typography variant="subtitle1" fontWeight="bold">Parents Details</Typography>
+                    </Box>
 
-                  {/* Father */}
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Card variant="outlined" sx={{ p: 1 }}>
-                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Father</Typography>
-                      <Stack spacing={1}>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Name</Typography>
-                          <Typography variant="body2">{selectedStudent.fatherName}</Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Occupation</Typography>
-                          <Typography variant="body2">{selectedStudent.fatherOccupation || '-'}</Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Aadhar</Typography>
-                          <Typography variant="body2">{selectedStudent.fatherAadharNo || '-'}</Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">PAN</Typography>
-                          <Typography variant="body2">{selectedStudent.fatherPanNo || '-'}</Typography>
-                        </Box>
-                      </Stack>
-                    </Card>
-                  </Grid>
+                    {/* Father */}
+                    <Box sx={{ px: 2, py: 1, bgcolor: 'action.selected', borderBottom: 1, borderColor: 'divider' }}>
+                      <Typography variant="subtitle2" fontWeight="bold">Father</Typography>
+                    </Box>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableBody>
+                          <StudentDetailRow label="Name" value={selectedStudent.fatherName} />
+                          <StudentDetailRow label="Occupation" value={selectedStudent.fatherOccupation} />
+                          <StudentDetailRow label="Aadhar" value={selectedStudent.fatherAadharNo} />
+                          <StudentDetailRow label="PAN" value={selectedStudent.fatherPanNo} />
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
 
-                  {/* Mother */}
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Card variant="outlined" sx={{ p: 1 }}>
-                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Mother</Typography>
-                      <Stack spacing={1}>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Name</Typography>
-                          <Typography variant="body2">{selectedStudent.motherName}</Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Occupation</Typography>
-                          <Typography variant="body2">{selectedStudent.motherOccupation || '-'}</Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Aadhar</Typography>
-                          <Typography variant="body2">{selectedStudent.motherAadharNo || '-'}</Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">PAN</Typography>
-                          <Typography variant="body2">{selectedStudent.motherPanNo || '-'}</Typography>
-                        </Box>
-                      </Stack>
-                    </Card>
-                  </Grid>
+                    {/* Mother */}
+                    <Box sx={{ px: 2, py: 1, bgcolor: 'action.selected', borderBottom: 1, borderColor: 'divider', borderTop: 1 }}>
+                      <Typography variant="subtitle2" fontWeight="bold">Mother</Typography>
+                    </Box>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableBody>
+                          <StudentDetailRow label="Name" value={selectedStudent.motherName} />
+                          <StudentDetailRow label="Occupation" value={selectedStudent.motherOccupation} />
+                          <StudentDetailRow label="Aadhar" value={selectedStudent.motherAadharNo} />
+                          <StudentDetailRow label="PAN" value={selectedStudent.motherPanNo} />
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
 
                   {/* Guardian Details (Conditional) */}
                   {selectedStudent.guardianName && (
-                    <>
-                      <Grid size={{ xs: 12 }} sx={{ mt: 1 }}><Typography variant="subtitle1" fontWeight="bold" color="primary">Guardian Information</Typography></Grid>
-                      <Grid size={{ xs: 12 }}>
-                        <Card variant="outlined" sx={{ p: 2 }}>
-                          <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, md: 4 }}>
-                              <Typography variant="caption" color="text.secondary">Relation</Typography>
-                              <Typography variant="body2">{selectedStudent.guardianRelation || '-'}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 4 }}>
-                              <Typography variant="caption" color="text.secondary">Name</Typography>
-                              <Typography variant="body2">{selectedStudent.guardianName}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 4 }}>
-                              <Typography variant="caption" color="text.secondary">Phone</Typography>
-                              <Typography variant="body2">{selectedStudent.guardianPhone || '-'}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 4 }}>
-                              <Typography variant="caption" color="text.secondary">Occupation</Typography>
-                              <Typography variant="body2">{selectedStudent.guardianOccupation || '-'}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 4 }}>
-                              <Typography variant="caption" color="text.secondary">Aadhar</Typography>
-                              <Typography variant="body2">{selectedStudent.guardianAadharNo || '-'}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 4 }}>
-                              <Typography variant="caption" color="text.secondary">Email</Typography>
-                              <Typography variant="body2">{selectedStudent.guardianEmail || '-'}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12 }}>
-                              <Typography variant="caption" color="text.secondary">Address</Typography>
-                              <Typography variant="body2">{selectedStudent.guardianAddress || '-'}</Typography>
-                            </Grid>
-                          </Grid>
-                        </Card>
-                      </Grid>
-                    </>
+                    <Paper variant="outlined">
+                      <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                        <Typography variant="subtitle1" fontWeight="bold">Guardian Information</Typography>
+                      </Box>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableBody>
+                            <StudentDetailRow label="Relation" value={selectedStudent.guardianRelation} />
+                            <StudentDetailRow label="Name" value={selectedStudent.guardianName} />
+                            <StudentDetailRow label="Phone" value={selectedStudent.guardianPhone} />
+                            <StudentDetailRow label="Occupation" value={selectedStudent.guardianOccupation} />
+                            <StudentDetailRow label="Aadhar" value={selectedStudent.guardianAadharNo} />
+                            <StudentDetailRow label="Email" value={selectedStudent.guardianEmail} />
+                            <StudentDetailRow label="Address" value={selectedStudent.guardianAddress} />
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Paper>
                   )}
-                </Grid>
+                </Stack>
               )}
 
               {tabValue === 1 && (
