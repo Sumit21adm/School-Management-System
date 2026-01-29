@@ -16,6 +16,10 @@ export class CreateSubjectDto {
     @IsHexColor()
     @IsOptional()
     color?: string;
+
+    @IsBoolean()
+    @IsOptional()
+    isActive?: boolean;
 }
 
 export class UpdateSubjectDto {

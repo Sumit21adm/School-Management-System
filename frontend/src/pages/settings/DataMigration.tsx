@@ -124,6 +124,12 @@ export default function DataMigration() {
                 if (result.isValid) {
                     setActiveStep(3);
                 }
+            } else if (selectedType === 'demand-bills') {
+                const result = await dataMigrationService.validateDemandBills(file);
+                setValidationResult(result);
+                if (result.isValid) {
+                    setActiveStep(3);
+                }
             } else {
                 // Skip validation for other types, go directly to import
                 setActiveStep(3);

@@ -3,9 +3,10 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button,
     Stepper, Step, StepLabel, Box, TextField, MenuItem,
     Typography, Stack, CircularProgress,
-    Alert, Paper, Switch, Divider, Chip
+    Alert, Paper, Switch, Divider, Chip,
+    Table, TableBody, TableCell, TableContainer, TableRow
 } from '@mui/material';
-import { LockReset as LockResetIcon } from '@mui/icons-material';
+
 import { useForm, Controller } from 'react-hook-form';
 import { staffService, UserRole, type Staff } from '../../lib/api/staff';
 import { roleSettingsService, type EnabledRole } from '../../lib/api/roleSettings';
@@ -17,11 +18,112 @@ interface AddStaffDialogProps {
     onClose: (refresh?: boolean) => void;
     staffToEdit: Staff | null;
     initialRole?: UserRole;
+    viewOnly?: boolean;
 }
 
-const steps = ['Identity & Role', 'HR Details', 'Professional Info', 'Login & Access', 'Review'];
+const steps = ['Identity & Role', 'HR Details', 'Professional Info', 'Review'];
 
-export default function AddUserDialog({ open, onClose, staffToEdit, initialRole }: AddStaffDialogProps) {
+// Helper component for View Mode
+const DetailRow = ({ label, value }: { label: string, value: React.ReactNode }) => (
+    <TableRow>
+        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold', width: '35%', color: 'text.secondary' }}>
+            {label}
+        </TableCell>
+        <TableCell>{value || '-'}</TableCell>
+    </TableRow>
+);
+
+const UserDetailView = ({ data }: { data: any }) => {
+    if (!data) return null;
+    return (
+        <Stack spacing={3}>
+            {/* Identity Section */}
+            <Paper variant="outlined">
+                <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="subtitle1" fontWeight="bold">Identity & Role</Typography>
+                </Box>
+                <TableContainer>
+                    <Table size="small">
+                        <TableBody>
+                            <DetailRow label="Full Name" value={data.name} />
+                            <DetailRow label="Role" value={data.role} />
+                            <DetailRow label="Email" value={data.email} />
+                            <DetailRow label="Phone" value={data.phone} />
+                            <DetailRow
+                                label="Login Access"
+                                value={<Chip label={data.loginAccess ? "Enabled" : "Disabled"} size="small" color={data.loginAccess ? "primary" : "default"} />}
+                            />
+                            <DetailRow
+                                label="Status"
+                                value={<Chip label={data.active ? "Active" : "Inactive"} size="small" color={data.active ? "success" : "default"} />}
+                            />
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+
+            {/* HR Details */}
+            <Paper variant="outlined">
+                <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="subtitle1" fontWeight="bold">HR Details</Typography>
+                </Box>
+                <TableContainer>
+                    <Table size="small">
+                        <TableBody>
+                            <DetailRow label="Designation" value={data.designation} />
+                            <DetailRow label="Department" value={data.department} />
+                            <DetailRow label="Joining Date" value={data.joiningDate} />
+                            <DetailRow label="Basic Salary" value={data.basicSalary ? `₹${data.basicSalary}` : '-'} />
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+                {/* Bank Details Sub-section */}
+                <Box sx={{ p: 1, px: 2, bgcolor: 'action.selected' }}>
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary">BANKING INFORMATION</Typography>
+                </Box>
+                <TableContainer>
+                    <Table size="small">
+                        <TableBody>
+                            <DetailRow label="Bank Name" value={data.bankName} />
+                            <DetailRow label="Account No" value={data.accountNo} />
+                            <DetailRow label="IFSC Code" value={data.ifscCode} />
+                            <DetailRow label="PAN No" value={data.panNo} />
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+
+            {/* Professional Info */}
+            <Paper variant="outlined">
+                <Box sx={{ p: 2, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="subtitle1" fontWeight="bold">Professional Information</Typography>
+                </Box>
+                <TableContainer>
+                    <Table size="small">
+                        <TableBody>
+                            <DetailRow label="Qualification" value={data.qualification} />
+                            <DetailRow label="Experience" value={data.experience} />
+
+                            {data.role === UserRole.TEACHER && (
+                                <DetailRow label="Specialization" value={data.specialization} />
+                            )}
+
+                            {data.role === UserRole.DRIVER && (
+                                <>
+                                    <DetailRow label="License Number" value={data.licenseNumber} />
+                                    <DetailRow label="License Expiry" value={data.licenseExpiry} />
+                                    <DetailRow label="Badge Number" value={data.badgeNumber} />
+                                </>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+        </Stack>
+    );
+};
+
+export default function AddUserDialog({ open, onClose, staffToEdit, initialRole, viewOnly }: AddStaffDialogProps) {
     const [activeStep, setActiveStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [enabledRoles, setEnabledRoles] = useState<EnabledRole[]>([]);
@@ -49,6 +151,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
             username: '',
             password: '',
             active: true,
+            loginAccess: true,
             permissions: [] as string[],
 
             // HR
@@ -95,6 +198,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                 username: staffToEdit.username,
                 password: '',
                 active: staffToEdit.active ?? true,
+                loginAccess: staffToEdit.loginAccess ?? true,
                 permissions: staffToEdit.permissions || ROLE_DEFAULT_PERMISSIONS[staffToEdit.role] || [],
 
                 designation: staffToEdit.staffDetails?.designation || '',
@@ -119,6 +223,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                 role: initialRole || UserRole.TEACHER,
                 permissions: ROLE_DEFAULT_PERMISSIONS[initialRole || UserRole.TEACHER] || [],
                 active: true,
+                loginAccess: true,
                 joiningDate: new Date().toISOString().split('T')[0],
             });
         }
@@ -127,11 +232,10 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
 
     // Define which fields belong to each step for validation
     const stepFields: Record<number, (keyof typeof control._defaultValues)[]> = {
-        0: ['role', 'name', 'email', 'phone', 'username', 'password'], // Identity & Role
+        0: ['role', 'name', 'loginAccess', 'active', 'email', 'phone', 'password'], // Identity & Role (includes login access)
         1: ['designation', 'department', 'joiningDate', 'basicSalary', 'bankName', 'accountNo', 'ifscCode', 'panNo'], // HR Details
         2: ['qualification', 'experience', 'specialization', 'licenseNumber', 'licenseExpiry', 'badgeNumber'], // Professional Info
-        3: ['active', 'password'], // Login & Access
-        4: [], // Review (no additional fields)
+        3: [], // Review (no additional fields)
     };
 
     const handleNext = async () => {
@@ -198,7 +302,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     name="role"
                                     control={control}
                                     render={({ field }) => (
-                                        <TextField {...field} select label="Role" fullWidth required>
+                                        <TextField {...field} select label="Role" fullWidth required disabled={viewOnly}>
                                             {enabledRoles.map((role) => (
                                                 <MenuItem key={role.role} value={role.role}>
                                                     {role.displayName}
@@ -214,11 +318,57 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     control={control}
                                     rules={{ required: 'Name is required' }}
                                     render={({ field, fieldState }) => (
-                                        <TextField {...field} label="Full Name" fullWidth error={!!fieldState.error} helperText={fieldState.error?.message} />
+                                        <TextField {...field} label="Full Name" fullWidth error={!!fieldState.error} helperText={fieldState.error?.message} disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
                         </Stack>
+
+                        {/* Login Access & Status Section */}
+                        <Paper variant="outlined" sx={{ p: 2 }}>
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                                <Box>
+                                    <Typography variant="subtitle1" fontWeight="bold">Login Access</Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Allow this staff member to log in to the portal
+                                    </Typography>
+                                </Box>
+                                <Controller
+                                    name="loginAccess"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Switch
+                                            checked={field.value}
+                                            onChange={(e) => field.onChange(e.target.checked)}
+                                            color="primary"
+                                            disabled={viewOnly}
+                                        />
+                                    )}
+                                />
+                            </Stack>
+                            <Divider sx={{ my: 1 }} />
+                            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                <Box>
+                                    <Typography variant="subtitle1" fontWeight="bold">Employee Status</Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Status in the organization (Active/Resigned)
+                                    </Typography>
+                                </Box>
+                                <Controller
+                                    name="active"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Switch
+                                            checked={field.value}
+                                            onChange={(e) => field.onChange(e.target.checked)}
+                                            color="success"
+                                            disabled={viewOnly}
+                                        />
+                                    )}
+                                />
+                            </Stack>
+                        </Paper>
+
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                             <Box flex={1}>
                                 <Controller
@@ -238,6 +388,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                             type="email"
                                             error={!!fieldState.error}
                                             helperText={fieldState.error?.message}
+                                            disabled={viewOnly}
                                         />
                                     )}
                                 />
@@ -259,32 +410,29 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                             fullWidth
                                             error={!!fieldState.error}
                                             helperText={fieldState.error?.message}
+                                            disabled={viewOnly}
                                         />
                                     )}
                                 />
                             </Box>
                         </Stack>
-                        {!isEdit && (
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                <Box flex={1}>
-                                    <Controller
-                                        name="username"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <TextField {...field} label="Username (Optional)" fullWidth helperText="Leave blank to auto-generate" />
-                                        )}
-                                    />
-                                </Box>
-                                <Box flex={1}>
-                                    <Controller
-                                        name="password"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <TextField {...field} label="Password (Optional)" fullWidth type="password" helperText="Default: Welcome@123" />
-                                        )}
-                                    />
-                                </Box>
-                            </Stack>
+                        {watch('loginAccess') !== false && (
+                            <Box>
+                                <Controller
+                                    name="password"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            label={isEdit ? "New Password (Optional)" : "Password (Optional)"}
+                                            fullWidth
+                                            type="password"
+                                            helperText="Default: Welcome@123. Login using your email address."
+                                            disabled={viewOnly}
+                                        />
+                                    )}
+                                />
+                            </Box>
                         )}
                     </Stack>
                 );
@@ -298,7 +446,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     control={control}
                                     rules={{ required: 'Designation is required' }}
                                     render={({ field, fieldState }) => (
-                                        <TextField {...field} label="Designation" fullWidth required error={!!fieldState.error} helperText={fieldState.error?.message} />
+                                        <TextField {...field} label="Designation" fullWidth required error={!!fieldState.error} helperText={fieldState.error?.message} disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
@@ -307,7 +455,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     name="department"
                                     control={control}
                                     render={({ field }) => (
-                                        <TextField {...field} label="Department" fullWidth />
+                                        <TextField {...field} label="Department" fullWidth disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
@@ -318,7 +466,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     name="joiningDate"
                                     control={control}
                                     render={({ field }) => (
-                                        <TextField {...field} label="Joining Date" type="date" fullWidth InputLabelProps={{ shrink: true }} />
+                                        <TextField {...field} label="Joining Date" type="date" fullWidth InputLabelProps={{ shrink: true }} disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
@@ -327,7 +475,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     name="basicSalary"
                                     control={control}
                                     render={({ field }) => (
-                                        <TextField {...field} label="Basic Salary" type="number" fullWidth />
+                                        <TextField {...field} label="Basic Salary" type="number" fullWidth disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
@@ -335,18 +483,18 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                         <Typography variant="subtitle2">Bank Details</Typography>
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                             <Box flex={1}>
-                                <Controller name="bankName" control={control} render={({ field }) => <TextField {...field} label="Bank Name" fullWidth size="small" />} />
+                                <Controller name="bankName" control={control} render={({ field }) => <TextField {...field} label="Bank Name" fullWidth size="small" disabled={viewOnly} />} />
                             </Box>
                             <Box flex={1}>
-                                <Controller name="accountNo" control={control} render={({ field }) => <TextField {...field} label="Account No" fullWidth size="small" />} />
+                                <Controller name="accountNo" control={control} render={({ field }) => <TextField {...field} label="Account No" fullWidth size="small" disabled={viewOnly} />} />
                             </Box>
                         </Stack>
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                             <Box flex={1}>
-                                <Controller name="ifscCode" control={control} render={({ field }) => <TextField {...field} label="IFSC Code" fullWidth size="small" />} />
+                                <Controller name="ifscCode" control={control} render={({ field }) => <TextField {...field} label="IFSC Code" fullWidth size="small" disabled={viewOnly} />} />
                             </Box>
                             <Box flex={1}>
-                                <Controller name="panNo" control={control} render={({ field }) => <TextField {...field} label="PAN No" fullWidth size="small" />} />
+                                <Controller name="panNo" control={control} render={({ field }) => <TextField {...field} label="PAN No" fullWidth size="small" disabled={viewOnly} />} />
                             </Box>
                         </Stack>
                     </Stack>
@@ -360,7 +508,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     name="qualification"
                                     control={control}
                                     render={({ field }) => (
-                                        <TextField {...field} label="Qualification" fullWidth helperText="Highest Degree" />
+                                        <TextField {...field} label="Qualification" fullWidth helperText="Highest Degree" disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
@@ -369,7 +517,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     name="experience"
                                     control={control}
                                     render={({ field }) => (
-                                        <TextField {...field} label="Experience" fullWidth helperText="e.g. 5 Years" />
+                                        <TextField {...field} label="Experience" fullWidth helperText="e.g. 5 Years" disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
@@ -381,7 +529,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                     control={control}
                                     rules={{ required: watchedRole === UserRole.TEACHER ? 'Specialization is required for teachers' : false }}
                                     render={({ field, fieldState }) => (
-                                        <TextField {...field} label="Specialization (Subject)" fullWidth required error={!!fieldState.error} helperText={fieldState.error?.message} />
+                                        <TextField {...field} label="Specialization (Subject)" fullWidth required error={!!fieldState.error} helperText={fieldState.error?.message} disabled={viewOnly} />
                                     )}
                                 />
                             </Box>
@@ -394,7 +542,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                             name="licenseNumber"
                                             control={control}
                                             render={({ field }) => (
-                                                <TextField {...field} label="Driving License No" fullWidth required />
+                                                <TextField {...field} label="Driving License No" fullWidth required disabled={viewOnly} />
                                             )}
                                         />
                                     </Box>
@@ -403,7 +551,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                             name="licenseExpiry"
                                             control={control}
                                             render={({ field }) => (
-                                                <TextField {...field} label="License Expiry" type="date" fullWidth InputLabelProps={{ shrink: true }} />
+                                                <TextField {...field} label="License Expiry" type="date" fullWidth InputLabelProps={{ shrink: true }} disabled={viewOnly} />
                                             )}
                                         />
                                     </Box>
@@ -413,7 +561,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                                         name="badgeNumber"
                                         control={control}
                                         render={({ field }) => (
-                                            <TextField {...field} label="Badge Number (Optional)" fullWidth />
+                                            <TextField {...field} label="Badge Number (Optional)" fullWidth disabled={viewOnly} />
                                         )}
                                     />
                                 </Box>
@@ -421,79 +569,7 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
                         )}
                     </Stack>
                 );
-            case 3: // Login & Access (NEW)
-                return (
-                    <Box key="step-login">
-                        <Stack spacing={3}>
-                            {/* Account Status Card */}
-                            <Paper variant="outlined" sx={{ p: 2, bgcolor: watchedActive ? 'success.lighter' : 'grey.100' }}>
-                                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                    <Box>
-                                        <Typography variant="subtitle1" fontWeight="bold">Login Access</Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Allow this staff member to log in to the portal
-                                        </Typography>
-                                    </Box>
-                                    <Controller
-                                        name="active"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <Switch
-                                                checked={field.value}
-                                                onChange={(e) => field.onChange(e.target.checked)}
-                                                color="success"
-                                            />
-                                        )}
-                                    />
-                                </Stack>
-                            </Paper>
-
-                            {/* Credentials Section */}
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                {isEdit && (
-                                    <Box flex={1}>
-                                        <TextField
-                                            label="Username"
-                                            value={watch('username') || getValues('username')}
-                                            fullWidth
-                                            disabled
-                                            size="small"
-                                            helperText="Username cannot be changed"
-                                        />
-                                    </Box>
-                                )}
-                                <Box flex={1}>
-                                    <Controller
-                                        name="password"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <TextField
-                                                {...field}
-                                                label={isEdit ? "Set New Password" : "Password"}
-                                                placeholder={isEdit ? "Leave blank to keep current" : ""}
-                                                fullWidth
-                                                type="password"
-                                                size="small"
-                                                helperText={isEdit ? "Only enter to reset password" : "Default: Welcome@123"}
-                                                InputProps={{
-                                                    startAdornment: isEdit ? <LockResetIcon color="action" sx={{ mr: 1 }} /> : null
-                                                }}
-                                            />
-                                        )}
-                                    />
-                                </Box>
-                            </Stack>
-
-                            <Alert severity="info" sx={{ mt: 2 }}>
-                                <Typography variant="caption">
-                                    Detailed permissions can be configured in <strong>User Permissions</strong> after creation.
-                                    Default permissions for <strong>{watchedRole}</strong> will be applied automatically.
-                                </Typography>
-                            </Alert>
-                        </Stack>
-                    </Box>
-                );
-            case 4: // Review
+            case 3: // Review
                 return (
                     <Box key="step-review">
                         <Typography variant="h6" gutterBottom>Confirm Details</Typography>
@@ -516,34 +592,46 @@ export default function AddUserDialog({ open, onClose, staffToEdit, initialRole 
     return (
         <Dialog open={open} onClose={() => onClose()} maxWidth="md" fullWidth>
             <DialogTitle>
-                {isEdit ? 'Edit User & Access' : 'Add New User'}
+                {viewOnly ? 'User Details' : (isEdit ? 'Edit User & Access' : 'Add New User')}
             </DialogTitle>
             <DialogContent dividers>
-                <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-                    {steps.map((label) => (
-                        <Step key={label}>
-                            <StepLabel>{label}</StepLabel>
-                        </Step>
-                    ))}
-                </Stepper>
+                {viewOnly ? (
+                    <UserDetailView data={watch()} />
+                ) : (
+                    <>
+                        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+                            {steps.map((label) => (
+                                <Step key={label}>
+                                    <StepLabel>{label}</StepLabel>
+                                </Step>
+                            ))}
+                        </Stepper>
 
-                <Box sx={{ mt: 2, minHeight: '350px' }}>
-                    {renderStepContent(activeStep)}
-                </Box>
+                        <Box sx={{ mt: 2, minHeight: '350px' }}>
+                            {renderStepContent(activeStep)}
+                        </Box>
+                    </>
+                )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => onClose()}>Cancel</Button>
-                <Box sx={{ flex: '1 1 auto' }} />
-                <Button
-                    disabled={activeStep === 0}
-                    onClick={handleBack}
-                    sx={{ mr: 1 }}
-                >
-                    Back
-                </Button>
-                <Button onClick={handleNext} variant="contained" disabled={loading}>
-                    {activeStep === steps.length - 1 ? (loading ? <CircularProgress size={24} /> : (isEdit ? 'Update' : 'Create Staff')) : 'Next'}
-                </Button>
+                {viewOnly ? (
+                    <Button onClick={() => onClose()} variant="contained">Close</Button>
+                ) : (
+                    <>
+                        <Button onClick={() => onClose()}>Cancel</Button>
+                        <Box sx={{ flex: '1 1 auto' }} />
+                        <Button
+                            disabled={activeStep === 0}
+                            onClick={handleBack}
+                            sx={{ mr: 1 }}
+                        >
+                            Back
+                        </Button>
+                        <Button onClick={handleNext} variant="contained" disabled={loading}>
+                            {activeStep === steps.length - 1 ? (loading ? <CircularProgress size={24} /> : (isEdit ? 'Update' : 'Create Staff')) : 'Next'}
+                        </Button>
+                    </>
+                )}
             </DialogActions>
         </Dialog>
     );

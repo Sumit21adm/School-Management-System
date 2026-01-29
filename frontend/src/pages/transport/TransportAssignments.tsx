@@ -113,7 +113,7 @@ export default function TransportAssignments() {
         }
     };
 
-    const calculateFare = (assignment: StudentTransport) => {
+    const calculateFare = (assignment: StudentTransport): number | null => {
         let distance = 0;
         if (assignment.transportType === 'pickup' && assignment.pickupStop?.distanceFromSchool) {
             distance = Number(assignment.pickupStop.distanceFromSchool);
@@ -129,6 +129,7 @@ export default function TransportAssignments() {
         if (distance > 0) {
             const slab = fareSlabs.find(s => s.isActive && distance >= s.minDistance && distance <= s.maxDistance);
             if (slab) return slab.monthlyFee;
+            return null; // Return null if distance exists but no slab matches
         }
         return 0;
     };
@@ -268,7 +269,15 @@ export default function TransportAssignments() {
                                         {!row.pickupStop && !row.dropStop && "-"}
                                     </Box>
                                 </TableCell>
-                                <TableCell>₹{calculateFare(row).toLocaleString()}</TableCell>
+                                <TableCell>
+                                    {(() => {
+                                        const fee = calculateFare(row);
+                                        if (fee === null) {
+                                            return <Chip label="No Slab" size="small" color="warning" variant="outlined" />;
+                                        }
+                                        return `₹${fee.toLocaleString()}`;
+                                    })()}
+                                </TableCell>
                                 <TableCell>
                                     <Chip label={row.transportType} size="small" sx={{ textTransform: 'capitalize' }} />
                                 </TableCell>

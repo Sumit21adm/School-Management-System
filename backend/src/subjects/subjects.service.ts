@@ -48,12 +48,16 @@ export class SubjectsService {
     }
 
     async delete(id: number) {
-        // Check if used in ClassSubject or other places
+        // Check if used in ClassSubject or ExamSchedule
         const usedInClass = await this.prisma.classSubject.findFirst({
             where: { subjectId: id }
         });
 
-        if (usedInClass) {
+        const usedInExams = await this.prisma.examSchedule.findFirst({
+            where: { subjectId: id }
+        });
+
+        if (usedInClass || usedInExams) {
             // Soft delete if used
             return this.prisma.subject.update({
                 where: { id },

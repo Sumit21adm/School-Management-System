@@ -30,11 +30,11 @@ import {
     Place as PlaceIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
-import { transportService, type Route, type Vehicle, type RouteStop, type FareSlab } from '../../lib/api/transport';
+import { transportService, type Route, type Vehicle, type RouteStop, type FareSlab, type TransportSettings } from '../../lib/api/transport';
 import PageHeader from '../../components/PageHeader';
 import { useSnackbar } from 'notistack';
 
-function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDeleteStop, getFareForDistance }: {
+function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDeleteStop, getFareForDistance, settings }: {
     route: Route;
     onEdit: (route: Route) => void;
     onDelete: (id: number) => void;
@@ -42,6 +42,7 @@ function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDelete
     onEditStop: (route: Route, stop: RouteStop) => void;
     onDeleteStop: (routeId: number, stopId: number) => void;
     getFareForDistance: (distance: number) => number | null;
+    settings: TransportSettings | null;
 }) {
     const [open, setOpen] = useState(false);
 
@@ -124,11 +125,17 @@ function RouteRow({ route, onEdit, onDelete, onManageStops, onEditStop, onDelete
                                                 {stop.distanceFromSchool ? `${Number(stop.distanceFromSchool)} km` : '-'}
                                             </TableCell>
                                             <TableCell>
-                                                {stop.distanceFromSchool ? (
+                                                {settings?.fareCalculationMode === 'STOP_WISE' ? (
                                                     <Typography color="success.main" fontWeight="bold">
-                                                        ₹{getFareForDistance(Number(stop.distanceFromSchool))?.toLocaleString() || 'N/A'}
+                                                        ₹{stop.fare?.toLocaleString() || 'N/A'}
                                                     </Typography>
-                                                ) : '-'}
+                                                ) : (
+                                                    stop.distanceFromSchool ? (
+                                                        <Typography color="success.main" fontWeight="bold">
+                                                            ₹{getFareForDistance(Number(stop.distanceFromSchool))?.toLocaleString() || 'N/A'}
+                                                        </Typography>
+                                                    ) : '-'
+                                                )}
                                             </TableCell>
                                             <TableCell>{stop.pickupTime || '-'}</TableCell>
                                             <TableCell>{stop.dropTime || '-'}</TableCell>
@@ -162,6 +169,7 @@ export default function RouteList() {
     const [routes, setRoutes] = useState<Route[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [fareSlabs, setFareSlabs] = useState<FareSlab[]>([]);
+    const [settings, setSettings] = useState<TransportSettings | null>(null);
 
     // Route Dialog State
     const [openRouteDialog, setOpenRouteDialog] = useState(false);
@@ -191,6 +199,7 @@ export default function RouteList() {
             pickupTime: '',
             dropTime: '',
             distanceFromSchool: '',
+            fare: '',
         },
     });
 
@@ -203,7 +212,12 @@ export default function RouteList() {
             ]);
             setRoutes(routesData);
             setVehicles(vehiclesData);
+            setVehicles(vehiclesData);
             setFareSlabs(fareSlabsData);
+
+            // Fetch settings
+            transportService.getSettings().then(setSettings).catch(console.error);
+
         } catch (error: any) {
             console.error('Fetch error:', error);
             const message = error.response?.data?.message || 'Failed to fetch data';
@@ -255,8 +269,7 @@ export default function RouteList() {
         try {
             const payload = {
                 ...data,
-                monthlyFee: 0, // Not used - fare calculated from stop distance
-                vehicleId: data.vehicleId ? Number(data.vehicleId) : null,
+                vehicleId: data.vehicleId ? Number(data.vehicleId) : undefined,
             };
 
             if (editingRoute) {
@@ -308,6 +321,7 @@ export default function RouteList() {
             pickupTime: stop.pickupTime || '',
             dropTime: stop.dropTime || '',
             distanceFromSchool: stop.distanceFromSchool?.toString() || '',
+            fare: stop.fare?.toString() || '',
         });
         setOpenStopDialog(true);
     };
@@ -332,6 +346,7 @@ export default function RouteList() {
                 ...data,
                 stopOrder: Number(data.stopOrder),
                 distanceFromSchool: data.distanceFromSchool ? Number(data.distanceFromSchool) : null,
+                fare: data.fare ? Number(data.fare) : null,
             };
 
             if (editingStop) {
@@ -367,6 +382,37 @@ export default function RouteList() {
                 }
             />
 
+            {settings ? (
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'background.paper', p: 2, borderRadius: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                        Fare Calculation Mode:
+                    </Typography>
+                    <Chip
+                        label={settings.fareCalculationMode === 'DISTANCE_SLAB' ? 'Distance Based' : 'Stop Wise'}
+                        color="primary"
+                        variant="filled"
+                    />
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={async () => {
+                            const newMode = settings.fareCalculationMode === 'DISTANCE_SLAB' ? 'STOP_WISE' : 'DISTANCE_SLAB';
+                            if (window.confirm(`Switch fare calculation mode to ${newMode}?`)) {
+                                try {
+                                    const updated = await transportService.updateSettings({ fareCalculationMode: newMode });
+                                    setSettings(updated);
+                                    enqueueSnackbar(`Switched to ${newMode} mode`, { variant: 'success' });
+                                } catch (err) {
+                                    enqueueSnackbar('Failed to update settings', { variant: 'error' });
+                                }
+                            }
+                        }}
+                    >
+                        Switch to {settings.fareCalculationMode === 'DISTANCE_SLAB' ? 'Stop Wise' : 'Distance Based'}
+                    </Button>
+                </Box>
+            ) : null}
+
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
@@ -392,6 +438,7 @@ export default function RouteList() {
                                 onEditStop={handleEditStop}
                                 onDeleteStop={handleDeleteStop}
                                 getFareForDistance={getFareForDistance}
+                                settings={settings}
                             />
                         ))}
                         {routes.length === 0 && (
@@ -566,6 +613,26 @@ export default function RouteList() {
                                     )}
                                 />
                             </Grid>
+                            {settings?.fareCalculationMode === 'STOP_WISE' && (
+                                <Grid size={{ xs: 12 }}>
+                                    <Controller
+                                        name="fare"
+                                        control={stopControl}
+                                        rules={{ required: 'Fare is required for Stop-wise mode' }}
+                                        render={({ field, fieldState: { error } }) => (
+                                            <TextField
+                                                {...field}
+                                                label="Stop Fare (₹)"
+                                                type="number"
+                                                fullWidth
+                                                inputProps={{ min: 0 }}
+                                                error={!!error}
+                                                helperText={error?.message || "Fixed fare for this stop"}
+                                            />
+                                        )}
+                                    />
+                                </Grid>
+                            )}
                         </Grid>
                     </DialogContent>
                     <DialogActions>

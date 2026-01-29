@@ -85,12 +85,13 @@ export class CreateExamScheduleDto {
     // Wait, if it's just Time, maybe the client sends '10:00:00'.
     // Let's treat it as string and handle conversion in service if needed, or use IsDateString if we send full ISO.
     // Let's stick to IsDateString which is safer for "DateTime" type in Prisma.
-    @IsNotEmpty({ message: 'Start time is required' })
-    startTime: string;
+    @IsDateString()
+    @IsOptional()
+    startTime?: string;
 
     @IsDateString()
-    @IsNotEmpty({ message: 'End time is required' })
-    endTime: string;
+    @IsOptional()
+    endTime?: string;
 
     @IsOptional()
     @IsString()

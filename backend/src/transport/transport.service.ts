@@ -10,6 +10,28 @@ export class TransportService {
     constructor(private prisma: PrismaService) { }
 
     // ============================================
+    // SETTINGS OPERATIONS
+    // ============================================
+
+    async getSettings() {
+        let settings = await this.prisma.transportSettings.findFirst();
+        if (!settings) {
+            settings = await this.prisma.transportSettings.create({
+                data: { fareCalculationMode: 'DISTANCE_SLAB' }
+            });
+        }
+        return settings;
+    }
+
+    async updateSettings(dto: { fareCalculationMode: string }) {
+        const settings = await this.getSettings();
+        return this.prisma.transportSettings.update({
+            where: { id: settings.id },
+            data: { fareCalculationMode: dto.fareCalculationMode }
+        });
+    }
+
+    // ============================================
     // VEHICLE OPERATIONS
     // ============================================
 
@@ -241,25 +263,32 @@ export class TransportService {
         if (!assignment) return null;
 
         // Calculate Fee based on Fare Slabs
+        // Calculate Fee based on Settings
         let calculatedFee = 0;
-        let distance = 0;
 
-        if (assignment.pickupStop?.distanceFromSchool) {
-            distance = Number(assignment.pickupStop.distanceFromSchool);
-        } else if (assignment.dropStop?.distanceFromSchool) {
-            distance = Number(assignment.dropStop.distanceFromSchool);
-        }
+        // Fetch Settings
+        const settings = await this.getSettings();
 
-        if (distance > 0) {
-            const slab = await this.prisma.transportFareSlab.findFirst({
-                where: {
-                    isActive: true,
-                    minDistance: { lte: distance },
-                    maxDistance: { gte: distance }
+        // Check assigned stop
+        const assignedStop = assignment.pickupStop || assignment.dropStop;
+        if (assignedStop) {
+            if (settings.fareCalculationMode === 'STOP_WISE') {
+                calculatedFee = Number(assignedStop.fare || 0);
+            } else {
+                // DISTANCE_SLAB
+                const distance = Number(assignedStop.distanceFromSchool || 0);
+                if (distance > 0) {
+                    const slab = await this.prisma.transportFareSlab.findFirst({
+                        where: {
+                            isActive: true,
+                            minDistance: { lte: distance },
+                            maxDistance: { gte: distance }
+                        }
+                    });
+                    if (slab) {
+                        calculatedFee = Number(slab.monthlyFee);
+                    }
                 }
-            });
-            if (slab) {
-                calculatedFee = Number(slab.monthlyFee);
             }
         }
 
@@ -478,7 +507,7 @@ export class TransportService {
             where: {
                 isActive: true,
                 OR: [
-                    { minDistance: { lte: dto.maxDistance }, maxDistance: { gte: dto.minDistance } }
+                    { minDistance: { lt: dto.maxDistance }, maxDistance: { gt: dto.minDistance } }
                 ]
             }
         });
@@ -510,7 +539,7 @@ export class TransportService {
                     id: { not: id },
                     isActive: true,
                     OR: [
-                        { minDistance: { lte: maxDist }, maxDistance: { gte: minDist } }
+                        { minDistance: { lt: maxDist }, maxDistance: { gt: minDist } }
                     ]
                 }
             });

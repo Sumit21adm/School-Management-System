@@ -66,6 +66,7 @@ export interface Staff {
     phone?: string;
     role: UserRole;
     active: boolean;
+    loginAccess?: boolean;
     staffDetails?: StaffDetails;
     teacherProfile?: TeacherProfile;
     driverDetails?: DriverDetails;
@@ -85,8 +86,8 @@ export interface PaginatedStaffResponse {
 }
 
 export const staffService = {
-    getAll: async (role?: string, department?: string, page: number = 1, limit: number = 50) => {
-        const params: any = { page, limit };
+    getAll: async (role?: string, department?: string, page: number = 1, limit: number = 50, includeInactive: boolean = false, onlyInactive: boolean = false) => {
+        const params: any = { page, limit, includeInactive, onlyInactive };
         if (role) params.role = role;
         if (department) params.department = department;
 
@@ -109,8 +110,9 @@ export const staffService = {
         return res.data;
     },
 
-    delete: async (id: number) => {
-        const res = await apiClient.delete(`/staff/${id}`);
+    delete: async (id: number, permanent: boolean = false) => {
+        const params = permanent ? { permanent: 'true' } : {};
+        const res = await apiClient.delete(`/staff/${id}`, { params });
         return res.data;
     }
 };

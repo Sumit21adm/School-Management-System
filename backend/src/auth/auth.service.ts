@@ -24,8 +24,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.loginAccess) {
+      throw new UnauthorizedException('Access to portal is disabled');
+    }
+
+    // Also check if user is 'active' (not deleted)
     if (!user.active) {
-      throw new UnauthorizedException('Account is inactive');
+      throw new UnauthorizedException('Account not found');
     }
 
     // Update last login timestamp

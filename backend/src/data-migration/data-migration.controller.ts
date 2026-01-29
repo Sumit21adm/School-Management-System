@@ -67,6 +67,22 @@ export class DataMigrationController {
         return this.dataMigrationService.validateStudentsImport(file);
     }
 
+    /**
+     * Validate demand bills import file (dry-run)
+     */
+    @Post('validate/demand-bills')
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+    }))
+    async validateDemandBills(
+        @UploadedFile() file: Express.Multer.File
+    ): Promise<ValidationResultDto> {
+        if (!file) {
+            throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+        }
+        return this.dataMigrationService.validateDemandBillsImport(file);
+    }
+
     // ============================================
     // IMPORT ENDPOINTS
     // ============================================

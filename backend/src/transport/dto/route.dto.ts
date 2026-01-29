@@ -33,6 +33,10 @@ export class CreateRouteStopDto {
     @IsOptional()
     @IsNumber()
     distanceFromSchool?: number;
+
+    @IsOptional()
+    @IsNumber()
+    fare?: number;
 }
 
 export class CreateRouteDto {
@@ -171,4 +175,8 @@ export class UpdateRouteStopDto {
     @IsOptional()
     @IsNumber()
     distanceFromSchool?: number;
+
+    @IsOptional()
+    @IsNumber()
+    fare?: number;
 }

@@ -199,4 +199,20 @@ export class TransportController {
     deleteFareSlab(@Param('id', ParseIntPipe) id: number) {
         return this.transportService.deleteFareSlab(id);
     }
+
+    // ============================================
+    // SETTINGS ENDPOINTS
+    // ============================================
+
+    @Get('settings')
+    @Roles('ADMIN')
+    getSettings() {
+        return this.transportService.getSettings();
+    }
+
+    @Patch('settings')
+    @Roles('ADMIN')
+    updateSettings(@Body() dto: { fareCalculationMode: string }) {
+        return this.transportService.updateSettings(dto);
+    }
 }

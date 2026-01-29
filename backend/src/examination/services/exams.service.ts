@@ -62,18 +62,23 @@ export class ExamsService {
             });
 
             if (schedules && schedules.length > 0) {
-                // Bulk create schedules
-                // Need to map DTOs to Prisma create input
-                // Parsing time strings if needed, assuming DTO sends full ISO strings for now or compatible format
+                // Validate schedules
+                schedules.forEach(s => {
+                    if (!s.period && (!s.startTime || !s.endTime)) {
+                        throw new BadRequestException('Either period or time range (start/end) must be provided.');
+                    }
+                });
+
                 await tx.examSchedule.createMany({
                     data: schedules.map(s => ({
                         examId: exam.id,
                         subjectId: s.subjectId,
                         className: s.className,
                         date: new Date(s.date),
-                        startTime: new Date(s.startTime),
-                        endTime: new Date(s.endTime),
-                        roomNo: s.roomNo
+                        startTime: s.startTime ? new Date(s.startTime) : null,
+                        endTime: s.endTime ? new Date(s.endTime) : null,
+                        roomNo: s.roomNo,
+                        period: s.period
                     }))
                 });
             }
@@ -106,15 +111,21 @@ export class ExamsService {
             // throw new BadRequestException('Schedule date is outside exam duration');
         }
 
+        // Validate Time vs Period
+        if (!dto.period && (!dto.startTime || !dto.endTime)) {
+            throw new BadRequestException('Either period or time range (start/end) must be provided.');
+        }
+
         return this.prisma.examSchedule.create({
             data: {
                 examId,
                 subjectId: dto.subjectId,
                 className: dto.className,
                 date: new Date(dto.date),
-                startTime: new Date(dto.startTime),
-                endTime: new Date(dto.endTime),
-                roomNo: dto.roomNo
+                startTime: dto.startTime ? new Date(dto.startTime) : null,
+                endTime: dto.endTime ? new Date(dto.endTime) : null,
+                roomNo: dto.roomNo,
+                period: dto.period
             }
         });
     }

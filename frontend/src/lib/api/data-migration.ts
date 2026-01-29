@@ -80,6 +80,22 @@ export const dataMigrationService = {
     },
 
     /**
+     * Validate demand bills import file
+     */
+    validateDemandBills: async (file: File): Promise<ValidationResult> => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await axios.post(`${API_URL}/data-migration/validate/demand-bills`, formData, {
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
+    /**
      * Import students from Excel file
      */
     importStudents: async (file: File, options?: ImportOptions): Promise<ImportResult> => {
